@@ -1,0 +1,9 @@
+{
+  "key": "bank",
+  "label": "Giả nhân viên ngân hàng",
+  "script": [
+    "Alo, tôi gọi từ bộ phận an ninh ngân hàng. Tài khoản của anh/chị vừa có giao dịch bất thường.",
+    "Để tránh mất tiền, anh/chị vui lòng đọc giúp tôi mã OTP vừa được gửi về điện thoại.",
+    "Nếu không xác minh trong 5 phút, tài khoản sẽ bị khóa vĩnh viễn theo quy định."
+  ]
+}

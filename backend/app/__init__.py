@@ -1,0 +1,1 @@
+"""Scam Arena application package."""

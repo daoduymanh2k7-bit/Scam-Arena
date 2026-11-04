@@ -1,0 +1,9 @@
+{
+  "key": "police",
+  "label": "Giả công an điều tra",
+  "script": [
+    "Tôi là điều tra viên. Số điện thoại của anh/chị liên quan đến một vụ án rửa tiền.",
+    "Để chứng minh vô tội, anh/chị cần chuyển tiền vào tài khoản tạm giữ của cơ quan điều tra.",
+    "Đây là lệnh khẩn, không được kể cho ai biết vì vụ án đang được bảo mật."
+  ]
+}

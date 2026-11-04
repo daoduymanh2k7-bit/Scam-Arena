@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10241e">
+  <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Scam Arena trang chủ"><span class="brand-mark">S</span><span>Scam Arena</span></a>
+      <span class="topbar-note">Phòng tập phản xạ an toàn</span>
+    </header>
+
+    <section class="intro">
+      <p class="eyebrow">LUYỆN TẬP TÌNH HUỐNG</p>
+      <h1>Nhận diện áp lực.<br><em>Giữ quyền chủ động.</em></h1>
+      <p class="intro-copy">Thực hành cách ứng phó với cuộc gọi lừa đảo giả lập. Đây là kịch bản viết sẵn, không phải cuộc gọi thật.</p>
+    </section>
+
+    <section id="arena-picker" class="panel">
+      <div class="section-heading"><div><p class="eyebrow">CHỌN TÌNH HUỐNG</p><h2>Bạn muốn luyện cuộc gọi nào?</h2></div><span class="step">01 / 02</span></div>
+      <div id="arena-scenario-list" class="scenario-grid" aria-live="polite"></div>
+      <button id="arena-random-btn" class="button button-secondary" type="button">Chọn ngẫu nhiên</button>
+      <p id="picker-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="arena-session" class="panel session-panel" hidden>
+      <div class="call-topline"><span class="live-dot"></span><span>MÔ PHỎNG CUỘC GỌI</span><span id="arena-call-timer" class="timer">00:00</span></div>
+      <div class="caller"><div class="caller-icon">☎</div><div><h2>Kẻ lạ mặt</h2><p id="arena-scenario-label"></p></div></div>
+      <div id="arena-transcript" class="transcript" aria-live="polite"></div>
+      <p id="arena-status" class="status" aria-live="polite"></p>
+      <audio id="arena-audio-player" hidden></audio>
+      <div class="reply-box">
+        <label for="arena-text-input">Hoặc nhập câu trả lời</label>
+        <textarea id="arena-text-input" rows="2" placeholder="Ví dụ: Tôi sẽ tự gọi lại số tổng đài chính thức."></textarea>
+        <div class="reply-actions">
+          <button id="arena-mic-btn" class="button button-secondary" type="button">🎙 Ghi âm</button>
+          <button id="arena-send-btn" class="button button-primary" type="button">Gửi câu trả lời</button>
+        </div>
+      </div>
+      <div class="session-actions">
+        <button id="arena-finish-btn" class="button button-danger" type="button">Kết thúc và xem điểm</button>
+        <button id="arena-cancel-btn" class="button button-quiet" type="button">Chọn tình huống khác</button>
+      </div>
+    </section>
+
+    <section id="arena-result" class="panel result-panel" hidden>
+      <p class="eyebrow">KẾT QUẢ LUYỆN TẬP</p>
+      <h2 id="arena-badge">—</h2>
+      <div class="score-display"><strong id="arena-score">—</strong><span>/ 100</span></div>
+      <p id="arena-latency" class="latency"></p>
+      <div id="arena-mistakes-wrap"><h3>Điểm cần lưu ý</h3><ul id="arena-mistakes"></ul></div>
+      <p id="arena-no-mistakes" class="safe-note" hidden>Không phát hiện lỗi trong các câu trả lời đã ghi nhận.</p>
+      <p class="scoring-note">Điểm dựa trên một số từ khóa và thời gian phản hồi; đây là cách chấm đơn giản để luyện tập, không phải đánh giá tâm lý.</p>
+      <button id="arena-restart-btn" class="button button-primary" type="button">Luyện tình huống khác</button>
+    </section>
+
+    <footer><span>Scam Arena</span><span>Kịch bản giả lập · Không lưu hội thoại trên máy chủ</span></footer>
+  </main>
+  <script src="/js/api.js"></script>
+  <script src="/js/arena.js"></script>
+</body>
+</html>

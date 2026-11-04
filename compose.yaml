@@ -1,0 +1,24 @@
+services:
+  scam-arena:
+    build: .
+    container_name: scam-arena
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      HF_HOME: /models/huggingface
+      PIPER_VOICE_PATH: /app/voices/vi_VN-vais1000-medium.onnx
+      PIPER_SENTENCE_PAUSE_MS: ${PIPER_SENTENCE_PAUSE_MS:-350}
+    volumes:
+      - whisper-cache:/models/huggingface
+      - ./voices:/app/voices
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  whisper-cache:
