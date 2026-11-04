@@ -13,19 +13,25 @@ Bản độc lập tập trung vào module luyện phản xạ qua cuộc gọi 
 ## Chạy bằng Docker Desktop
 
 1. Cài và khởi động Docker Desktop ở chế độ Linux containers.
-2. Tải model Piper vào thư mục `voices/`:
+2. Build image ứng dụng:
+
+   ```powershell
+   docker compose build
+   ```
+
+3. Tải model Piper vào thư mục `voices/`:
 
    ```powershell
    docker compose run --rm scam-arena python -m piper.download_voices vi_VN-vais1000-medium --download-dir /app/voices
    ```
 
-3. Build và khởi động ứng dụng:
+4. Khởi động ứng dụng:
 
    ```powershell
    docker compose up --build
    ```
 
-4. Mở [http://localhost:8000](http://localhost:8000). Kiểm tra API tại [http://localhost:8000/health](http://localhost:8000/health).
+5. Mở [http://localhost:8000](http://localhost:8000). Kiểm tra API tại [http://localhost:8000/health](http://localhost:8000/health).
 
 Lần đầu nhận diện giọng nói, Faster-Whisper tải model `base` về Docker volume `whisper-cache`; lần tải đầu cần Internet và có thể mất thời gian. Volume giữ model sau khi container được tạo lại. Đổi model bằng biến môi trường `WHISPER_MODEL`. Nhận diện chạy trên CPU với `int8` để giới hạn RAM và tránh đưa CUDA/PyTorch vào image. [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) dùng CTranslate2 và PyAV; không cần cài FFmpeg hệ thống.
 
