@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "id": "police-call-001",
+  "version": 1,
+  "status": "draft",
+  "title": "Giả cơ quan điều tra yêu cầu hợp tác",
+  "category": "law_enforcement_impersonation",
+  "difficulty": "beginner",
+  "locale": "vi-VN",
+  "summary": "Người gọi tự xưng là điều tra viên và tạo áp lực để người nghe làm theo yêu cầu.",
+  "user_context": "Bạn nhận cuộc gọi từ số lạ. Người gọi nói tài khoản của bạn liên quan đến một vụ án.",
+  "persona": {
+    "name": "Hùng (nhân vật hư cấu)",
+    "claimed_role": "Cán bộ điều tra",
+    "speaking_style": "Nghiêm giọng, tạo cảm giác khẩn cấp, gọi người nghe là anh/chị.",
+    "pressure_level": 3
+  },
+  "start_stage_id": "intro",
+  "stages": [
+    {
+      "id": "intro",
+      "objective": "Tạo uy quyền và khiến người nghe lo lắng.",
+      "tactics": ["mạo danh cơ quan", "gây sợ hãi"],
+      "requested_action": "other",
+      "opening_line": "Alo, tôi gọi từ cơ quan điều tra. Số điện thoại của anh/chị đang được nhắc đến trong một hồ sơ.",
+      "fallback_lines": ["Anh/chị nghe rõ tôi nói không? Đây là việc cần xử lý ngay."],
+      "transitions": [
+        {"on_intent": "verify", "next_stage_id": "ask_for_code"},
+        {"on_intent": "doubt", "next_stage_id": "pressure"},
+        {"on_intent": "comply", "next_stage_id": "pressure"},
+        {"on_intent": "refuse", "next_stage_id": "END_SAFE"},
+        {"on_intent": "hang_up", "next_stage_id": "END_SAFE"},
+        {"on_intent": "share_sensitive", "next_stage_id": "END_UNSAFE"}
+      ],
+      "default_next_stage_id": "pressure",
+      "max_turns": 3,
+      "timeout_next_stage_id": "pressure"
+    },
+    {
+      "id": "pressure",
+      "objective": "Cô lập người nghe và tăng áp lực thời gian.",
+      "tactics": ["khẩn cấp", "cô lập"],
+      "requested_action": "keep_secret",
+      "opening_line": "Hồ sơ đang được xử lý. Anh/chị tuyệt đối không nói với người khác để tránh ảnh hưởng điều tra.",
+      "fallback_lines": ["Anh/chị cần hợp tác ngay, nếu không hồ sơ sẽ được chuyển bước tiếp theo."],
+      "transitions": [
+        {"on_intent": "verify", "next_stage_id": "END_SAFE"},
+        {"on_intent": "refuse", "next_stage_id": "END_SAFE"},
+        {"on_intent": "hang_up", "next_stage_id": "END_SAFE"},
+        {"on_intent": "comply", "next_stage_id": "ask_for_code"},
+        {"on_intent": "share_sensitive", "next_stage_id": "END_UNSAFE"}
+      ],
+      "default_next_stage_id": "ask_for_code",
+      "max_turns": 3,
+      "timeout_next_stage_id": "ask_for_code"
+    },
+    {
+      "id": "ask_for_code",
+      "objective": "Yêu cầu mã xác thực để minh họa dấu hiệu nguy hiểm.",
+      "tactics": ["yêu cầu thông tin nhạy cảm"],
+      "requested_action": "share_sensitive",
+      "opening_line": "Anh/chị đọc mã xác thực vừa nhận để tôi kiểm tra hồ sơ nhé.",
+      "fallback_lines": ["Mã chỉ gồm vài số thôi, anh/chị đọc để tôi xác minh ngay."],
+      "transitions": [
+        {"on_intent": "share_sensitive", "next_stage_id": "END_UNSAFE"},
+        {"on_intent": "comply", "next_stage_id": "END_UNSAFE"},
+        {"on_intent": "verify", "next_stage_id": "END_SAFE"},
+        {"on_intent": "refuse", "next_stage_id": "END_SAFE"},
+        {"on_intent": "hang_up", "next_stage_id": "END_SAFE"},
+        {"on_intent": "doubt", "next_stage_id": "END_SAFE"}
+      ],
+      "default_next_stage_id": "END_NEUTRAL",
+      "max_turns": 2,
+      "timeout_next_stage_id": "END_NEUTRAL"
+    }
+  ],
+  "red_flags": [
+    {
+      "id": "authority-pressure",
+      "stage_id": "intro",
+      "title": "Người gọi tự xưng cơ quan điều tra",
+      "explanation": "Không làm theo yêu cầu ngay qua điện thoại; hãy tự tìm kênh liên hệ chính thức để xác minh.",
+      "severity": "high"
+    },
+    {
+      "id": "secrecy-pressure",
+      "stage_id": "pressure",
+      "title": "Bị yêu cầu giữ bí mật",
+      "explanation": "Yêu cầu không nói với người thân có thể nhằm cô lập bạn và ngăn việc kiểm tra độc lập.",
+      "severity": "medium"
+    },
+    {
+      "id": "verification-code",
+      "stage_id": "ask_for_code",
+      "title": "Bị yêu cầu đọc mã xác thực",
+      "explanation": "Không đọc OTP hoặc mã xác thực cho người gọi. Hãy kết thúc cuộc gọi và tự liên hệ tổ chức qua số chính thức.",
+      "severity": "high"
+    }
+  ],
+  "scoring": {
+    "base_score": 60,
+    "rules": [
+      {"intent": "verify", "points_delta": 20, "feedback": "Tốt: bạn chọn xác minh qua kênh độc lập.", "critical": false},
+      {"intent": "refuse", "points_delta": 15, "feedback": "Tốt: bạn từ chối yêu cầu đáng ngờ.", "critical": false},
+      {"intent": "hang_up", "points_delta": 20, "feedback": "Tốt: bạn kết thúc cuộc gọi để giữ an toàn.", "critical": false},
+      {"intent": "doubt", "points_delta": 5, "feedback": "Bạn đã nhận ra điểm bất thường; hãy xác minh trước khi hành động.", "critical": false},
+      {"intent": "comply", "points_delta": -20, "feedback": "Làm theo yêu cầu khi chưa xác minh có thể khiến bạn gặp rủi ro.", "critical": false},
+      {"intent": "share_sensitive", "points_delta": -60, "feedback": "Không chia sẻ OTP, mật khẩu hoặc thông tin nhạy cảm cho người gọi.", "critical": true},
+      {"intent": "transfer_money", "points_delta": -60, "feedback": "Không chuyển tiền theo hướng dẫn của người gọi chưa được xác minh.", "critical": true},
+      {"intent": "unknown", "points_delta": 0, "feedback": "Chưa đủ dữ liệu để đánh giá câu trả lời này.", "critical": false}
+    ]
+  },
+  "lesson_summary": "Cơ quan hợp pháp không yêu cầu bạn đọc mã xác thực hoặc chuyển tiền qua điện thoại. Hãy kết thúc cuộc gọi và tự liên hệ qua kênh chính thức.",
+  "created_at": "2026-11-04T00:00:00Z",
+  "updated_at": "2026-11-04T00:00:00Z",
+  "published_at": null
+}

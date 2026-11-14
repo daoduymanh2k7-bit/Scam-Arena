@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scam Arena — Sơ đồ kịch bản</title>
+  <style>
+    :root{font-family:Segoe UI,Arial,sans-serif;color:#193029;background:#f2f5f0;--green:#126348;--muted:#6f8179;--line:#dfe8e1}
+    *{box-sizing:border-box}body{margin:0}.shell{max-width:1200px;margin:28px auto;padding:0 20px}
+    header{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:20px}h1{font-size:25px;margin:0 0 6px}.subtitle,.meta{color:var(--muted);font-size:13px;margin:0}
+    .controls,.diagram-panel{background:white;border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+    .controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap}.field{display:grid;gap:6px;font-size:12px;font-weight:700}.field select{min-width:190px;padding:10px;border:1px solid #d8e2da;border-radius:9px;background:#fff;font:14px inherit;color:#193029}
+    button{padding:10px 14px;border:0;border-radius:9px;background:var(--green);color:white;font-weight:700;cursor:pointer}button.secondary{background:#edf4ef;color:#27513d;border:1px solid #dce9df}
+    .legend{font-size:12px;color:var(--muted);margin-left:auto}.diagram-wrap{width:100%;overflow:auto;min-height:260px}.diagram svg{max-width:none;height:auto}.error{color:#a53f2e;padding:12px}.node-info{font-size:12px;color:var(--muted)}
+    @media(max-width:700px){header{display:block}.legend{margin-left:0;width:100%}.field{flex:1}.field select{min-width:0;width:100%}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<main class="shell">
+  <header><div><h1>Sơ đồ kịch bản Scam Arena</h1><p class="subtitle">Tạo từ JSON kịch bản. Sửa JSON rồi chạy lại lệnh sinh sơ đồ để cập nhật.</p></div><p class="meta">Sinh lúc 2026-11-13 22:16 SE Asia Standard Time</p></header>
+  <section class="controls">
+    <label class="field">Kịch bản<select id="scenario"></select></label>
+    <label class="field">Giai đoạn<select id="stage"><option value="*">Tất cả giai đoạn</option></select></label>
+    <button id="copy" class="secondary" type="button">Sao chép mã Mermaid</button>
+    <button id="download" class="secondary" type="button">Tải SVG</button>
+    <span class="legend">Mũi tên liền: ý định · nét đứt: mặc định / hết lượt · màu xanh: an toàn · đỏ: rủi ro</span>
+  </section>
+  <section class="diagram-panel"><div id="diagram" class="diagram-wrap" aria-live="polite"></div><p id="error" class="error" hidden></p><p id="node-info" class="node-info"></p></section>
+</main>
+<script id="scenario-data" type="application/json">[{"schema_version":1,"id":"bank","version":1,"status":"published","title":"Giả nhân viên ngân hàng","category":"bank_impersonation","difficulty":"beginner","locale":"vi-VN","summary":"Tình huống mô phỏng Giả nhân viên ngân hàng để luyện cách nhận biết và xử lý yêu cầu đáng ngờ.","user_context":"Bạn nhận được một cuộc gọi bất ngờ. Hãy tự đánh giá thông tin, không chia sẻ dữ liệu hoặc chuyển tiền khi chưa xác minh.","persona":{"claimed_role":"Nhân viên tổ chức","name":"Người gọi giả mạo","speaking_style":"Nói lịch sự nhưng tạo áp lực và thúc giục làm theo.","pressure_level":3},"start_stage_id":"intro","stages":[{"timeout_next_stage_id":"pressure","requested_action":"other","opening_line":"Alo, tôi gọi từ bộ phận an ninh ngân hàng. Tài khoản của anh/chị vừa có giao dịch bất thường.","max_turns":2,"objective":"Nêu lý do gọi và tạo cảm giác cần xử lý.","fallback_lines":["Anh/chị còn nghe máy chứ? Tôi cần anh/chị trả lời rõ giúp tôi."],"tactics":["mạo danh","tạo áp lực"],"id":"intro","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"pressure"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"share_sensitive","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"intro"},{"timeout_next_stage_id":"ask_action","requested_action":"keep_secret","opening_line":"Nếu không xử lý ngay, tài khoản có thể bị khóa. Anh/chị đừng ngắt máy.","max_turns":2,"objective":"Tăng sức ép để người nghe làm theo.","fallback_lines":["Tôi chưa hiểu anh/chị muốn làm gì. Anh/chị có đồng ý làm theo không?"],"tactics":["khẩn cấp","gây lo lắng"],"id":"pressure","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"share_sensitive","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"pressure"},{"timeout_next_stage_id":"END_NEUTRAL","requested_action":"share_sensitive","opening_line":"Để xác minh giao dịch, anh/chị đọc mã OTP vừa gửi về điện thoại.","max_turns":2,"objective":"Đưa ra yêu cầu rủi ro để người chơi nhận diện.","fallback_lines":["Anh/chị có đồng ý đọc mã OTP để tôi xác minh không?"],"tactics":["yêu cầu hành động nhạy cảm"],"id":"ask_action","transitions":[{"on_intent":"share_sensitive","next_stage_id":"END_UNSAFE"},{"on_intent":"comply","next_stage_id":"END_UNSAFE"},{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"}],"default_next_stage_id":"ask_action"}],"red_flags":[{"title":"Yêu cầu đọc mã OTP","explanation":"Ngân hàng không yêu cầu khách hàng đọc OTP qua điện thoại. Hãy dừng cuộc gọi và tự liên hệ ngân hàng qua số chính thức.","id":"identity-pressure","stage_id":"intro","severity":"high"},{"title":"Tạo áp lực phải làm ngay","explanation":"Sự khẩn cấp và yêu cầu không kiểm tra độc lập là dấu hiệu cần dừng lại, xác minh qua kênh chính thức.","id":"urgency","stage_id":"pressure","severity":"medium"}],"scoring":{"base_score":60,"rules":[{"intent":"verify","critical":false,"feedback":"Tốt: bạn chọn xác minh độc lập.","points_delta":20},{"intent":"refuse","critical":false,"feedback":"Tốt: bạn từ chối yêu cầu đáng ngờ.","points_delta":15},{"intent":"hang_up","critical":false,"feedback":"Tốt: bạn kết thúc cuộc gọi để giữ an toàn.","points_delta":20},{"intent":"doubt","critical":false,"feedback":"Bạn nhận ra điểm bất thường; hãy xác minh trước khi hành động.","points_delta":5},{"intent":"comply","critical":false,"feedback":"Làm theo khi chưa xác minh có thể gây rủi ro.","points_delta":-20},{"intent":"share_sensitive","critical":true,"feedback":"Không chia sẻ OTP, mật khẩu hoặc dữ liệu nhạy cảm.","points_delta":-60},{"intent":"transfer_money","critical":true,"feedback":"Không chuyển tiền theo hướng dẫn chưa được xác minh.","points_delta":-60},{"intent":"unknown","critical":false,"feedback":"Chưa đủ dữ liệu để đánh giá câu trả lời.","points_delta":0}]},"lesson_summary":"Không cung cấp OTP hoặc mật khẩu cho người gọi. Hãy tự gọi số trên thẻ hoặc ứng dụng chính thức.","created_at":"2026-11-05T00:00:00Z","updated_at":"2026-11-05T00:00:00Z","published_at":"2026-11-05T00:00:00Z","source_file":"bank.json"},{"schema_version":1,"id":"lottery","version":1,"status":"published","title":"Giả trúng thưởng","category":"fake_prize","difficulty":"beginner","locale":"vi-VN","summary":"Tình huống mô phỏng Giả trúng thưởng để luyện cách nhận biết và xử lý yêu cầu đáng ngờ.","user_context":"Bạn nhận được một cuộc gọi bất ngờ. Hãy tự đánh giá thông tin, không chia sẻ dữ liệu hoặc chuyển tiền khi chưa xác minh.","persona":{"claimed_role":"Nhân viên tổ chức","name":"Người gọi giả mạo","speaking_style":"Nói lịch sự nhưng tạo áp lực và thúc giục làm theo.","pressure_level":3},"start_stage_id":"intro","stages":[{"timeout_next_stage_id":"pressure","requested_action":"other","opening_line":"Chúc mừng anh/chị trúng giải đặc biệt 500 triệu đồng từ chương trình tri ân khách hàng!","max_turns":2,"objective":"Nêu lý do gọi và tạo cảm giác cần xử lý.","fallback_lines":["Anh/chị còn nghe máy chứ? Tôi cần anh/chị trả lời rõ giúp tôi."],"tactics":["mạo danh","tạo áp lực"],"id":"intro","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"pressure"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"intro"},{"timeout_next_stage_id":"ask_action","requested_action":"keep_secret","opening_line":"Giải chỉ được giữ trong hôm nay. Anh/chị cần xác nhận ngay để không mất quyền lợi.","max_turns":2,"objective":"Tăng sức ép để người nghe làm theo.","fallback_lines":["Tôi chưa hiểu anh/chị muốn làm gì. Anh/chị có đồng ý làm theo không?"],"tactics":["khẩn cấp","gây lo lắng"],"id":"pressure","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"pressure"},{"timeout_next_stage_id":"END_NEUTRAL","requested_action":"transfer_money","opening_line":"Để nhận thưởng, anh/chị chuyển trước 2 triệu đồng phí thủ tục vào tài khoản này.","max_turns":2,"objective":"Đưa ra yêu cầu rủi ro để người chơi nhận diện.","fallback_lines":["Anh/chị có đồng ý chuyển khoản để xử lý việc này không?"],"tactics":["yêu cầu hành động nhạy cảm"],"id":"ask_action","transitions":[{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"},{"on_intent":"comply","next_stage_id":"END_UNSAFE"},{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"}],"default_next_stage_id":"ask_action"}],"red_flags":[{"title":"Báo trúng thưởng nhưng yêu cầu phí trước","explanation":"Không chuyển phí để nhận giải bất ngờ. Hãy kiểm tra chương trình trên kênh chính thức, không dùng thông tin liên hệ do người gọi cung cấp.","id":"identity-pressure","stage_id":"intro","severity":"high"},{"title":"Tạo áp lực phải làm ngay","explanation":"Sự khẩn cấp và yêu cầu không kiểm tra độc lập là dấu hiệu cần dừng lại, xác minh qua kênh chính thức.","id":"urgency","stage_id":"pressure","severity":"medium"}],"scoring":{"base_score":60,"rules":[{"intent":"verify","critical":false,"feedback":"Tốt: bạn chọn xác minh độc lập.","points_delta":20},{"intent":"refuse","critical":false,"feedback":"Tốt: bạn từ chối yêu cầu đáng ngờ.","points_delta":15},{"intent":"hang_up","critical":false,"feedback":"Tốt: bạn kết thúc cuộc gọi để giữ an toàn.","points_delta":20},{"intent":"doubt","critical":false,"feedback":"Bạn nhận ra điểm bất thường; hãy xác minh trước khi hành động.","points_delta":5},{"intent":"comply","critical":false,"feedback":"Làm theo khi chưa xác minh có thể gây rủi ro.","points_delta":-20},{"intent":"share_sensitive","critical":true,"feedback":"Không chia sẻ OTP, mật khẩu hoặc dữ liệu nhạy cảm.","points_delta":-60},{"intent":"transfer_money","critical":true,"feedback":"Không chuyển tiền theo hướng dẫn chưa được xác minh.","points_delta":-60},{"intent":"unknown","critical":false,"feedback":"Chưa đủ dữ liệu để đánh giá câu trả lời.","points_delta":0}]},"lesson_summary":"Yêu cầu đóng phí trước để nhận thưởng là dấu hiệu rủi ro. Không chuyển tiền và kiểm tra độc lập với đơn vị tổ chức.","created_at":"2026-11-05T00:00:00Z","updated_at":"2026-11-05T00:00:00Z","published_at":"2026-11-05T00:00:00Z","source_file":"lottery.json"},{"schema_version":1,"id":"police","version":1,"status":"published","title":"Giả công an điều tra","category":"law_enforcement_impersonation","difficulty":"beginner","locale":"vi-VN","summary":"Tình huống mô phỏng Giả công an điều tra để luyện cách nhận biết và xử lý yêu cầu đáng ngờ.","user_context":"Bạn nhận được một cuộc gọi bất ngờ. Hãy tự đánh giá thông tin, không chia sẻ dữ liệu hoặc chuyển tiền khi chưa xác minh.","persona":{"claimed_role":"Nhân viên tổ chức","name":"Người gọi giả mạo","speaking_style":"Nói lịch sự nhưng tạo áp lực và thúc giục làm theo.","pressure_level":3},"start_stage_id":"intro","stages":[{"timeout_next_stage_id":"pressure","requested_action":"other","opening_line":"Tôi là điều tra viên. Số điện thoại của anh/chị liên quan đến một vụ án rửa tiền.","max_turns":2,"objective":"Nêu lý do gọi và tạo cảm giác cần xử lý.","fallback_lines":["Anh/chị còn nghe máy chứ? Tôi cần anh/chị trả lời rõ giúp tôi."],"tactics":["mạo danh","tạo áp lực"],"id":"intro","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"pressure"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"intro"},{"timeout_next_stage_id":"ask_action","requested_action":"keep_secret","opening_line":"Đây là việc khẩn cấp, anh/chị không được kể với ai để tránh ảnh hưởng điều tra.","max_turns":2,"objective":"Tăng sức ép để người nghe làm theo.","fallback_lines":["Tôi chưa hiểu anh/chị muốn làm gì. Anh/chị có đồng ý làm theo không?"],"tactics":["khẩn cấp","gây lo lắng"],"id":"pressure","transitions":[{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"},{"on_intent":"comply","next_stage_id":"ask_action"},{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"}],"default_next_stage_id":"pressure"},{"timeout_next_stage_id":"END_NEUTRAL","requested_action":"transfer_money","opening_line":"Để chứng minh vô tội, anh/chị cần chuyển tiền vào tài khoản tạm giữ.","max_turns":2,"objective":"Đưa ra yêu cầu rủi ro để người chơi nhận diện.","fallback_lines":["Anh/chị có đồng ý chuyển khoản để xử lý việc này không?"],"tactics":["yêu cầu hành động nhạy cảm"],"id":"ask_action","transitions":[{"on_intent":"transfer_money","next_stage_id":"END_UNSAFE"},{"on_intent":"comply","next_stage_id":"END_UNSAFE"},{"on_intent":"verify","next_stage_id":"END_SAFE"},{"on_intent":"refuse","next_stage_id":"END_SAFE"},{"on_intent":"hang_up","next_stage_id":"END_SAFE"},{"on_intent":"doubt","next_stage_id":"END_SAFE"}],"default_next_stage_id":"ask_action"}],"red_flags":[{"title":"Mạo danh cơ quan và yêu cầu chuyển tiền","explanation":"Không chuyển tiền vào tài khoản cá nhân hoặc tài khoản được gọi là tạm giữ. Hãy kết thúc cuộc gọi và xác minh với cơ quan qua kênh chính thức.","id":"identity-pressure","stage_id":"intro","severity":"high"},{"title":"Tạo áp lực phải làm ngay","explanation":"Sự khẩn cấp và yêu cầu không kiểm tra độc lập là dấu hiệu cần dừng lại, xác minh qua kênh chính thức.","id":"urgency","stage_id":"pressure","severity":"medium"}],"scoring":{"base_score":60,"rules":[{"intent":"verify","critical":false,"feedback":"Tốt: bạn chọn xác minh độc lập.","points_delta":20},{"intent":"refuse","critical":false,"feedback":"Tốt: bạn từ chối yêu cầu đáng ngờ.","points_delta":15},{"intent":"hang_up","critical":false,"feedback":"Tốt: bạn kết thúc cuộc gọi để giữ an toàn.","points_delta":20},{"intent":"doubt","critical":false,"feedback":"Bạn nhận ra điểm bất thường; hãy xác minh trước khi hành động.","points_delta":5},{"intent":"comply","critical":false,"feedback":"Làm theo khi chưa xác minh có thể gây rủi ro.","points_delta":-20},{"intent":"share_sensitive","critical":true,"feedback":"Không chia sẻ OTP, mật khẩu hoặc dữ liệu nhạy cảm.","points_delta":-60},{"intent":"transfer_money","critical":true,"feedback":"Không chuyển tiền theo hướng dẫn chưa được xác minh.","points_delta":-60},{"intent":"unknown","critical":false,"feedback":"Chưa đủ dữ liệu để đánh giá câu trả lời.","points_delta":0}]},"lesson_summary":"Cơ quan chức năng không yêu cầu chuyển tiền để chứng minh vô tội. Hãy cúp máy và liên hệ cơ quan bằng số công khai.","created_at":"2026-11-05T00:00:00Z","updated_at":"2026-11-05T00:00:00Z","published_at":"2026-11-05T00:00:00Z","source_file":"police.json"}]</script>
+<script>
+(() => {
+  const scenarios = JSON.parse(document.getElementById("scenario-data").textContent);
+  const scenarioSelect = document.getElementById("scenario");
+  const stageSelect = document.getElementById("stage");
+  const output = document.getElementById("diagram");
+  const error = document.getElementById("error");
+  const info = document.getElementById("node-info");
+  let lastSvg = "";
+  let renderNo = 0;
+  const terminalInfo = {
+    END_SAFE: {id:"terminalSafe", label:"Kết thúc an toàn", style:"safe"},
+    END_UNSAFE: {id:"terminalRisk", label:"Kết thúc rủi ro", style:"risk"},
+    END_NEUTRAL: {id:"terminalNeutral", label:"Kết thúc · chưa đủ dữ liệu", style:"neutral"},
+  };
+  const text = (value) => String(value ?? "").replace(/[\r\n\t]+/g," ").replace(/\s+/g," ").replace(/"/g,"”").trim();
+  const short = (value, max=92) => { const s=text(value); return s.length>max ? s.slice(0,max-1)+"…" : s; };
+  const stageNodeId = (index) => `stage${index}`;
+
+  scenarios.forEach((scenario, index) => {
+    const option = document.createElement("option");
+    option.value=String(index); option.textContent=`${scenario.title || scenario.id} (${scenario.id})`;
+    scenarioSelect.appendChild(option);
+  });
+
+  function populateStages() {
+    const scenario=scenarios[Number(scenarioSelect.value)];
+    stageSelect.replaceChildren();
+    const all=document.createElement("option"); all.value="*"; all.textContent="Tất cả giai đoạn"; stageSelect.appendChild(all);
+    (scenario.stages || []).forEach((stage,index) => {
+      const option=document.createElement("option");
+      option.value=String(index); option.textContent=`${stage.id} — ${stage.objective || ""}`;
+      stageSelect.appendChild(option);
+    });
+  }
+
+  function makeGraph(scenario, selectedStage) {
+    const stages=scenario.stages || [];
+    const stageIds=new Map(stages.map((stage,index)=>[stage.id,index]));
+    const edges=[]; const used=new Set(); const terminalUsed=new Set();
+    const mapTarget=(key) => {
+      if(stageIds.has(key)) { const id=stageNodeId(stageIds.get(key)); used.add(id); return id; }
+      if(terminalInfo[key]) { terminalUsed.add(key); return terminalInfo[key].id; }
+      const ghost=`missing${String(key).replace(/[^A-Za-z0-9]/g,"") || "Node"}`; used.add(ghost); return ghost;
+    };
+    stages.forEach((stage,index)=>{
+      if(selectedStage!=="*" && Number(selectedStage)!==index) return;
+      const from=stageNodeId(index); used.add(from);
+      (stage.transitions || []).forEach((transition)=>{
+        const to=mapTarget(transition.next_stage_id);
+        edges.push(`${from} -->|${text(transition.on_intent)}| ${to}`);
+      });
+      if(stage.default_next_stage_id) {
+        const to=mapTarget(stage.default_next_stage_id);
+        edges.push(`${from} -.->|Mặc định| ${to}`);
+      }
+      if(stage.timeout_next_stage_id) {
+        const to=mapTarget(stage.timeout_next_stage_id);
+        edges.push(`${from} -.->|Hết lượt| ${to}`);
+      }
+    });
+    if(!edges.length) return "flowchart LR\n  empty[Chưa có nhánh trong giai đoạn này]";
+    const lines=["flowchart LR"];
+    stages.forEach((stage,index)=>{
+      const id=stageNodeId(index);
+      if(!used.has(id)) return;
+      const label=`${stage.id}: ${short(stage.opening_line || stage.objective || "")}`;
+      lines.push(`  ${id}["${label}"]`);
+    });
+    for(const key of terminalUsed) {
+      const term=terminalInfo[key];
+      lines.push(`  ${term.id}(["${term.label}"])`);
+    }
+    for(const id of used) {
+      if(id.startsWith("missing")) lines.push(`  ${id}["Đích chưa tồn tại: ${id.slice(7)}"]`);
+    }
+    lines.push(...edges.map(edge=>`  ${edge}`));
+    const start=stages.findIndex(stage=>stage.id===scenario.start_stage_id);
+    if(start>=0 && used.has(stageNodeId(start))) lines.push(`  class ${stageNodeId(start)} startNode`);
+    lines.push("  classDef startNode fill:#e7f3eb,stroke:#126348,stroke-width:3px");
+    lines.push("  classDef safe fill:#e7f3eb,stroke:#126348,stroke-width:2px");
+    lines.push("  classDef risk fill:#fff0ec,stroke:#c64d39,stroke-width:2px");
+    lines.push("  classDef neutral fill:#f2f3f4,stroke:#748179,stroke-width:2px");
+    if(terminalUsed.has("END_SAFE")) lines.push("  class terminalSafe safe");
+    if(terminalUsed.has("END_UNSAFE")) lines.push("  class terminalRisk risk");
+    if(terminalUsed.has("END_NEUTRAL")) lines.push("  class terminalNeutral neutral");
+    return lines.join("\n");
+  }
+
+  async function render() {
+    error.hidden=true; output.replaceChildren();
+    const scenario=scenarios[Number(scenarioSelect.value)];
+    const source=makeGraph(scenario,stageSelect.value);
+    info.textContent=`${scenario.stages.length} giai đoạn · ${(scenario.stages || []).reduce((sum,s)=>sum+(s.transitions || []).length,0)} nhánh intent · nguồn ${scenario.source_file}`;
+    if(!window.mermaid) { error.textContent="Không tải được thư viện Mermaid. Kiểm tra kết nối Internet rồi tải lại trang."; error.hidden=false; return; }
+    try {
+      const result=await mermaid.render(`scenarioGraph${++renderNo}`,source);
+      lastSvg=result.svg; output.innerHTML=result.svg; result.bindFunctions?.(output);
+    } catch(err) { error.textContent=`Không vẽ được sơ đồ: ${err.message}`; error.hidden=false; }
+  }
+
+  scenarioSelect.addEventListener("change",()=>{populateStages();render();});
+  stageSelect.addEventListener("change",render);
+  document.getElementById("copy").addEventListener("click",async()=>{
+    try { await navigator.clipboard.writeText(makeGraph(scenarios[Number(scenarioSelect.value)],stageSelect.value)); info.textContent="Đã sao chép mã Mermaid."; }
+    catch { info.textContent="Trình duyệt chặn clipboard; hãy mở rộng sơ đồ bằng Mermaid Live Editor nếu cần."; }
+  });
+  document.getElementById("download").addEventListener("click",()=>{
+    if(!lastSvg) return;
+    const blob=new Blob([lastSvg],{type:"image/svg+xml;charset=utf-8"});
+    const url=URL.createObjectURL(blob); const link=document.createElement("a");
+    link.href=url; link.download=`${scenarios[Number(scenarioSelect.value)].id}-scenario.svg`;
+    link.click(); URL.revokeObjectURL(url);
+  });
+  window.mermaid?.initialize({startOnLoad:false,securityLevel:"strict",theme:"neutral",flowchart:{curve:"basis",htmlLabels:false}});
+  populateStages(); render();
+})();
+</script>
+</body>
+</html>

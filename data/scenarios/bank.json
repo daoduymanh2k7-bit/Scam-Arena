@@ -1,9 +1,219 @@
 {
-  "key": "bank",
-  "label": "Giả nhân viên ngân hàng",
-  "script": [
-    "Alo, tôi gọi từ bộ phận an ninh ngân hàng. Tài khoản của anh/chị vừa có giao dịch bất thường.",
-    "Để tránh mất tiền, anh/chị vui lòng đọc giúp tôi mã OTP vừa được gửi về điện thoại.",
-    "Nếu không xác minh trong 5 phút, tài khoản sẽ bị khóa vĩnh viễn theo quy định."
-  ]
+  "schema_version": 1,
+  "id": "bank",
+  "version": 1,
+  "status": "published",
+  "title": "Giả nhân viên ngân hàng",
+  "category": "bank_impersonation",
+  "difficulty": "beginner",
+  "locale": "vi-VN",
+  "summary": "Tình huống mô phỏng Giả nhân viên ngân hàng để luyện cách nhận biết và xử lý yêu cầu đáng ngờ.",
+  "user_context": "Bạn nhận được một cuộc gọi bất ngờ. Hãy tự đánh giá thông tin, không chia sẻ dữ liệu hoặc chuyển tiền khi chưa xác minh.",
+  "persona": {
+    "claimed_role": "Nhân viên tổ chức",
+    "name": "Người gọi giả mạo",
+    "speaking_style": "Nói lịch sự nhưng tạo áp lực và thúc giục làm theo.",
+    "pressure_level": 3
+  },
+  "start_stage_id": "intro",
+  "stages": [
+    {
+      "timeout_next_stage_id": "pressure",
+      "requested_action": "other",
+      "opening_line": "Alo, tôi gọi từ bộ phận an ninh ngân hàng. Tài khoản của anh/chị vừa có giao dịch bất thường.",
+      "max_turns": 2,
+      "objective": "Nêu lý do gọi và tạo cảm giác cần xử lý.",
+      "fallback_lines": [
+        "Anh/chị còn nghe máy chứ? Tôi cần anh/chị trả lời rõ giúp tôi."
+      ],
+      "tactics": [
+        "mạo danh",
+        "tạo áp lực"
+      ],
+      "id": "intro",
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "pressure"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        }
+      ],
+      "default_next_stage_id": "intro"
+    },
+    {
+      "timeout_next_stage_id": "ask_action",
+      "requested_action": "keep_secret",
+      "opening_line": "Nếu không xử lý ngay, tài khoản có thể bị khóa. Anh/chị đừng ngắt máy.",
+      "max_turns": 2,
+      "objective": "Tăng sức ép để người nghe làm theo.",
+      "fallback_lines": [
+        "Tôi chưa hiểu anh/chị muốn làm gì. Anh/chị có đồng ý làm theo không?"
+      ],
+      "tactics": [
+        "khẩn cấp",
+        "gây lo lắng"
+      ],
+      "id": "pressure",
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        }
+      ],
+      "default_next_stage_id": "pressure"
+    },
+    {
+      "timeout_next_stage_id": "END_NEUTRAL",
+      "requested_action": "share_sensitive",
+      "opening_line": "Để xác minh giao dịch, anh/chị đọc mã OTP vừa gửi về điện thoại.",
+      "max_turns": 2,
+      "objective": "Đưa ra yêu cầu rủi ro để người chơi nhận diện.",
+      "fallback_lines": [
+        "Anh/chị có đồng ý đọc mã OTP để tôi xác minh không?"
+      ],
+      "tactics": [
+        "yêu cầu hành động nhạy cảm"
+      ],
+      "id": "ask_action",
+      "transitions": [
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "ask_action"
+    }
+  ],
+  "red_flags": [
+    {
+      "title": "Yêu cầu đọc mã OTP",
+      "explanation": "Ngân hàng không yêu cầu khách hàng đọc OTP qua điện thoại. Hãy dừng cuộc gọi và tự liên hệ ngân hàng qua số chính thức.",
+      "id": "identity-pressure",
+      "stage_id": "intro",
+      "severity": "high"
+    },
+    {
+      "title": "Tạo áp lực phải làm ngay",
+      "explanation": "Sự khẩn cấp và yêu cầu không kiểm tra độc lập là dấu hiệu cần dừng lại, xác minh qua kênh chính thức.",
+      "id": "urgency",
+      "stage_id": "pressure",
+      "severity": "medium"
+    }
+  ],
+  "scoring": {
+    "base_score": 60,
+    "rules": [
+      {
+        "intent": "verify",
+        "critical": false,
+        "feedback": "Tốt: bạn chọn xác minh độc lập.",
+        "points_delta": 20
+      },
+      {
+        "intent": "refuse",
+        "critical": false,
+        "feedback": "Tốt: bạn từ chối yêu cầu đáng ngờ.",
+        "points_delta": 15
+      },
+      {
+        "intent": "hang_up",
+        "critical": false,
+        "feedback": "Tốt: bạn kết thúc cuộc gọi để giữ an toàn.",
+        "points_delta": 20
+      },
+      {
+        "intent": "doubt",
+        "critical": false,
+        "feedback": "Bạn nhận ra điểm bất thường; hãy xác minh trước khi hành động.",
+        "points_delta": 5
+      },
+      {
+        "intent": "comply",
+        "critical": false,
+        "feedback": "Làm theo khi chưa xác minh có thể gây rủi ro.",
+        "points_delta": -20
+      },
+      {
+        "intent": "share_sensitive",
+        "critical": true,
+        "feedback": "Không chia sẻ OTP, mật khẩu hoặc dữ liệu nhạy cảm.",
+        "points_delta": -60
+      },
+      {
+        "intent": "transfer_money",
+        "critical": true,
+        "feedback": "Không chuyển tiền theo hướng dẫn chưa được xác minh.",
+        "points_delta": -60
+      },
+      {
+        "intent": "unknown",
+        "critical": false,
+        "feedback": "Chưa đủ dữ liệu để đánh giá câu trả lời.",
+        "points_delta": 0
+      }
+    ]
+  },
+  "lesson_summary": "Không cung cấp OTP hoặc mật khẩu cho người gọi. Hãy tự gọi số trên thẻ hoặc ứng dụng chính thức.",
+  "created_at": "2026-11-05T00:00:00Z",
+  "updated_at": "2026-11-05T00:00:00Z",
+  "published_at": "2026-11-05T00:00:00Z"
 }

@@ -1,0 +1,26 @@
+[
+  {
+    "intent": "doubt",
+    "phrase": "người gọi này đang giả danh",
+    "priority": 80,
+    "enabled": true
+  },
+  {
+    "intent": "doubt",
+    "phrase": "nghe có vẻ là cuộc gọi lừa đảo",
+    "priority": 80,
+    "enabled": true
+  },
+  {
+    "intent": "verify",
+    "phrase": "tôi sẽ tự đối chiếu thông tin với trang web chính thức",
+    "priority": 60,
+    "enabled": true
+  },
+  {
+    "intent": "comply",
+    "phrase": "ừ được để tôi làm theo hướng dẫn",
+    "priority": 70,
+    "enabled": true
+  }
+]

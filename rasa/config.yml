@@ -1,0 +1,17 @@
+recipe: default.v1
+assistant_id: scam_arena_nlu
+language: vi
+
+pipeline:
+  - name: WhitespaceTokenizer
+  - name: RegexFeaturizer
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 2
+    max_ngram: 5
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+  - name: FallbackClassifier
+    threshold: 0.65
+    ambiguity_threshold: 0.1

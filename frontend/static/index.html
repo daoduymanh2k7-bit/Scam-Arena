@@ -27,6 +27,27 @@
       <p id="picker-error" class="error" role="alert" hidden></p>
     </section>
 
+    <section id="arena-history-panel" class="panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">CÁC PHIÊN ĐÃ LƯU</p><h2>Lịch sử luyện tập</h2></div>
+        <button id="arena-history-refresh" class="button button-secondary" type="button">Làm mới</button>
+      </div>
+      <div id="arena-history-list" class="history-list" aria-live="polite"></div>
+      <p id="arena-history-empty" class="muted-note" hidden>Chưa có phiên chơi nào được lưu.</p>
+      <p id="arena-history-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="arena-review-panel" class="panel">
+      <div class="section-heading">
+        <div><p class="eyebrow">QUẢN TRỊ NỘI BỘ</p><h2>Duyệt câu máy chưa nhận diện</h2></div>
+        <button id="arena-review-refresh" class="button button-secondary" type="button">Làm mới</button>
+      </div>
+      <p class="muted-note">LLM chỉ đưa ra đề xuất. Luật chỉ được thêm sau khi bạn chọn ý định và duyệt. Khi cấu hình API key, câu chưa nhận diện (đã che số dài và email) sẽ được gửi tới nhà cung cấp LLM để phân tích.</p>
+      <div id="arena-review-list" class="review-list" aria-live="polite"></div>
+      <p id="arena-review-empty" class="muted-note" hidden>Chưa có câu nào chờ duyệt.</p>
+      <p id="arena-review-error" class="error" role="alert" hidden></p>
+    </section>
+
     <section id="arena-session" class="panel session-panel" hidden>
       <div class="call-topline"><span class="live-dot"></span><span>MÔ PHỎNG CUỘC GỌI</span><span id="arena-call-timer" class="timer">00:00</span></div>
       <div class="caller"><div class="caller-icon">☎</div><div><h2>Kẻ lạ mặt</h2><p id="arena-scenario-label"></p></div></div>
@@ -53,14 +74,18 @@
       <div class="score-display"><strong id="arena-score">—</strong><span>/ 100</span></div>
       <p id="arena-latency" class="latency"></p>
       <div id="arena-mistakes-wrap"><h3>Điểm cần lưu ý</h3><ul id="arena-mistakes"></ul></div>
+      <div id="arena-feedback-wrap" hidden><h3>Phản hồi theo lượt</h3><ul id="arena-feedback"></ul></div>
+      <div id="arena-redflags-wrap" hidden><h3>Dấu hiệu cảnh báo trong kịch bản</h3><ul id="arena-redflags"></ul></div>
+      <p id="arena-lesson" class="safe-note" hidden></p>
       <p id="arena-no-mistakes" class="safe-note" hidden>Không phát hiện lỗi trong các câu trả lời đã ghi nhận.</p>
-      <p class="scoring-note">Điểm dựa trên một số từ khóa và thời gian phản hồi; đây là cách chấm đơn giản để luyện tập, không phải đánh giá tâm lý.</p>
+      <p class="scoring-note">Điểm dựa trên nhánh hội thoại và ý định được phân loại; văn bản lưu trên máy chủ được che dãy số dài.</p>
       <button id="arena-restart-btn" class="button button-primary" type="button">Luyện tình huống khác</button>
     </section>
 
-    <footer><span>Scam Arena</span><span>Kịch bản giả lập · Không lưu hội thoại trên máy chủ</span></footer>
+    <footer><span>Scam Arena</span><span>Kịch bản giả lập · Lượt chơi lưu với dãy số dài đã che</span></footer>
   </main>
   <script src="/js/api.js"></script>
-  <script src="/js/arena.js"></script>
+  <script src="/js/arena/arena.js"></script>
+  <script src="/js/arena/history.js"></script>
 </body>
 </html>

@@ -1,0 +1,354 @@
+version: "3.1"
+nlu:
+  # verify: người chơi tự kiểm tra qua một kênh chính thức, độc lập.
+  - intent: verify
+    examples: |
+      - tôi sẽ tự gọi lên hotline ngân hàng
+      - để tôi kiểm tra trên ứng dụng chính thức
+      - tôi muốn xác minh với chi nhánh trước
+      - tôi sẽ gọi số điện thoại in trên thẻ
+      - tôi sẽ đến trực tiếp ngân hàng hỏi
+      - tôi cần kiểm tra thông tin qua kênh chính thức
+      - tôi tra cứu trang web chính thức đã
+      - để tôi hỏi nhân viên ngân hàng ở quầy
+      - tôi muốn xác thực danh tính của anh trước
+      - tôi sẽ gọi cho ngân hàng bằng số tôi tự tìm
+      - tôi kiểm tra giao dịch trong app ngân hàng
+      - tôi sẽ xác minh với cơ quan chức năng
+      - tôi liên hệ tổng đài để hỏi lại
+      - cho tôi gọi lại số chính thức của ngân hàng
+      - tôi cần xác nhận việc này trực tiếp
+      - tôi muốn xác minh độc lập trước khi làm
+      - gọi tổng đài chính thức để kiểm tra đã
+      - tự mở ứng dụng ngân hàng xem thử
+      - để tôi gọi số trên mặt sau thẻ
+      - tôi sẽ tìm số điện thoại trên website chính thức
+      - kiểm tra với chi nhánh gần nhà trước
+      - tôi muốn gặp trực tiếp nhân viên
+      - để tôi gọi công an bằng số công khai
+      - xác minh qua website của cơ quan đã
+      - tôi sẽ hỏi ngân hàng qua ứng dụng chính chủ
+      - tôi tự tìm số tổng đài rồi gọi lại
+      - đến quầy giao dịch hỏi cho chắc
+      - gọi lại bằng số ghi trên thẻ nhé
+      - để tôi kiểm tra nguồn tin độc lập
+      - tôi muốn xác nhận qua kênh khác
+      - tự liên hệ cơ quan chức năng để hỏi
+      - tôi sẽ kiểm tra thông báo trong app
+      - cho tôi xác minh với ngân hàng trước
+      - tu goi tong dai chinh thuc de kiem tra
+      - tôi sẽ gọi lại vào số chính thức
+      - kiểm tra trang web của ngân hàng trước đã
+      - tôi sẽ ra chi nhánh xác nhận
+      - để tôi gọi cho công an địa phương
+      - tôi cần xác thực thông tin từ nguồn chính thức
+      - tôi sẽ tự kiểm chứng rồi mới quyết định
+
+  # refuse: từ chối yêu cầu; không khẳng định đã thực hiện hành vi nguy hiểm.
+  - intent: refuse
+    examples: |
+      - tôi không làm theo đâu
+      - tôi từ chối cung cấp thông tin
+      - khong lam theo yeu cau nay
+      - đừng yêu cầu tôi làm việc đó
+      - tôi sẽ không bấm vào đường link
+      - tôi không cài ứng dụng lạ
+      - tôi không đọc mã cho anh
+      - tôi không chuyển tiền
+      - tôi không thực hiện giao dịch này
+      - tôi sẽ không làm theo hướng dẫn
+      - không, tôi không đồng ý
+      - tôi xin phép từ chối
+      - tôi không cung cấp mã OTP
+      - tôi không chia sẻ màn hình
+      - tôi sẽ không đăng nhập theo yêu cầu
+      - tôi không đưa điện thoại cho anh điều khiển
+      - tôi không làm việc này qua điện thoại
+      - không đời nào tôi chuyển khoản
+      - tôi nhất quyết không cung cấp thông tin
+      - không cung cấp mã xác thực đâu
+      - không gửi ảnh căn cước
+      - không đọc mật khẩu cho người lạ
+      - tôi không trả khoản phí này
+      - tôi không nhấn vào liên kết đó
+      - tôi sẽ không tải tệp anh gửi
+      - không cài phần mềm điều khiển
+      - tôi không bật chia sẻ màn hình
+      - tôi không làm theo lời người gọi lạ
+      - xin lỗi, tôi không chấp nhận yêu cầu đó
+      - yêu cầu này tôi xin từ chối
+      - mã OTP thì không cung cấp
+      - không chuyển khoản cho ai cả
+      - tôi không đăng nhập vào trang anh gửi
+      - tôi không cho phép truy cập điện thoại
+      - không, tôi sẽ không làm vậy
+      - tôi sẽ không cung cấp số thẻ
+      - tôi không gửi tiền để nhận quà
+      - không mở đường dẫn lạ
+      - tôi không cung cấp thông tin cá nhân
+      - tôi dứt khoát không làm theo
+
+  # doubt: nghi ngờ hoặc hỏi vì chưa tin; chưa nêu hành động xác minh/từ chối rõ.
+  - intent: doubt
+    examples: |
+      - cuộc gọi này nghe đáng ngờ quá
+      - tôi nghi ngờ anh không phải nhân viên ngân hàng
+      - sao giao dịch lại bất thường
+      - nghe sao sai sai vay
+      - tôi thấy có gì đó sai sai
+      - có thật là tôi trúng thưởng không
+      - tại sao anh cần mã của tôi
+      - tôi không chắc thông tin này đúng
+      - cuộc gọi này có phải lừa đảo không
+      - tôi thấy lời anh nói rất lạ
+      - nghe giống một vụ lừa đảo
+      - tôi thấy không đáng tin lắm
+      - sao lại cần xử lý gấp như vậy
+      - tôi chưa tin anh
+      - có chắc đây là cơ quan công an không
+      - việc này nghe bất thường
+      - tôi thấy khả nghi
+      - tại sao ngân hàng không gửi thông báo chính thức
+      - có gì đó không đúng ở đây
+      - tôi đang nghi ngờ lời anh nói
+      - nghe không ổn lắm
+      - sao phải làm gấp thế
+      - tự nhiên gọi tới thấy lạ quá
+      - chuyện này có thật không vậy
+      - tôi thấy hơi khó tin
+      - có gì chứng minh anh là nhân viên không
+      - sao lại trúng thưởng dễ dàng vậy
+      - tại sao phải giữ bí mật
+      - nghe cứ sai sai thế nào ấy
+      - tôi chưa hiểu sao tài khoản lại bị khóa
+      - yêu cầu này có vẻ đáng ngờ
+      - có chắc là ngân hàng gọi không
+      - tôi thấy không an tâm
+      - sao công an lại gọi cho tôi qua số này
+      - tôi không tin lắm
+      - việc này nghe vô lý quá
+      - sao lại cần mã OTP để hủy giao dịch
+      - tự dưng bắt chuyển tiền thấy kỳ quá
+      - có phải đang định lừa tôi không
+      - tôi cảm thấy có gì đó không minh bạch
+
+  # comply: đồng ý làm theo nhưng chưa nói rõ là tiết lộ dữ liệu hay chuyển tiền.
+  - intent: comply
+    examples: |
+      - được tôi sẽ làm theo hướng dẫn
+      - duoc, toi lam theo
+      - tôi đồng ý làm theo
+      - vậy tôi sẽ cài ứng dụng đó
+      - tôi sẽ bấm vào đường link
+      - được tôi sẽ mở ứng dụng
+      - tôi sẽ làm theo anh nói
+      - tôi chấp nhận hướng dẫn của anh
+      - để tôi làm theo các bước
+      - tôi sẽ đăng nhập như anh hướng dẫn
+      - được tôi sẽ bật chia sẻ màn hình
+      - tôi sẽ giữ máy và làm theo
+      - tôi đồng ý thực hiện yêu cầu
+      - được tôi sẽ thao tác ngay
+      - tôi sẽ tải ứng dụng về
+      - tôi sẽ nhấn vào liên kết đó
+      - tôi sẽ làm theo chỉ dẫn
+      - ừ được để tôi làm
+      - tôi sẽ làm theo lời anh
+      - được, mở ứng dụng lên nhé
+      - tôi sẽ nhập thông tin theo hướng dẫn
+      - cứ chỉ tôi từng bước
+      - vậy tôi làm theo
+      - đồng ý, tôi sẽ tiếp tục
+      - tôi sẽ làm như anh hướng dẫn
+      - để tôi cài thử ứng dụng
+      - tôi sẽ mở đường dẫn đó
+      - được, tôi sẽ đăng nhập
+      - tôi đồng ý thao tác trên điện thoại
+      - cứ nói tôi cần làm gì
+      - tôi sẽ làm theo các bước anh đọc
+      - ừ, tôi sẽ thực hiện ngay
+      - tôi chấp nhận làm theo yêu cầu
+      - tôi sẽ bật tính năng đó lên
+      - được, tôi sẽ nhấn vào nút này
+      - tôi sẽ tiếp tục làm theo
+      - tôi đồng ý cài phần mềm
+      - để tôi làm theo yêu cầu của anh
+      - được, tôi sẽ thao tác theo lời anh
+      - tôi sẽ làm việc đó ngay
+
+  # share_sensitive: chủ động/đã tiết lộ dữ liệu xác thực hoặc dữ liệu cá nhân.
+  - intent: share_sensitive
+    examples: |
+      - tôi sẽ đọc mã OTP cho anh
+      - ma xac thuc cua toi la 123456
+      - tôi sẽ gửi mật khẩu cho anh
+      - tôi đồng ý cung cấp số thẻ
+      - tôi vừa đọc mã OTP
+      - tôi sẽ nhập mã bảo mật vào đây
+      - tôi sẽ gửi ảnh căn cước
+      - tôi sẽ cho anh biết mã PIN
+      - đây là mã xác thực của tôi
+      - tôi sẽ đọc số trên thẻ ngân hàng
+      - mật khẩu tài khoản của tôi là abc123
+      - tôi sẽ chia sẻ thông tin thẻ
+      - tôi đồng ý gửi mã qua điện thoại
+      - tôi sẽ cung cấp mã CVV
+      - tôi vừa gửi thông tin đăng nhập
+      - OTP của tôi là 482913
+      - mã PIN là 1234
+      - tôi sẽ nói mã xác minh vừa gửi đến
+      - tôi đọc mã cho anh nhé
+      - để tôi gửi ảnh căn cước hai mặt
+      - tôi sẽ cung cấp ngày tháng năm sinh
+      - số thẻ của tôi là 9704 1234 5678
+      - tôi vừa nói mật khẩu cho người gọi
+      - tôi đã gửi mã bảo mật rồi
+      - tôi sẽ cho anh xem giấy tờ tùy thân
+      - đây là số căn cước của tôi
+      - tôi sẽ gửi thông tin tài khoản ngân hàng
+      - tôi sẽ đọc mã xác nhận trong tin nhắn
+      - tôi cung cấp mã OTP đây
+      - tôi sẽ tiết lộ mật khẩu đăng nhập
+      - mã CVV trên thẻ của tôi là 123
+      - tôi gửi ảnh thẻ ngân hàng cho anh
+      - tôi vừa cung cấp số căn cước
+      - tôi sẽ nhập mã OTP vào trang đó
+      - để tôi đọc mã bảo mật
+      - tôi sẽ gửi mã PIN qua tin nhắn
+      - tôi cho anh biết thông tin cá nhân
+      - tôi vừa chia sẻ số thẻ và mã bảo mật
+      - tôi sẽ đọc mã vừa nhận được
+      - tôi đồng ý gửi thông tin xác thực
+
+  # transfer_money: chấp nhận hoặc đã thực hiện gửi tiền/thanh toán.
+  - intent: transfer_money
+    examples: |
+      - tôi sẽ chuyển tiền ngay
+      - tôi đồng ý chuyển khoản
+      - tôi sẽ gửi tiền vào tài khoản đó
+      - tôi đang thực hiện giao dịch
+      - tôi vừa chuyển tiền rồi
+      - tôi sẽ nộp phí để nhận thưởng
+      - tôi đồng ý thanh toán khoản phí
+      - tôi sẽ chuyển khoản theo hướng dẫn
+      - tôi chấp nhận nộp tiền trước
+      - tôi đang chuyển tiền
+      - tôi sẽ thanh toán ngay bây giờ
+      - tôi sẽ chuyển số tiền đó
+      - tôi vừa gửi khoản tiền theo yêu cầu
+      - tôi đồng ý trả phí xác minh
+      - chuyen khoan ngay bay gio
+      - tôi đã gửi tiền vào số tài khoản đó
+      - tôi sẽ trả phí nhận quà
+      - để tôi chuyển tiền
+      - tôi đang nhập số tiền để chuyển
+      - tôi chấp nhận đóng phí trước
+      - tôi sẽ nộp khoản tiền này
+      - vừa chuyển khoản xong
+      - tôi sẽ gửi khoản phí qua ngân hàng
+      - tôi đồng ý trả tiền để mở khóa tài khoản
+      - tôi sẽ chuyển tiền vào tài khoản tạm giữ
+      - thanh toán khoản phí này bằng chuyển khoản nhé
+      - tôi đã chuyển số tiền anh yêu cầu
+      - tôi sẽ làm giao dịch chuyển khoản
+      - tôi đang gửi tiền cho anh
+      - tôi đồng ý nộp tiền để nhận giải
+      - để tôi thanh toán ngay
+      - tôi sẽ trả khoản phí vận chuyển
+      - chuyển tiền vào tài khoản vừa gửi
+      - tôi vừa thanh toán khoản phí
+      - tôi sẽ gửi tiền để xác minh tài khoản
+      - tôi chấp nhận chuyển tiền theo hướng dẫn
+      - giao dịch chuyển tiền đã hoàn tất
+      - tôi sẽ trả phí hồ sơ
+      - tôi đồng ý gửi khoản tiền này
+      - tôi sẽ chuyển khoản cho bên anh
+
+  # hang_up: kết thúc hoặc chủ động chặn cuộc gọi.
+  - intent: hang_up
+    examples: |
+      - tôi cúp máy đây
+      - tôi sẽ ngắt cuộc gọi
+      - tôi kết thúc cuộc gọi nhé
+      - thôi tôi tắt máy đây
+      - tôi sẽ chặn số này
+      - tôi không muốn nói chuyện nữa tôi cúp máy
+      - tôi xin phép ngắt máy
+      - dừng cuộc gọi tại đây
+      - tôi tắt máy và báo công an
+      - tôi sẽ chấm dứt cuộc gọi
+      - toi cup may ngay
+      - tôi sẽ kết thúc cuộc gọi
+      - thôi nhé tôi cúp máy
+      - tôi sẽ ngắt máy bây giờ
+      - cúp máy đi
+      - tôi tắt máy đây
+      - dừng gọi cho tôi
+      - tôi ngắt máy nhé
+      - không nói nữa, tôi cúp đây
+      - tôi sẽ chặn số điện thoại này
+      - kết thúc cuộc gọi ngay
+      - tôi xin dừng cuộc gọi
+      - thôi, tôi tắt máy
+      - tôi không nghe nữa
+      - tôi sẽ ngắt liên lạc
+      - chấm dứt cuộc gọi nhé
+      - tôi sẽ báo cáo số này rồi chặn
+      - đủ rồi, tôi cúp máy
+      - tôi không muốn tiếp tục cuộc gọi
+      - ngắt máy ngay bây giờ
+      - tôi sẽ kết thúc nói chuyện tại đây
+      - xin dừng cuộc gọi ở đây
+      - tôi chặn số lạ này
+      - cúp máy và không gọi lại nữa
+      - tôi tắt điện thoại đây
+      - cuộc gọi kết thúc tại đây
+      - không liên lạc với tôi nữa
+      - để tôi cúp máy
+      - tôi sẽ dừng cuộc nói chuyện
+      - tôi xin phép kết thúc cuộc gọi
+
+  # unknown: thông tin ngoài chủ đề hoặc chưa thể suy ra hành động/ý định.
+  # Các xác nhận rất ngắn được backend xử lý theo requested_action của stage.
+  - intent: unknown
+    examples: |
+      - hôm nay thời tiết thế nào
+      - tôi chưa hiểu anh đang nói gì
+      - anh có thể nói lại không
+      - tôi đang bận
+      - tôi không biết
+      - ai đang gọi vậy
+      - anh gọi nhầm số rồi
+      - tôi đang ở ngoài đường
+      - alo
+      - chuyện gì vậy
+      - tôi chưa nghe rõ
+      - cho tôi hỏi mấy giờ rồi
+      - tôi đang nấu ăn
+      - toi chua co cau tra loi
+      - hiện tại tôi chưa trả lời được
+      - tôi không nhớ nữa
+      - chắc là vậy
+      - ừm
+      - bạn nói gì cơ
+      - tôi đang đi xe
+      - máy tôi sắp hết pin
+      - tôi đang ở chỗ đông người
+      - hôm nay tôi đi làm
+      - chuyện đó để sau nhé
+      - tôi chưa rõ câu hỏi
+      - không nghe thấy gì cả
+      - anh nói chậm lại được không
+      - tôi đang họp
+      - để tôi gọi người nhà
+      - tôi không rành việc này
+      - hình như mất sóng
+      - tôi đang ở ngoài
+      - xin nhắc lại câu hỏi
+      - tôi chưa biết phải nói gì
+      - để lát nữa nói chuyện
+      - tôi đang làm việc
+      - câu hỏi là gì vậy
+      - tôi đang không tiện nghe máy
+      - tôi chưa có câu trả lời
+      - ừ, tôi nghe đây

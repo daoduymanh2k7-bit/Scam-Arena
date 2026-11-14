@@ -5,7 +5,7 @@
   const textInput = $("arena-text-input"), micButton = $("arena-mic-btn");
   const sendButton = $("arena-send-btn"), status = $("arena-status");
   const audioPlayer = $("arena-audio-player");
-  let scenario = null, history = [], sessionId = null, mediaRecorder = null, chunks = [];
+  let scenario = null, sessionId = null, mediaRecorder = null, chunks = [];
   let recording = false, busy = false, callEnded = false, lastScammerAt = null;
   let timerStartedAt = null, timerHandle = null;
 
@@ -48,26 +48,37 @@
     }
     lastScammerAt = Date.now();
   }
-  function detectCallEnd(line) {
-    if (line.includes("kết thúc cuộc gọi") || line.includes("kịch bản demo đã kết thúc")) {
+  function updateCallState(response) {
+    if (response.ended) {
       callEnded = true;
       micButton.disabled = true;
       sendButton.disabled = true;
       textInput.disabled = true;
     }
   }
-  async function showScammer(line) {
-    history.push({ role: "scammer_ai", text: line, elapsed_seconds: null });
+  async function showScammer(response) {
+    const line = response.bot_text;
+    if (!line) return;
     addBubble(line, "scammer");
-    detectCallEnd(line);
+    updateCallState(response);
     setStatus("Đang phát lời thoại…");
     await speak(line);
-    if (!callEnded) setStatus("Đến lượt bạn. Hãy bình tĩnh trả lời hoặc yêu cầu xác minh.");
+    if (!callEnded && response.intent === "unknown") {
+      setStatus("Chưa nhận diện rõ ý định. Hãy thử nói rõ bạn từ chối, muốn tự xác minh, nghi ngờ, hay đồng ý làm theo.");
+    } else if (callEnded) {
+      setStatus("Cuộc gọi đã kết thúc. Xem kết quả để đọc bài học và phản hồi.");
+    } else if (!callEnded) {
+      const source = response.intent_method === "rasa"
+        ? "Rasa đã phân loại câu trả lời. "
+        : response.intent_method === "rule"
+          ? "Luật an toàn/dự phòng đã nhận diện câu trả lời. "
+          : "";
+      setStatus(`${source}Đến lượt bạn. Hãy bình tĩnh trả lời hoặc yêu cầu xác minh.`);
+    }
   }
   async function startSession(nextScenario) {
     scenario = nextScenario;
-    history = [];
-    sessionId = crypto.randomUUID();
+    sessionId = null;
     callEnded = false;
     picker.hidden = true;
     result.hidden = true;
@@ -79,8 +90,9 @@
     setCallTimer();
     setStatus("Đang kết nối…");
     try {
-      const { reply } = await Api.scammerReply(scenario.key, history, "");
-      await showScammer(reply);
+      const response = await Api.startCall(scenario.key);
+      sessionId = response.session_id;
+      await showScammer(response);
     } catch (error) {
       setStatus(`Không tải được lời thoại: ${error.message}`);
     } finally { setBusy(false); }
@@ -91,11 +103,10 @@
     setBusy(true);
     setStatus("Đang xử lý câu trả lời…");
     try {
-      const { reply } = await Api.scammerReply(scenario.key, history, answer);
-      history.push({ role: "user", text: answer, elapsed_seconds: elapsed });
+      const response = await Api.submitCallTurn(sessionId, answer, elapsed);
       addBubble(answer, "user");
       textInput.value = "";
-      await showScammer(reply);
+      await showScammer(response);
     } catch (error) {
       setStatus(`Chưa gửi được câu trả lời: ${error.message}`);
     } finally { setBusy(false); }
@@ -164,8 +175,9 @@
     $("arena-score").textContent = "…";
     $("arena-badge").textContent = "Đang tính điểm";
     try {
-      const score = await Api.scoreSession(sessionId, scenario.label, history);
-      $("arena-score").textContent = String(score.user_score);
+      await Api.finishCall(sessionId);
+      const score = await Api.callSummary(sessionId);
+      $("arena-score").textContent = String(score.total_score);
       $("arena-badge").textContent = score.badge || "Kết quả luyện tập";
       $("arena-latency").textContent = score.avg_response_latency == null
         ? "Chưa có dữ liệu thời gian phản hồi."
@@ -179,6 +191,27 @@
       });
       $("arena-mistakes-wrap").hidden = !score.mistakes?.length;
       $("arena-no-mistakes").hidden = !!score.mistakes?.length;
+      const feedbackList = $("arena-feedback");
+      feedbackList.replaceChildren();
+      (score.feedback || []).forEach((item) => {
+        const li = document.createElement("li");
+        const change = item.score_delta > 0 ? `+${item.score_delta}` : String(item.score_delta);
+        const tactic = item.tactic ? ` · Chiêu: ${item.tactic}` : "";
+        li.textContent = `Lượt ${item.turn_no} · ${item.intent} · ${change}${tactic}: ${item.feedback}`;
+        feedbackList.appendChild(li);
+      });
+      $("arena-feedback-wrap").hidden = !score.feedback?.length;
+      $("arena-lesson").textContent = score.lesson_summary || "";
+      $("arena-lesson").hidden = !score.lesson_summary;
+      const redFlags = $("arena-redflags");
+      redFlags.replaceChildren();
+      (score.red_flags || []).forEach((flag) => {
+        const li = document.createElement("li");
+        li.textContent = `${flag.title} (${flag.severity}): ${flag.explanation}`;
+        redFlags.appendChild(li);
+      });
+      $("arena-redflags-wrap").hidden = !score.red_flags?.length;
+      if (window.ArenaHistory) setTimeout(() => window.ArenaHistory.refreshAll(), 1200);
     } catch (error) {
       $("arena-badge").textContent = `Chưa chấm được: ${error.message}`;
       $("arena-score").textContent = "—";
@@ -203,6 +236,7 @@
     if (recording && mediaRecorder?.state !== "inactive") mediaRecorder.stop();
     if (mediaRecorder?.stream) mediaRecorder.stream.getTracks().forEach((track) => track.stop());
     recording = false;
+    if (sessionId) Api.finishCall(sessionId).catch(() => {});
     session.hidden = true;
     picker.hidden = false;
     callEnded = true;
