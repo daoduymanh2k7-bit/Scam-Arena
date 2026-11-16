@@ -16,10 +16,87 @@
     textInput.disabled = value;
     micButton.disabled = value || callEnded;
   }
-  function addBubble(text, role) {
+  const intentNames = {
+    verify: "Muốn tự xác minh", refuse: "Từ chối", hang_up: "Muốn kết thúc cuộc gọi",
+    doubt: "Nghi ngờ", comply: "Đồng ý làm theo", share_sensitive: "Chia sẻ thông tin nhạy cảm",
+    transfer_money: "Đồng ý chuyển tiền", unknown: "Chưa nhận diện rõ",
+  };
+  const intentMethods = { rule: "luật an toàn", rasa: "bộ nhận diện Rasa", llm: "LLM", fallback: "dự phòng" };
+  const lineSources = {
+    cache_exact: "LLM (dùng lại câu khớp chính xác từ bộ nhớ)",
+    cache_pool: "LLM (dùng lại câu trong bộ nhớ)", llm: "LLM (vừa tạo câu này)", fixed: "luật/kịch bản cố định",
+  };
+  function addBubble(text, role, metadata = null) {
     const bubble = document.createElement("div");
     bubble.className = `bubble ${role === "user" ? "user" : "scammer"}`;
-    bubble.textContent = text;
+    const content = document.createElement("div");
+    content.className = "bubble-text";
+    content.textContent = text;
+    bubble.appendChild(content);
+    if (metadata?.intent) {
+      const label = document.createElement("div");
+      label.className = "bubble-meta intent-label";
+      label.textContent = `Hệ thống nhận diện: ${intentNames[metadata.intent] || metadata.intent} · ${intentMethods[metadata.intent_method] || metadata.intent_method}`;
+      bubble.appendChild(label);
+    }
+    if (metadata?.line_source) {
+      const info = document.createElement("span");
+      info.className = "bubble-info";
+      info.tabIndex = 0;
+      info.setAttribute("role", "note");
+      info.setAttribute("aria-label", `Nguồn lời thoại: ${lineSources[metadata.line_source] || metadata.line_source}; ${metadata.line_latency_ms ?? 0} mili giây`);
+      info.dataset.tooltip = `Nguồn: ${lineSources[metadata.line_source] || metadata.line_source}\nThời gian: ${metadata.line_latency_ms ?? 0} ms`;
+      info.textContent = "i";
+      bubble.appendChild(info);
+    }
+    if (role !== "user" && metadata?.turn_no != null) {
+      const options = document.createElement("details");
+      options.className = "bubble-options";
+      const summary = document.createElement("summary");
+      summary.textContent = "Mở rộng";
+      const actions = document.createElement("div");
+      actions.className = "bubble-actions";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "bubble-action";
+      retry.textContent = "Trả lời lại câu này";
+      retry.addEventListener("click", async () => {
+        retry.disabled = true;
+        retry.textContent = "Đang tạo câu mới…";
+        try {
+          const alternative = await Api.regenerateLine(sessionId, metadata.turn_no, metadata.line_id);
+          addBubble(alternative.bot_text, "scammer", { line_source: alternative.line_source,
+            line_latency_ms: alternative.line_latency_ms, line_id: alternative.line_id, turn_no: alternative.turn_no });
+          setStatus("Đã thêm câu trả lời mới; câu cũ vẫn được giữ lại.");
+          await speak(alternative.bot_text);
+          setStatus("Đến lượt bạn. Hãy bình tĩnh trả lời hoặc yêu cầu xác minh.");
+        } catch (error) {
+          setStatus(`Chưa tạo được câu trả lời mới: ${error.message}`);
+          retry.disabled = false;
+          retry.textContent = "Trả lời lại câu này";
+        }
+      });
+      actions.appendChild(retry);
+      if (metadata.line_id != null) {
+        const like = document.createElement("button");
+        like.type = "button";
+        like.className = "bubble-action";
+        like.textContent = "♡ Thích câu này";
+        like.addEventListener("click", async () => {
+          like.disabled = true;
+          try {
+            await Api.likeLine(sessionId, metadata.turn_no, metadata.line_id);
+            like.textContent = "♥ Đã thích";
+          } catch (error) {
+            like.disabled = false;
+            setStatus(`Chưa ghi nhận được lượt thích: ${error.message}`);
+          }
+        });
+        actions.appendChild(like);
+      }
+      options.append(summary, actions);
+      bubble.appendChild(options);
+    }
     transcriptBox.appendChild(bubble);
     transcriptBox.scrollTop = transcriptBox.scrollHeight;
   }
@@ -59,7 +136,8 @@
   async function showScammer(response) {
     const line = response.bot_text;
     if (!line) return;
-    addBubble(line, "scammer");
+    addBubble(line, "scammer", { line_source: response.line_source || "fixed", line_latency_ms: response.line_latency_ms ?? 0,
+      line_id: response.line_id, turn_no: response.turn_no });
     updateCallState(response);
     setStatus("Đang phát lời thoại…");
     await speak(line);
@@ -104,7 +182,7 @@
     setStatus("Đang xử lý câu trả lời…");
     try {
       const response = await Api.submitCallTurn(sessionId, answer, elapsed);
-      addBubble(answer, "user");
+      addBubble(answer, "user", { intent: response.intent, intent_method: response.intent_method });
       textInput.value = "";
       await showScammer(response);
     } catch (error) {

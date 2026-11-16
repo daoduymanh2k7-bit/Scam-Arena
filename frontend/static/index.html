@@ -3,54 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#10241e">
+  <meta name="theme-color" content="#0f0e18">
   <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=desktop-orbit-4">
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Scam Arena trang chủ"><span class="brand-mark">S</span><span>Scam Arena</span></a>
-      <span class="topbar-note">Phòng tập phản xạ an toàn</span>
+      <div class="account-controls" id="account-controls" hidden>
+        <span id="auth-username"></span>
+        <button id="auth-logout" class="button button-quiet" type="button">Đăng xuất</button>
+      </div>
     </header>
 
+    <section id="auth-panel" class="panel auth-panel">
+      <p class="eyebrow">TÀI KHOẢN</p>
+      <h1 id="auth-heading">Đăng nhập</h1>
+      <p class="muted-note">Lịch sử luyện tập riêng theo tài khoản. Câu thoại và đánh giá vẫn được chia sẻ để cải thiện kho chung.</p>
+      <label for="auth-username-input">Tên đăng nhập</label>
+      <input id="auth-username-input" type="text" minlength="3" maxlength="32" autocomplete="username" required>
+      <label for="auth-password-input">Mật khẩu</label>
+      <input id="auth-password-input" type="password" minlength="3" maxlength="128" autocomplete="current-password" required>
+      <p class="muted-note">Tên đăng nhập gồm 3–32 chữ cái không dấu, số, dấu chấm, gạch dưới hoặc gạch ngang. Mật khẩu cần ít nhất 3 ký tự.</p>
+      <div class="reply-actions">
+        <button id="auth-login" class="button button-primary" type="button">Đăng nhập</button>
+        <button id="auth-register" class="button button-secondary" type="button">Tạo tài khoản</button>
+      </div>
+      <p id="auth-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <div id="app-content" hidden>
+    <div id="message-mode" class="app-mode-panel">
     <section class="intro">
-      <p class="eyebrow">LUYỆN TẬP TÌNH HUỐNG</p>
-      <h1>Nhận diện áp lực.<br><em>Giữ quyền chủ động.</em></h1>
-      <p class="intro-copy">Thực hành cách ứng phó với cuộc gọi lừa đảo giả lập. Đây là kịch bản viết sẵn, không phải cuộc gọi thật.</p>
+      <h1>Luyện phản xạ chống lừa đảo</h1>
+      <p class="intro-copy">Trả lời tình huống giả lập, nhận phản hồi ngay.</p>
     </section>
 
     <section id="arena-picker" class="panel">
-      <div class="section-heading"><div><p class="eyebrow">CHỌN TÌNH HUỐNG</p><h2>Bạn muốn luyện cuộc gọi nào?</h2></div><span class="step">01 / 02</span></div>
+      <div class="section-heading"><div><h2>Chọn tình huống</h2></div></div>
       <div id="arena-scenario-list" class="scenario-grid" aria-live="polite"></div>
       <button id="arena-random-btn" class="button button-secondary" type="button">Chọn ngẫu nhiên</button>
       <p id="picker-error" class="error" role="alert" hidden></p>
     </section>
 
-    <section id="arena-history-panel" class="panel">
+    <details id="arena-history-panel" class="utility-panel">
+      <summary>Lịch sử luyện tập</summary>
+      <div class="utility-content">
       <div class="section-heading">
-        <div><p class="eyebrow">CÁC PHIÊN ĐÃ LƯU</p><h2>Lịch sử luyện tập</h2></div>
+        <div><h2>Các phiên đã lưu</h2></div>
         <button id="arena-history-refresh" class="button button-secondary" type="button">Làm mới</button>
       </div>
       <div id="arena-history-list" class="history-list" aria-live="polite"></div>
       <p id="arena-history-empty" class="muted-note" hidden>Chưa có phiên chơi nào được lưu.</p>
       <p id="arena-history-error" class="error" role="alert" hidden></p>
-    </section>
-
-    <section id="arena-review-panel" class="panel">
-      <div class="section-heading">
-        <div><p class="eyebrow">QUẢN TRỊ NỘI BỘ</p><h2>Duyệt câu máy chưa nhận diện</h2></div>
-        <button id="arena-review-refresh" class="button button-secondary" type="button">Làm mới</button>
       </div>
-      <p class="muted-note">LLM chỉ đưa ra đề xuất. Luật chỉ được thêm sau khi bạn chọn ý định và duyệt. Khi cấu hình API key, câu chưa nhận diện (đã che số dài và email) sẽ được gửi tới nhà cung cấp LLM để phân tích.</p>
-      <div id="arena-review-list" class="review-list" aria-live="polite"></div>
-      <p id="arena-review-empty" class="muted-note" hidden>Chưa có câu nào chờ duyệt.</p>
-      <p id="arena-review-error" class="error" role="alert" hidden></p>
-    </section>
+    </details>
 
-    <section id="arena-session" class="panel session-panel" hidden>
-      <div class="call-topline"><span class="live-dot"></span><span>MÔ PHỎNG CUỘC GỌI</span><span id="arena-call-timer" class="timer">00:00</span></div>
-      <div class="caller"><div class="caller-icon">☎</div><div><h2>Kẻ lạ mặt</h2><p id="arena-scenario-label"></p></div></div>
+    <section id="arena-session" class="panel session-panel message-chat-panel" hidden>
+      <div class="call-topline"><span class="live-dot"></span><span>HỘI THOẠI GIẢ LẬP</span><span id="arena-call-timer" hidden>00:00</span></div>
+      <div class="caller"><div class="caller-icon" aria-hidden="true">✉</div><div><h2>Người gửi lạ</h2><p id="arena-scenario-label"></p></div></div>
       <div id="arena-transcript" class="transcript" aria-live="polite"></div>
       <p id="arena-status" class="status" aria-live="polite"></p>
       <audio id="arena-audio-player" hidden></audio>
@@ -64,7 +76,7 @@
       </div>
       <div class="session-actions">
         <button id="arena-finish-btn" class="button button-danger" type="button">Kết thúc và xem điểm</button>
-        <button id="arena-cancel-btn" class="button button-quiet" type="button">Chọn tình huống khác</button>
+        <button id="arena-cancel-btn" class="button button-quiet" type="button">Đổi tình huống</button>
       </div>
     </section>
 
@@ -82,10 +94,43 @@
       <button id="arena-restart-btn" class="button button-primary" type="button">Luyện tình huống khác</button>
     </section>
 
-    <footer><span>Scam Arena</span><span>Kịch bản giả lập · Lượt chơi lưu với dãy số dài đã che</span></footer>
+    <footer><span>Scam Arena · Mô phỏng, không phải cuộc gọi thật</span></footer>
+    </div>
+    <section id="call-static-screen" class="call-static-screen" aria-labelledby="call-static-title" hidden>
+      <div class="static-call-orbit" aria-hidden="true"><span>☎</span></div>
+      <p class="eyebrow">SẮP RA MẮT</p>
+      <h1 id="call-static-title">Luyện tập qua cuộc gọi</h1>
+      <p>Chế độ trò chuyện qua cuộc gọi đang được phát triển. Trong lúc chờ, bạn có thể luyện phản xạ bằng tin nhắn.</p>
+      <button class="button button-primary" type="button" data-open-mode="message">Mở phần nhắn tin</button>
+    </section>
+    <aside class="desktop-visual" aria-hidden="true">
+      <div class="orbit-scene">
+        <div class="orbit-glow"></div>
+        <div class="orbit-ring orbit-ring-one"></div>
+        <div class="orbit-ring orbit-ring-two"></div>
+        <div class="orbit-core"><span></span></div>
+        <div class="orbit-spark orbit-spark-one"></div>
+        <div class="orbit-spark orbit-spark-two"></div>
+      </div>
+      <p class="visual-caption">LUYỆN TẬP · NHẬN DIỆN · PHẢN XẠ</p>
+    </aside>
+    </div>
+
+    <nav id="mode-nav" class="mode-nav" aria-label="Chọn chế độ luyện tập">
+      <button class="mode-nav-item" type="button" data-mode="call" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.4 15.4 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.03-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.03l-2.22 2.2Z"/></svg>
+        <span>Cuộc gọi</span>
+      </button>
+      <button class="mode-nav-item is-active" type="button" data-mode="message" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-6 4V5a2 2 0 0 1 2-2Z"/></svg>
+        <span>Nhắn tin</span>
+      </button>
+    </nav>
   </main>
   <script src="/js/api.js"></script>
   <script src="/js/arena/arena.js"></script>
   <script src="/js/arena/history.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/app-mode.js"></script>
 </body>
 </html>

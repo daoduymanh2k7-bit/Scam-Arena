@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from app.schemas import SpeakRequest
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 MAX_AUDIO_BYTES = 15 * 1024 * 1024
 
 
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)) -> dict[str, str]:
+async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_current_user)) -> dict[str, str]:
     content = await audio.read(MAX_AUDIO_BYTES + 1)
     await audio.close()
     if not content:
@@ -27,7 +28,7 @@ async def transcribe(audio: UploadFile = File(...)) -> dict[str, str]:
 
 
 @router.post("/speak")
-def speak(request: SpeakRequest) -> Response:
+def speak(request: SpeakRequest, user: dict = Depends(get_current_user)) -> Response:
     from app.voice.synthesis import text_to_speech
 
     try:

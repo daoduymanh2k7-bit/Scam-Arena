@@ -1,0 +1,44 @@
+{
+  "bank": [
+    "Alo, tôi gọi từ bộ phận an ninh ngân hàng. Tài khoản của anh/chị vừa có giao dịch bất thường.",
+    "Xin chào anh/chị, tôi gọi từ bộ phận hỗ trợ an toàn tài khoản. Hệ thống vừa ghi nhận một giao dịch cần xác minh.",
+    "Alo, bên an ninh ngân hàng đây ạ. Tài khoản của anh/chị đang có dấu hiệu phát sinh giao dịch lạ.",
+    "Chào anh/chị, tôi liên hệ về một hoạt động bất thường vừa được ghi nhận trên tài khoản ngân hàng.",
+    "Alo, tôi phụ trách hỗ trợ bảo mật ngân hàng. Có một giao dịch trên tài khoản của anh/chị cần kiểm tra lại.",
+    "Xin phép hỏi anh/chị có tiện nghe máy không ạ? Tôi gọi từ bộ phận an toàn tài khoản về một giao dịch đáng chú ý.",
+    "Chào anh/chị, hệ thống vừa báo một giao dịch khác thường. Tôi gọi để trao đổi về tài khoản ngân hàng của anh/chị.",
+    "Alo, tôi gọi từ bộ phận kiểm soát giao dịch. Tài khoản của anh/chị vừa có hoạt động cần được xác nhận.",
+    "Xin chào, bên ngân hàng đang cần liên hệ với anh/chị về giao dịch mới được hệ thống đánh dấu bất thường.",
+    "Alo anh/chị, tôi gọi để hỗ trợ kiểm tra một giao dịch lạ vừa xuất hiện trên tài khoản.",
+    "Chào anh/chị, tôi từ bộ phận bảo vệ tài khoản. Có hoạt động giao dịch cần anh/chị xác nhận thông tin.",
+    "Alo, bộ phận an ninh ngân hàng xin nghe. Chúng tôi vừa nhận cảnh báo liên quan đến một giao dịch trên tài khoản của anh/chị."
+  ],
+  "lottery": [
+    "Chúc mừng anh/chị trúng giải đặc biệt 500 triệu đồng từ chương trình tri ân khách hàng!",
+    "Xin chúc mừng anh/chị, mã tham gia của anh/chị vừa được chọn nhận giải thưởng đặc biệt từ chương trình tri ân.",
+    "Alo, tôi gọi báo tin vui: anh/chị đã trúng giải thưởng lớn trong chương trình tri ân khách hàng tuần này.",
+    "Chúc mừng anh/chị! Hồ sơ tham gia của anh/chị vừa được chọn cho một phần quà giá trị từ chương trình khách hàng thân thiết.",
+    "Xin chào anh/chị, tôi liên hệ để thông báo anh/chị có tên trong danh sách nhận giải đặc biệt của chương trình tri ân.",
+    "Alo anh/chị, chương trình tri ân khách hàng vừa quay thưởng và anh/chị là người nhận giải lớn lần này.",
+    "Tôi có một tin vui muốn báo anh/chị: lượt tham gia của anh/chị đã nhận được giải thưởng đặc biệt.",
+    "Chúc mừng anh/chị, anh/chị vừa được chọn nhận phần thưởng giá trị trong đợt tri ân khách hàng hiện nay.",
+    "Xin phép báo tin, anh/chị đã trúng giải cao nhất của chương trình tri ân khách hàng tháng này.",
+    "Alo, tôi gọi từ bộ phận trao thưởng. Anh/chị vừa được xác nhận là người nhận giải đặc biệt.",
+    "Chúc mừng anh/chị, thông tin tham gia chương trình của anh/chị khớp với một giải thưởng trị giá lớn.",
+    "Xin chào, tôi gọi để thông báo anh/chị được chọn nhận giải thưởng đặc biệt trong chương trình tri ân khách hàng."
+  ],
+  "police": [
+    "Tôi là điều tra viên. Số điện thoại của anh/chị liên quan đến một vụ án rửa tiền.",
+    "Alo, tôi gọi từ cơ quan điều tra. Chúng tôi cần trao đổi với anh/chị về một hồ sơ tài chính đang được xác minh.",
+    "Xin chào, tôi là cán bộ điều tra. Thông tin liên lạc của anh/chị xuất hiện trong một vụ việc liên quan đến dòng tiền.",
+    "Tôi gọi từ bộ phận điều tra kinh tế. Anh/chị có thể dành ít phút để nghe về một hồ sơ đang cần làm rõ không ạ?",
+    "Alo anh/chị, tôi là điều tra viên phụ trách một vụ việc tài chính có thông tin liên quan đến số điện thoại này.",
+    "Xin chào, cơ quan điều tra đang xác minh một vụ án rửa tiền và cần làm rõ thông tin liên hệ của anh/chị.",
+    "Tôi là cán bộ điều tra đang thụ lý hồ sơ giao dịch đáng ngờ. Thông tin của anh/chị được nhắc đến trong quá trình rà soát.",
+    "Alo, tôi liên hệ từ cơ quan điều tra về một vụ án tài chính. Số điện thoại của anh/chị có trong hồ sơ cần xác minh.",
+    "Chào anh/chị, tôi là điều tra viên. Chúng tôi đang kiểm tra một vụ việc rửa tiền có dữ liệu liên hệ trùng với anh/chị.",
+    "Xin phép trao đổi, tôi gọi từ bộ phận điều tra về một hồ sơ tài chính mà số điện thoại của anh/chị được ghi nhận.",
+    "Alo anh/chị, bên điều tra cần xác minh một thông tin liên quan đến vụ án tài chính đang xử lý.",
+    "Tôi là điều tra viên phụ trách vụ việc này. Thông tin số điện thoại của anh/chị xuất hiện trong quá trình điều tra rửa tiền."
+  ]
+}

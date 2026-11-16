@@ -34,11 +34,11 @@
       "transitions": [
         {
           "on_intent": "verify",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "pressure"
         },
         {
           "on_intent": "refuse",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "pressure"
         },
         {
           "on_intent": "hang_up",

@@ -11,10 +11,10 @@ const Api = (() => {
   return {
     listScenarios: () => fetch("/api/arena/scenarios").then(asJson),
     randomScenario: () => fetch("/api/arena/scenarios/random").then(asJson),
-    startCall(scenarioKey) {
+    startCall(scenarioKey, interactionMode = "message") {
       return fetch("/api/arena/calls", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario_key: scenarioKey }),
+        body: JSON.stringify({ scenario_key: scenarioKey, interaction_mode: interactionMode }),
       }).then(asJson);
     },
     submitCallTurn(sessionId, userText, elapsedSeconds) {
@@ -22,6 +22,13 @@ const Api = (() => {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_text: userText, elapsed_seconds: elapsedSeconds }),
       }).then(asJson);
+    },
+    regenerateLine(sessionId, turnNo, lineId) {
+      const query = lineId == null ? "" : `?line_id=${encodeURIComponent(lineId)}`;
+      return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/turns/${turnNo}/regenerate${query}`, { method: "POST" }).then(asJson);
+    },
+    likeLine(sessionId, turnNo, lineId) {
+      return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/turns/${turnNo}/lines/${lineId}/like`, { method: "POST" }).then(asJson);
     },
     finishCall(sessionId) {
       return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/finish`, { method: "POST" })
@@ -36,19 +43,6 @@ const Api = (() => {
     callHistory() { return fetch("/api/arena/history?limit=30").then(asJson); },
     callTranscript(sessionId) {
       return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/transcript`).then(asJson);
-    },
-    flagCallTurn(sessionId, turnNo) {
-      return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/turns/${turnNo}/flag`, { method: "POST" }).then(asJson);
-    },
-    intentCandidates() { return fetch("/api/arena/admin/intent-candidates").then(asJson); },
-    approveIntentCandidate(candidateId, intent, phrase) {
-      return fetch(`/api/arena/admin/intent-candidates/${candidateId}/approve`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ intent, phrase }),
-      }).then(asJson);
-    },
-    rejectIntentCandidate(candidateId) {
-      return fetch(`/api/arena/admin/intent-candidates/${candidateId}/reject`, { method: "POST" }).then(asJson);
     },
     async transcribeAudio(blob) {
       const form = new FormData();

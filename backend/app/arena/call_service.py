@@ -4,7 +4,8 @@ import re
 from typing import Any
 from uuid import UUID
 
-from app.arena.intent_detector import RequestedAction, detect_intent
+from app.arena.intent_detector import Intent, RequestedAction, detect_intent
+from app.arena.intent_reclassifier import reclassify_unknown
 from app.arena.scorer import improvement_tip
 from app.database import get_connection_pool
 from app.schemas import (
@@ -17,6 +18,8 @@ from app.schemas import (
     StartCallResponse,
     CallHistoryItem,
     CallTranscriptResponse,
+    LinePreferenceResponse,
+    RegeneratedLineResponse,
     TranscriptMessage,
     IntentCandidate,
     ApproveIntentCandidateRequest,
@@ -25,6 +28,10 @@ from app.schemas import (
 )
 from app.arena.normalization import normalize_phrase
 from app.database import clear_intent_rule_cache
+from app.arena.line_generator import resolve_bot_line, regenerate_line_for_turn
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def list_scenarios() -> list[dict[str, str]]:
@@ -44,7 +51,9 @@ def random_scenario() -> dict[str, str]:
     return random.choice(scenarios)
 
 
-def start_call(scenario_key: str) -> StartCallResponse:
+def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message") -> StartCallResponse:
+    if interaction_mode not in {"message", "call"}:
+        raise ValueError("Chế độ tương tác không hợp lệ.")
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
@@ -60,9 +69,9 @@ def start_call(scenario_key: str) -> StartCallResponse:
 
         cursor.execute(
             """
-            SELECT node_id, node_key, stage, text
-            FROM dialogue_nodes
-            WHERE scenario_id = %s AND is_start = TRUE
+            SELECT node.node_id, node.node_key, node.stage
+            FROM dialogue_nodes AS node
+            WHERE node.scenario_id = %s AND node.is_start = TRUE
             """,
             (scenario["scenario_id"],),
         )
@@ -70,20 +79,40 @@ def start_call(scenario_key: str) -> StartCallResponse:
         if node is None:
             raise RuntimeError(f"Kịch bản '{scenario_key}' chưa có node bắt đầu.")
 
+        # Keep opener rotation tied to each persisted session while selecting the least-used variant.
+        cursor.execute(
+            """UPDATE dialogue_lines
+               SET use_count = use_count + 1
+               WHERE line_id = (
+                   SELECT line_id FROM dialogue_lines
+                   WHERE node_id = %s AND source = 'fixed' AND is_reprompt = FALSE
+                     AND enabled = TRUE
+                   ORDER BY use_count ASC, preference_score DESC, random(), line_id
+                   LIMIT 1
+               )
+               RETURNING line_id, line_text""",
+            (node["node_id"],),
+        )
+        opening_line = cursor.fetchone()
+        if opening_line is None:
+            raise RuntimeError(f"Kịch bản '{scenario_key}' chưa có lời mở đầu.")
+
         cursor.execute(
             """
-            INSERT INTO call_sessions (scenario_id, current_node_id, total_score)
-            VALUES (%s, %s, %s)
+            INSERT INTO call_sessions
+                (scenario_id, current_node_id, total_score, user_id, interaction_mode, opening_line_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING session_id
             """,
-            (scenario["scenario_id"], node["node_id"], scenario["base_score"]),
+            (scenario["scenario_id"], node["node_id"], scenario["base_score"], user_id,
+             interaction_mode, opening_line["line_id"]),
         )
         session_id = str(cursor.fetchone()["session_id"])
         return StartCallResponse(
             session_id=session_id,
             scenario_key=scenario["scenario_name"],
             scenario_title=scenario["title"],
-            bot_text=node["text"],
+            bot_text=opening_line["line_text"],
             stage=node["stage"],
         )
 
@@ -97,11 +126,14 @@ def _masked_text(text: str) -> str:
 def _terminal_node(cursor: Any, scenario_id: int, outcome: str) -> dict[str, Any] | None:
     cursor.execute(
         """
-        SELECT node_id AS target_node_id, node_key AS target_node_key,
-               stage AS target_stage, text AS target_text,
-               is_terminal AS target_is_terminal, outcome AS target_outcome
-        FROM dialogue_nodes
-        WHERE scenario_id = %s AND is_terminal = TRUE AND outcome = %s
+        SELECT node.node_id AS target_node_id, node.node_key AS target_node_key,
+               node.stage AS target_stage, line.line_text AS target_text,
+               line.line_id AS target_line_id,
+               node.is_terminal AS target_is_terminal, node.outcome AS target_outcome
+        FROM dialogue_nodes AS node
+        JOIN dialogue_lines AS line ON line.node_id = node.node_id
+          AND line.source = 'fixed' AND line.is_reprompt = FALSE
+        WHERE node.scenario_id = %s AND node.is_terminal = TRUE AND node.outcome = %s
         LIMIT 1
         """,
         (scenario_id, outcome),
@@ -109,23 +141,29 @@ def _terminal_node(cursor: Any, scenario_id: int, outcome: str) -> dict[str, Any
     return cursor.fetchone()
 
 
-def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None) -> CallTurnResponse:
+def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None, user_id: str) -> CallTurnResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
             SELECT cs.session_id, cs.scenario_id, cs.current_node_id, cs.ended_at,
                    cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count,
-                   s.scenario_name, s.max_turns,
-                   n.node_key, n.stage, n.text AS node_text, n.reprompt_text,
+                   s.scenario_name, s.title AS scenario_title, s.payload AS scenario_payload, s.max_turns,
+                   n.node_key, n.stage, n.objective, n.tactic,
+                   main_line.line_text AS node_text, main_line.line_id AS node_line_id,
+                   reprompt_line.line_text AS reprompt_text, reprompt_line.line_id AS reprompt_line_id,
                    n.requested_action, n.max_turns AS node_max_turns,
                    n.timeout_next_node_id, n.is_terminal
             FROM call_sessions AS cs
             JOIN scenarios AS s ON s.scenario_id = cs.scenario_id
             JOIN dialogue_nodes AS n ON n.node_id = cs.current_node_id
-            WHERE cs.session_id = %s
+            LEFT JOIN dialogue_lines AS main_line ON main_line.node_id = n.node_id
+              AND main_line.source = 'fixed' AND main_line.is_reprompt = FALSE
+            LEFT JOIN dialogue_lines AS reprompt_line ON reprompt_line.node_id = n.node_id
+              AND reprompt_line.source = 'fixed' AND reprompt_line.is_reprompt = TRUE
+            WHERE cs.session_id = %s AND cs.user_id = %s
             FOR UPDATE OF cs
             """,
-            (session_id,),
+            (session_id, user_id),
         )
         session = cursor.fetchone()
         if session is None:
@@ -147,6 +185,29 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
             "rasa" if result.matched_rule and result.matched_rule.startswith("rasa:")
             else "rule" if result.matched_rule else "fallback"
         )
+        if intent == "unknown":
+            # Reclassify unknowns before transition/scoring lookup. Only masked player text
+            # is sent; this bounded provider call runs while the session row is locked.
+            try:
+                scenario_payload = session.get("scenario_payload") or {}
+                context = {
+                    "scenario_title": session["scenario_title"],
+                    "scenario_category": scenario_payload.get("category") if isinstance(scenario_payload, dict) else None,
+                    "persona": scenario_payload.get("persona") if isinstance(scenario_payload, dict) else None,
+                    "user_context": scenario_payload.get("user_context") if isinstance(scenario_payload, dict) else None,
+                    "stage": session["stage"],
+                    "objective": session["objective"],
+                    "tactics": session["tactic"],
+                    "requested_action": session["requested_action"],
+                    "player_text_masked": _masked_text(user_text),
+                }
+                revised_intent = reclassify_unknown(context=context)
+                if revised_intent is not None:
+                    intent = revised_intent.value
+                    intent_method = "llm"
+            except Exception as exc:
+                # Supplemental classification must never break the deterministic game flow.
+                logger.warning("Unknown intent reclassification failed: %s", type(exc).__name__)
         next_turn_no = session["turn_no"] + 1
         unknown_count = session["unknown_count"]
         score_delta = 0
@@ -158,10 +219,13 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
             """
             SELECT transition.score_delta, transition.feedback, transition.critical,
                    destination.node_id AS target_node_id, destination.node_key AS target_node_key,
-                   destination.stage AS target_stage, destination.text AS target_text,
+                   destination.stage AS target_stage, line.line_text AS target_text,
+                   line.line_id AS target_line_id,
                    destination.is_terminal AS target_is_terminal, destination.outcome AS target_outcome
             FROM dialogue_transitions AS transition
             JOIN dialogue_nodes AS destination ON destination.node_id = transition.to_node_id
+            LEFT JOIN dialogue_lines AS line ON line.node_id = destination.node_id
+              AND line.source = 'fixed' AND line.is_reprompt = FALSE
             WHERE transition.from_node_id = %s AND transition.intent = %s
             """,
             (session["current_node_id"], intent),
@@ -201,13 +265,20 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
                     cursor.execute(
                         """
                         SELECT node_id AS target_node_id, node_key AS target_node_key,
-                               stage AS target_stage, text AS target_text,
+                               stage AS target_stage,
                                is_terminal AS target_is_terminal, outcome AS target_outcome
                         FROM dialogue_nodes WHERE node_id = %s
                         """,
                         (session["timeout_next_node_id"],),
                     )
                     target = cursor.fetchone()
+                    if target is not None:
+                        cursor.execute(
+                            """SELECT line_text AS target_text,line_id AS target_line_id
+                               FROM dialogue_lines WHERE node_id=%s AND source='fixed' AND is_reprompt=FALSE""",
+                            (target["target_node_id"],),
+                        )
+                        target.update(cursor.fetchone() or {})
                     unknown_count = 0
                 elif unknown_count >= 2 or next_turn_no >= session["max_turns"]:
                     target = _terminal_node(cursor, session["scenario_id"], "timeout")
@@ -226,19 +297,36 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
             outcome = target["target_outcome"] if target["target_is_terminal"] else None
             ended = outcome is not None
 
+        line_result = None
+        if not (target is not None and target["target_is_terminal"]):
+            # The session row is locked here; keep LINE_LLM_TIMEOUT_SECONDS short (default 3s).
+            line_result = resolve_bot_line(
+                scenario_id=session["scenario_id"], session_id=session_id,
+                target_node=target_node_id, intent=intent, user_text_masked=_masked_text(user_text),
+                original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
+                context={"sample_line": bot_text, "intent": intent, "player_text": _masked_text(user_text)},
+            )
+            bot_text = line_result.text
+        else:
+            from app.arena.line_generator import LineResult
+            line_result = LineResult(bot_text, None, "fixed", 0)
+        logger.info("session_id=%s node=%s intent=%s line_source=%s line_latency_ms=%s", session_id, target_node_id, intent, line_result.source, line_result.latency_ms)
+
         total_score = max(0, min(100, session["total_score"] + score_delta))
         cursor.execute(
             """
             INSERT INTO call_turns
-                (session_id, turn_no, node_id, user_text_masked, intent, intent_method,
-                 score_delta, feedback, critical, elapsed_seconds, bot_reply_text)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (session_id, turn_no, node_id, target_node_id, is_reprompt, user_text_masked, intent, intent_method,
+                 score_delta, feedback, critical, elapsed_seconds, bot_reply_text,
+                 line_id, line_source, line_latency_ms)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING turn_id
             """,
             (
-                session_id, next_turn_no, session["current_node_id"], _masked_text(user_text),
+                session_id, next_turn_no, session["current_node_id"], target_node_id, target is None, _masked_text(user_text),
                 intent, intent_method, score_delta,
-                feedback, critical, elapsed_seconds, bot_text,
+                feedback, critical, elapsed_seconds, bot_text, line_result.line_id,
+                line_result.source, line_result.latency_ms,
             ),
         )
         turn_id = cursor.fetchone()["turn_id"]
@@ -269,8 +357,12 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
 
         return CallTurnResponse(
             bot_text=bot_text,
-            intent=result.intent,
+            intent=Intent(intent),
             intent_method=intent_method,
+            line_source=line_result.source,
+            line_latency_ms=line_result.latency_ms,
+            line_id=line_result.line_id,
+            turn_no=next_turn_no,
             stage=stage,
             ended=ended,
             outcome=outcome,
@@ -280,7 +372,59 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None)
         )
 
 
-def finish_call(session_id: UUID) -> None:
+def _adjust_line_preference(cursor, line_id: int, delta: int) -> int:
+    cursor.execute(
+        """UPDATE dialogue_lines
+           SET preference_score=GREATEST(-100,LEAST(100,preference_score+%s))
+           WHERE line_id=%s AND source='llm' RETURNING preference_score""",
+        (delta, line_id),
+    )
+    result = cursor.fetchone()
+    if not result:
+        raise KeyError(line_id)
+    return result["preference_score"]
+
+
+def rate_generated_line(session_id: UUID, turn_no: int, line_id: int, user_id: str) -> LinePreferenceResponse:
+    with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        cursor.execute("""SELECT gl.line_id FROM call_turns t
+                       JOIN call_sessions s USING(session_id)
+                       JOIN dialogue_lines gl ON gl.line_id=%s AND gl.node_id=t.target_node_id
+                         AND gl.source='llm' AND gl.intent=t.intent AND gl.is_reprompt=t.is_reprompt
+                       WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s""",(line_id,session_id,user_id,turn_no))
+        if not cursor.fetchone(): raise KeyError(line_id)
+        score=_adjust_line_preference(cursor,line_id,1)
+    return LinePreferenceResponse(line_id=line_id,reaction='like',preference_score=score)
+
+
+def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None, user_id: str) -> RegeneratedLineResponse:
+    with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        cursor.execute("""SELECT t.target_node_id,t.intent,t.is_reprompt,s.scenario_id
+                       FROM call_turns t JOIN call_sessions s USING(session_id)
+                       WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s""",(session_id,user_id,turn_no))
+        turn=cursor.fetchone()
+        if not turn: raise KeyError(turn_no)
+        if not turn['target_node_id'] or not turn['intent']: raise ValueError('Lượt này chưa hỗ trợ tạo lại lời thoại.')
+        cursor.execute("SELECT is_terminal FROM dialogue_nodes WHERE node_id=%s",(turn['target_node_id'],))
+        target=cursor.fetchone()
+        if not target or target['is_terminal']: raise ValueError('Không thể tạo lại lời thoại cho node kết thúc.')
+        if old_line_id is not None:
+            cursor.execute("""SELECT line_id FROM dialogue_lines WHERE line_id=%s
+                           AND node_id=%s AND source='llm' AND intent=%s AND is_reprompt=%s""",
+                           (old_line_id,turn['target_node_id'],turn['intent'],turn['is_reprompt']))
+            if not cursor.fetchone(): raise KeyError(old_line_id)
+    result=regenerate_line_for_turn(session_id=session_id,turn_no=turn_no,old_line_id=old_line_id,user_id=user_id)
+    with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        if old_line_id is not None:
+            _adjust_line_preference(cursor,old_line_id,-1)
+        cursor.execute("""UPDATE call_turns SET bot_reply_text=%s,line_id=%s,line_source=%s,line_latency_ms=%s
+                       WHERE session_id=%s AND turn_no=%s""",
+                       (result.text,result.line_id,result.source,result.latency_ms,session_id,turn_no))
+    return RegeneratedLineResponse(bot_text=result.text,line_source=result.source,
+        line_latency_ms=result.latency_ms,line_id=result.line_id,turn_no=turn_no)
+
+
+def finish_call(session_id: UUID, user_id: str) -> None:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
@@ -292,16 +436,16 @@ def finish_call(session_id: UUID) -> None:
                 ),
                 outcome = COALESCE(outcome, 'timeout'),
                 ended_at = COALESCE(ended_at, now())
-            WHERE session_id = %s
+            WHERE session_id = %s AND user_id = %s
             RETURNING session_id
             """,
-            (session_id,),
+            (session_id, user_id),
         )
         if cursor.fetchone() is None:
             raise KeyError(str(session_id))
 
 
-def get_call_summary(session_id: UUID) -> CallSummaryResponse:
+def get_call_summary(session_id: UUID, user_id: str) -> CallSummaryResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
@@ -310,9 +454,9 @@ def get_call_summary(session_id: UUID) -> CallSummaryResponse:
                    s.payload->'red_flags' AS red_flags
             FROM call_sessions AS cs
             JOIN scenarios AS s ON s.scenario_id = cs.scenario_id
-            WHERE cs.session_id = %s
+            WHERE cs.session_id = %s AND cs.user_id = %s
             """,
-            (session_id,),
+            (session_id, user_id),
         )
         session = cursor.fetchone()
         if session is None:
@@ -374,14 +518,14 @@ def tip(mistake: str) -> str:
     return improvement_tip(mistake)
 
 
-def list_call_history(limit: int = 30) -> list[CallHistoryItem]:
+def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """SELECT cs.session_id, s.title, cs.started_at, cs.ended_at,
                       cs.outcome, cs.total_score, cs.turn_no
                FROM call_sessions cs JOIN scenarios s ON s.scenario_id = cs.scenario_id
-               ORDER BY cs.started_at DESC LIMIT %s""",
-            (limit,),
+               WHERE cs.user_id = %s ORDER BY cs.started_at DESC LIMIT %s""",
+            (user_id, limit),
         )
         return [
             CallHistoryItem(
@@ -394,16 +538,22 @@ def list_call_history(limit: int = 30) -> list[CallHistoryItem]:
         ]
 
 
-def get_call_transcript(session_id: UUID) -> CallTranscriptResponse:
+def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT cs.session_id, s.title, start_node.text AS opening_line
+            """SELECT cs.session_id, s.title, COALESCE(chosen.line_text, fallback.line_text) AS opening_line
                FROM call_sessions cs
                JOIN scenarios s ON s.scenario_id = cs.scenario_id
                JOIN dialogue_nodes start_node
                  ON start_node.scenario_id = cs.scenario_id AND start_node.is_start = TRUE
-               WHERE cs.session_id = %s""",
-            (session_id,),
+               LEFT JOIN dialogue_lines chosen ON chosen.line_id = cs.opening_line_id
+               LEFT JOIN LATERAL (
+                   SELECT line_text FROM dialogue_lines
+                   WHERE node_id = start_node.node_id AND source='fixed' AND is_reprompt=FALSE
+                   ORDER BY line_id LIMIT 1
+               ) fallback ON TRUE
+               WHERE cs.session_id = %s AND cs.user_id = %s""",
+            (session_id, user_id),
         )
         session = cursor.fetchone()
         if session is None:
@@ -516,16 +666,18 @@ def reject_intent_candidate(candidate_id: int) -> IntentCandidateActionResponse:
     return IntentCandidateActionResponse(candidate_id=candidate_id, review_status="rejected")
 
 
-def flag_turn_for_review(session_id: UUID, turn_no: int) -> FlagTurnResponse:
+def flag_turn_for_review(session_id: UUID, turn_no: int, user_id: str) -> FlagTurnResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT s.scenario_id, n.stage, n.requested_action, n.text AS caller_text,
+            """SELECT s.scenario_id, n.stage, n.requested_action, line.line_text AS caller_text,
                       t.turn_id, t.intent, t.user_text_masked
                FROM call_sessions s
                JOIN call_turns t ON t.session_id = s.session_id
                JOIN dialogue_nodes n ON n.node_id = t.node_id
-               WHERE s.session_id = %s AND t.turn_no = %s""",
-            (session_id, turn_no),
+               LEFT JOIN dialogue_lines line ON line.node_id=n.node_id
+                 AND line.source='fixed' AND line.is_reprompt=FALSE
+               WHERE s.session_id = %s AND s.user_id = %s AND t.turn_no = %s""",
+            (session_id, user_id, turn_no),
         )
         row = cursor.fetchone()
         if row is None:

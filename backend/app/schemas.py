@@ -69,6 +69,22 @@ class SpeakRequest(BaseModel):
 
 class StartCallRequest(BaseModel):
     scenario_key: str = Field(min_length=1, max_length=80)
+    interaction_mode: Literal["message", "call"] = "message"
+
+
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9_.-]+$")
+    password: str = Field(min_length=3, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AuthUserResponse(BaseModel):
+    username: str
+    role: Literal["user", "admin"]
 
 
 class StartCallResponse(BaseModel):
@@ -88,12 +104,30 @@ class CallTurnResponse(BaseModel):
     bot_text: str
     intent: Intent
     intent_method: Literal["rule", "rasa", "llm", "fallback"]
+    line_source: Literal["cache_exact", "cache_pool", "llm", "fixed"] = "fixed"
+    line_latency_ms: int = 0
+    line_id: int | None = None
+    turn_no: int | None = None
     stage: str | None = None
     ended: bool = False
     outcome: Literal["safe", "scammed", "timeout"] | None = None
     score: int = Field(ge=0, le=100)
     score_delta: int = 0
     feedback: str | None = None
+
+
+class LinePreferenceResponse(BaseModel):
+    line_id: int
+    reaction: Literal["like", "dislike"]
+    preference_score: int
+
+
+class RegeneratedLineResponse(BaseModel):
+    bot_text: str
+    line_source: Literal["llm", "cache_pool"]
+    line_latency_ms: int
+    line_id: int
+    turn_no: int
 
 
 class SessionFeedback(BaseModel):

@@ -6,16 +6,21 @@ PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` gi
 
 | Bảng | Chứa gì |
 | --- | --- |
+| `app_users` | Tài khoản với username duy nhất, hash mật khẩu PBKDF2 và vai trò `user`/`admin`; không lưu mật khẩu dạng rõ. |
+| `auth_sessions` | Hash token cookie phiên đăng nhập và hạn dùng; token gốc chỉ nằm trong cookie HttpOnly của trình duyệt. |
 | `scenarios` | Danh mục kịch bản: ID số, mã ổn định (`bank`), tên, độ khó, số lượt tối đa, điểm bắt đầu, trạng thái; `payload` chỉ giữ cấu hình phụ như nhân vật, dấu hiệu cảnh báo và bài học. |
-| `dialogue_nodes` | Mỗi câu máy nói là một node, có stage, lời nhắc dự phòng, thủ đoạn và node timeout. Mỗi kịch bản có đúng một node bắt đầu và ba node kết thúc. |
+| `dialogue_nodes` | Node điều khiển hội thoại: stage, mục tiêu, thủ đoạn, hành động được yêu cầu và timeout. Nội dung câu nói nằm tập trung trong `dialogue_lines`. Mỗi kịch bản có một node bắt đầu và ba node kết thúc. |
+| `dialogue_lines` | Danh mục tập trung cho câu cố định và câu LLM. `source` phân biệt `fixed`/`llm`; câu LLM có nhãn intent, khóa câu người chơi, model/prompt, cờ bật/tắt, số lượt dùng và `preference_score`. Điểm ưu tiên được cập nhật trực tiếp trên dòng này. Mỗi tình huống có 12 biến thể mở đầu cố định, được chọn luân phiên theo `use_count`. |
 | `dialogue_transitions` | Một dòng cho mỗi cặp `(node hiện tại, intent)`, trỏ tới node kế tiếp và chứa thay đổi điểm/phản hồi. |
 | `intent_phrase_rules` | Cụm từ bổ sung cho bộ nhận diện. `scenario_id = NULL` nghĩa là dùng chung; nếu có ID thì chỉ dùng cho kịch bản đó. `priority` lớn hơn được xét trước. |
 | `intent_defaults` | Luật chung cho `hang_up`, `share_sensitive`, `transfer_money` và `unknown`, tránh lặp nhánh kết thúc ở mọi node. |
-| `call_sessions` | Phiên chơi, node hiện tại, điểm, số lượt, trạng thái và kết quả. |
-| `call_turns` | Mỗi câu trả lời: node máy vừa nói, ý định, phương pháp nhận diện, điểm/phản hồi và thời gian trả lời. Văn bản người chơi được lưu dưới dạng đã che dãy số dài. |
+| `call_sessions` | Phiên chơi dùng chung cho cả nhắn tin và cuộc gọi; `interaction_mode` ghi nguồn (`message`/`call`), `opening_line_id` lưu chính xác câu mở đầu đã chọn, cùng chủ sở hữu, node hiện tại, điểm, số lượt, trạng thái và kết quả. Phiên cũ được gán `message` khi migration; phiên chưa gắn chủ sở hữu vẫn được giữ nhưng không hiện trong lịch sử tài khoản mới. |
+| `call_turns` | Mỗi lượt: node máy vừa nói, nhãn nhận diện, điểm/phản hồi, văn bản bot đã gửi và ID câu trong `dialogue_lines` nếu là câu LLM. Văn bản người chơi được lưu dưới dạng đã che dãy số dài. |
 | `intent_review_candidates` | Câu `unknown` hoặc câu người chơi báo máy hiểu sai, đã che thông tin, ngữ cảnh, đề xuất từ LLM và trạng thái chờ duyệt. Duyệt mới tạo luật hoạt động; từ chối thì không ảnh hưởng bộ nhận diện. |
 
 `scenarios.payload` không còn chứa bản sao của `stages` và `scoring`. Hai phần đó được nạp vào `dialogue_nodes` và `dialogue_transitions`; file JSON trong `data/scenarios/` vẫn là nguồn để tạo kịch bản ban đầu.
+
+Các biến thể mở đầu nằm trong `data/opening_line_variants.json` (12 câu cho mỗi kịch bản, gồm câu gốc). Khi khởi động, seed thêm câu còn thiếu mà không ghi đè câu đã có. Mỗi phiên mới chọn câu có `use_count` thấp nhất; `call_sessions.opening_line_id` giữ lại đúng câu đã hiển thị trong transcript.
 
 ## Nạp dữ liệu và cập nhật
 
@@ -33,9 +38,17 @@ Các migration schema chạy trong transaction khi app khởi động. Migration
 - `POST /api/arena/calls/{session_id}/turns/{turn_no}/flag` đưa lượt người chơi báo hiểu sai vào hàng đợi phân tích.
 - `GET /api/arena/admin/intent-candidates` liệt kê câu chờ duyệt. `POST .../{candidate_id}/approve` thêm phrase rule theo kịch bản; `POST .../{candidate_id}/reject` bỏ qua đề xuất.
 
-Nhận diện trong lúc chơi hiện dùng luật trong Python và cụm từ trong database. Khi chưa có luật phù hợp hoặc các luật mâu thuẫn, kết quả là `unknown`; `intent_method` ghi `fallback`. Sau khi kết thúc phiên, các câu `unknown` được đưa vào `intent_review_candidates`; người chơi cũng có thể báo lượt máy phân loại sai từ lịch sử để đưa câu đó vào hàng đợi. Nếu cấu hình `OPENAI_API_KEY`, backend gửi câu đã che số dài/email cùng câu thoại và hành động được yêu cầu tới Responses API để đề xuất ý định/cụm từ. Không có key thì admin có thể gán nhãn thủ công. LLM không được quyền thêm hoặc bật luật; phải duyệt thủ công trong khu vực quản trị trên trang chủ. Compose chỉ bind port trên localhost; cần bổ sung đăng nhập/phân quyền trước khi đưa trang duyệt lên môi trường công khai.
+Nhận diện trong lúc chơi hiện dùng luật trong Python và cụm từ trong database. Khi chưa có luật phù hợp hoặc các luật mâu thuẫn, kết quả là `unknown`; `intent_method` ghi `fallback`. Sau khi kết thúc phiên, các câu `unknown` được đưa vào `intent_review_candidates`; người chơi cũng có thể báo lượt máy phân loại sai từ lịch sử để đưa câu đó vào hàng đợi. Nếu cấu hình `OPENAI_API_KEY`, backend gửi câu đã che số dài/email cùng câu thoại và hành động được yêu cầu tới Responses API để đề xuất ý định/cụm từ. Không có key thì admin có thể gán nhãn thủ công. LLM không được quyền thêm hoặc bật luật; các API duyệt yêu cầu tài khoản admin. Compose mặc định bind port trên localhost; khi đưa lên mạng, hãy bật HTTPS và cookie Secure.
 
 Trước khi lưu câu trả lời, backend thay mọi dãy từ 4 chữ số trở lên bằng `****`. Không lưu bản gốc câu trả lời trong `call_turns`. Thời gian phản hồi được lưu riêng để tính chỉ số tham khảo.
+
+## Tài khoản và quyền truy cập
+
+Các endpoint tài khoản: `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout` và `GET /api/auth/me`. Cookie đăng nhập HttpOnly, SameSite=Lax, hết hạn sau 14 ngày. Mật khẩu tài khoản tối thiểu 3 ký tự và được băm PBKDF2.
+
+API phiên chơi, lịch sử, transcript, ghi âm và đọc thoại yêu cầu đăng nhập, đồng thời kiểm tra chủ sở hữu phiên. `/api/arena/scenarios` vẫn công khai để tải danh sách tình huống. Lịch sử cũ có `user_id IS NULL` được giữ lại nhưng không tự gán cho tài khoản nào. Câu thoại và điểm ưu tiên trong `dialogue_lines` dùng chung giữa người dùng, tin nhắn và cuộc gọi.
+
+Tài khoản quản trị nội bộ được tạo khi đặt `ADMIN_USERNAME` và `ADMIN_PASSWORD` (tối thiểu 12 ký tự) trong `.env`; để trống thì không có admin. Khi triển khai sau HTTPS, đặt `AUTH_COOKIE_SECURE=true`.
 
 ## Xem dữ liệu
 
@@ -56,4 +69,18 @@ Thêm một dòng vào `intent_phrase_rules` hoặc duyệt một đề xuất �
 docker compose restart scam-arena
 ```
 
-Khu vực duyệt phrase rules trên trang chủ là công cụ nội bộ không có đăng nhập, phù hợp khi chạy local. Không đưa lên máy chủ công khai trước khi có xác thực và phân quyền. Để bật LLM, thêm `OPENAI_API_KEY` vào `.env`, tùy chọn đặt `OPENAI_MODEL`, rồi chạy `docker compose up -d --build scam-arena`. Nếu chưa cấu hình key, câu vẫn được lưu để admin gán nhãn thủ công. Compose mặc định dùng PostgreSQL local; có thể đặt `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` trong `.env` trước lần chạy đầu. Đổi mật khẩu trong `.env` không tự sửa thông tin của volume đã khởi tạo.
+Khu vực duyệt phrase rules trên trang chủ là công cụ nội bộ không có đăng nhập, phù hợp khi chạy local. Không đưa lên máy chủ công khai trước khi có xác thực và phân quyền. Sinh lời thoại thử lần lượt Gemini, Groq, rồi OpenRouter khi provider trước lỗi/hết quota. Cấu hình qua `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY` và model tương ứng; bật `LINE_LLM_ENABLED=true`. Sau khi sửa `.env`, chạy `docker compose up -d --build --force-recreate scam-arena`. Rà soát ý định sau phiên vẫn dùng `OPENAI_API_KEY` riêng. Compose mặc định dùng PostgreSQL local; có thể đặt `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` trong `.env` trước lần chạy đầu. Đổi mật khẩu trong `.env` không tự sửa thông tin của volume đã khởi tạo.
+# Unified dialogue line catalog
+
+`dialogue_lines` là nơi lưu nội dung câu thoại duy nhất: câu cố định của node và câu LLM đều gắn với `node_id`. Câu LLM được phân biệt bằng `source='llm'`; cache dùng `intent`, `is_reprompt`, `player_text_norm` và `prompt_version`. Lượt thích tăng `preference_score`, yêu cầu tạo lại giảm điểm câu cũ trực tiếp trong cùng bảng; không còn bảng feedback riêng. Migration chuyển các câu và điểm từ `generated_lines`, chuyển văn bản cố định khỏi `dialogue_nodes`, cập nhật liên kết lượt rồi xóa bảng/cột cũ. `call_turns` giữ `bot_reply_text` làm ảnh chụp nội dung đã gửi và `line_id` làm liên kết tới câu LLM. `call_sessions.interaction_mode` chỉ để phân tích theo kênh, cache vẫn dùng chung.
+
+```sql
+SELECT line_source, count(*) AS turns,
+       round(100.0 * count(*) / sum(count(*)) OVER (), 1) AS percent
+FROM call_turns WHERE line_source IS NOT NULL GROUP BY line_source;
+SELECT line_source, round(avg(line_latency_ms)::numeric, 1) AS avg_latency_ms
+FROM call_turns WHERE line_source IS NOT NULL GROUP BY line_source;
+UPDATE dialogue_lines SET enabled = FALSE WHERE line_id = 123;
+```
+
+Pre-warm lời thoại bằng `docker compose exec scam-arena python -m app.arena.prewarm_lines --scenario bank` (thay `bank` bằng scenario key). Cần đặt `GEMINI_API_KEY` và bật `LINE_LLM_ENABLED=true` trước khi chạy.
