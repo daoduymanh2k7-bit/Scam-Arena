@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "bank",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "title": "Giả nhân viên ngân hàng",
   "category": "bank_impersonation",
@@ -60,7 +60,7 @@
       "default_next_stage_id": "intro"
     },
     {
-      "timeout_next_stage_id": "ask_action",
+      "timeout_next_stage_id": "rebuttal",
       "requested_action": "keep_secret",
       "opening_line": "Nếu không xử lý ngay, tài khoản có thể bị khóa. Anh/chị đừng ngắt máy.",
       "max_turns": 2,
@@ -76,19 +76,15 @@
       "transitions": [
         {
           "on_intent": "verify",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "verify_pressure"
         },
         {
           "on_intent": "refuse",
-          "next_stage_id": "END_SAFE"
-        },
-        {
-          "on_intent": "hang_up",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "doubt",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "comply",
@@ -97,12 +93,20 @@
         {
           "on_intent": "share_sensitive",
           "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
         }
       ],
       "default_next_stage_id": "pressure"
     },
     {
-      "timeout_next_stage_id": "END_NEUTRAL",
+      "timeout_next_stage_id": "reassurance",
       "requested_action": "share_sensitive",
       "opening_line": "Để xác minh giao dịch, anh/chị đọc mã OTP vừa gửi về điện thoại.",
       "max_turns": 2,
@@ -116,13 +120,143 @@
       "id": "ask_action",
       "transitions": [
         {
-          "on_intent": "share_sensitive",
-          "next_stage_id": "END_UNSAFE"
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "reassurance"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "reassurance"
         },
         {
           "on_intent": "comply",
           "next_stage_id": "END_UNSAFE"
         },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "ask_action"
+    },
+    {
+      "id": "reassurance",
+      "requested_action": "share_sensitive",
+      "opening_line": "Tôi đang cố giúp anh/chị tránh rủi ro. Mình hoàn tất bước xác nhận trên cuộc gọi này rồi tôi sẽ cập nhật kết quả.",
+      "max_turns": 2,
+      "objective": "Trấn an thêm một lần, làm nhẹ mối lo của người nghe rồi thúc họ ra quyết định.",
+      "fallback_lines": [
+        "Anh/chị có muốn tiếp tục để tôi hoàn tất việc này không?"
+      ],
+      "tactics": [
+        "trấn an",
+        "giảm nhẹ rủi ro"
+      ],
+      "timeout_next_stage_id": "final_pressure",
+      "default_next_stage_id": "reassurance",
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ]
+    },
+    {
+      "id": "rebuttal",
+      "requested_action": "keep_secret",
+      "opening_line": "Tôi hiểu anh/chị đang lo. Có thể tôi chưa nói rõ; anh/chị cứ nghe hết phần xác minh rồi hãy quyết định.",
+      "objective": "Đáp lại sự nghi ngờ, làm dịu người nghe rồi tiếp tục cuộc gọi.",
+      "tactics": [
+        "trấn an",
+        "tạo cảm giác quy trình bình thường"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Tôi đang giải thích để anh/chị nắm rõ. Anh/chị còn nghe máy chứ?"
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "rebuttal"
+    },
+    {
+      "id": "verify_pressure",
+      "requested_action": "keep_secret",
+      "opening_line": "Anh/chị đừng ngắt máy để kiểm tra lúc này. Tôi sẽ nói rõ hơn để anh/chị xử lý kịp thời.",
+      "objective": "Gây áp lực để người nghe trì hoãn việc xác minh độc lập.",
+      "tactics": [
+        "ngăn xác minh độc lập",
+        "thúc giục"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Anh/chị có thể nghe tôi nói hết rồi hãy quyết định."
+      ],
+      "max_turns": 2,
+      "transitions": [
         {
           "on_intent": "verify",
           "next_stage_id": "END_SAFE"
@@ -132,15 +266,73 @@
           "next_stage_id": "END_SAFE"
         },
         {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
           "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "verify_pressure"
+    },
+    {
+      "id": "final_pressure",
+      "requested_action": "share_sensitive",
+      "opening_line": "Thời gian xử lý sắp hết. Anh/chị xác nhận theo hướng dẫn để tôi tiếp tục kiểm tra giao dịch nhé.",
+      "objective": "Nhắc lại yêu cầu rủi ro và tạo áp lực chốt hành động.",
+      "tactics": [
+        "khẩn cấp",
+        "thúc giục hành động"
+      ],
+      "timeout_next_stage_id": "END_NEUTRAL",
+      "fallback_lines": [
+        "Anh/chị có đồng ý làm theo yêu cầu vừa rồi không?"
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
           "next_stage_id": "END_SAFE"
         },
         {
           "on_intent": "doubt",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
           "next_stage_id": "END_SAFE"
         }
       ],
-      "default_next_stage_id": "ask_action"
+      "default_next_stage_id": "final_pressure"
     }
   ],
   "red_flags": [
@@ -214,6 +406,6 @@
   },
   "lesson_summary": "Không cung cấp OTP hoặc mật khẩu cho người gọi. Hãy tự gọi số trên thẻ hoặc ứng dụng chính thức.",
   "created_at": "2026-11-05T00:00:00Z",
-  "updated_at": "2026-11-05T00:00:00Z",
+  "updated_at": "2026-11-17T00:00:00Z",
   "published_at": "2026-11-05T00:00:00Z"
 }

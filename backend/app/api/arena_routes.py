@@ -137,6 +137,12 @@ def intent_candidates(status: str = "pending") -> list[IntentCandidate]:
     return call_service.list_intent_candidates(status)
 
 
+@router.get("/admin/scenarios/graphs", dependencies=[Depends(require_admin)])
+def admin_scenario_graphs() -> list[dict]:
+    """All stored scripts and their actual transition graphs; admin role only."""
+    return call_service.list_admin_scenario_graphs()
+
+
 @router.post("/admin/intent-candidates/{candidate_id}/approve", response_model=IntentCandidateActionResponse, dependencies=[Depends(require_admin)])
 def approve_intent_candidate(
     candidate_id: int, request: ApproveIntentCandidateRequest,

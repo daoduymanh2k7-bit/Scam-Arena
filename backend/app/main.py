@@ -7,7 +7,6 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from app.api import arena_routes, auth_routes, voice_routes
-from app.auth import bootstrap_admin
 from app.database import close_database, initialize_database
 from app.scenario_visualizer import generate_scenario_map
 
@@ -17,7 +16,6 @@ STATIC_DIR = ROOT / "frontend" / "static"
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
-    bootstrap_admin()
     generate_scenario_map()
     try:
         yield

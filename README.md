@@ -139,8 +139,6 @@ Compose tự đọc `.env` ở thư mục gốc. Các giá trị mặc định d
 | `WHISPER_MODEL` | `base` | Model Whisper chạy local (`base`, `small`, ... tùy tài nguyên máy). |
 | `RASA_NLU_TIMEOUT_SECONDS` | `2` | Timeout gọi dịch vụ Rasa nội bộ. |
 | `PIPER_SENTENCE_PAUSE_MS` | `350` | Khoảng nghỉ giữa câu khi Piper đọc. |
-| `ADMIN_USERNAME` | rỗng | Tạo/cập nhật tài khoản quản trị khi khởi động nếu đặt cùng mật khẩu. |
-| `ADMIN_PASSWORD` | rỗng | Mật khẩu admin, tối thiểu 12 ký tự. |
 | `AUTH_COOKIE_SECURE` | `false` | Đặt `true` khi phục vụ qua HTTPS. |
 
 Để bật Gemini và dự phòng Groq rồi OpenRouter, điền key tương ứng trong `.env` và đặt:
@@ -160,7 +158,13 @@ Không cần khai báo provider mà bạn không dùng; xóa key khỏi `.env` h
 - Mật khẩu: tối thiểu 3 ký tự; mật khẩu được băm trước khi lưu.
 - Phiên đăng nhập tồn tại tối đa 14 ngày.
 - Tài khoản thường chỉ xem lịch sử và transcript của chính mình.
-- Muốn có admin, đặt cả `ADMIN_USERNAME` và `ADMIN_PASSWORD` (ít nhất 12 ký tự) trong `.env`, sau đó tạo lại container. Khi môi trường này được đặt, thông tin admin sẽ được áp dụng lúc khởi động.
+- Muốn cấp quyền admin, tạo tài khoản bình thường rồi đổi `role` trong PostgreSQL. Ví dụ:
+
+  ```sql
+  UPDATE app_users SET role = 'admin' WHERE username = 'ten_dang_nhap' RETURNING username, role;
+  ```
+
+  Hạ quyền lại bằng `UPDATE app_users SET role = 'user' WHERE username = 'ten_dang_nhap';`. Tải lại trang hoặc đăng nhập lại để giao diện hiện quyền mới. Không có tài khoản admin mặc định được tạo lúc khởi động.
 
 ## Sử dụng ứng dụng
 
@@ -214,7 +218,7 @@ Các bảng chính:
 - `intent_phrase_rules`, `intent_defaults`: luật nhận diện bổ sung và luật mặc định.
 - `intent_review_candidates`: đề xuất intent cần admin xem xét.
 
-Migration và seed được chạy idempotent khi ứng dụng khởi động. Dữ liệu ban đầu được đọc từ `data/scenarios/*.json`, `data/intent_phrases.json` và `data/opening_line_variants.json`; sau khi seed, database là nguồn lúc chạy. Sửa file JSON không tự ghi đè các dòng đã có trong database.
+Migration và seed được chạy idempotent khi ứng dụng khởi động. Các node, metadata và transition của kịch bản đã published được đồng bộ từ `data/scenarios/*.json` mỗi lần khởi động; vì vậy sửa diễn biến trong các file này sẽ cập nhật nhánh đang chạy. Câu thoại cố định đã có trong database không bị ghi đè; các câu thoại mới được thêm nếu còn thiếu. Phrase rules và 12 câu mở đầu mỗi tình huống được nạp idempotent từ `data/intent_phrases.json` và `data/opening_line_variants.json`.
 
 Sao lưu database ra file SQL:
 
@@ -310,7 +314,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 - Piper cần file voice trong `voices/`; nếu chưa tải voice, nhập bàn phím vẫn dùng được nhưng TTS không hoạt động.
 - Rasa chạy trong container riêng; build đầu tải image lớn và train model. Các câu huấn luyện chưa phải kết quả đánh giá độ chính xác production.
 - Tài khoản chưa có xác minh email hoặc tự khôi phục mật khẩu. Quên mật khẩu cần quản trị viên xử lý.
-- Các biến thể lời mở đầu được seed vào PostgreSQL; thay đổi JSON sau khi database đã có dữ liệu sẽ không tự cập nhật các câu đã seed.
+- Các biến thể lời mở đầu và câu thoại cố định đã có được lưu trong PostgreSQL; thêm biến thể mới vào JSON sẽ nạp câu còn thiếu khi ứng dụng khởi động, không xóa các câu cũ.
 - Đây là bản thực hành; không dùng dữ liệu cá nhân thật, OTP thật, thông tin tài khoản thật hoặc nội dung liên hệ tổ chức thật trong kịch bản.
 
 ## Tài liệu bổ sung

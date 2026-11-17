@@ -18,13 +18,13 @@ PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` gi
 | `call_turns` | Mỗi lượt: node máy vừa nói, nhãn nhận diện, điểm/phản hồi, văn bản bot đã gửi và ID câu trong `dialogue_lines` nếu là câu LLM. Văn bản người chơi được lưu dưới dạng đã che dãy số dài. |
 | `intent_review_candidates` | Câu `unknown` hoặc câu người chơi báo máy hiểu sai, đã che thông tin, ngữ cảnh, đề xuất từ LLM và trạng thái chờ duyệt. Duyệt mới tạo luật hoạt động; từ chối thì không ảnh hưởng bộ nhận diện. |
 
-`scenarios.payload` không còn chứa bản sao của `stages` và `scoring`. Hai phần đó được nạp vào `dialogue_nodes` và `dialogue_transitions`; file JSON trong `data/scenarios/` vẫn là nguồn để tạo kịch bản ban đầu.
+`scenarios.payload` không còn chứa bản sao của `stages` và `scoring`. Hai phần đó được đồng bộ từ các file JSON `data/scenarios/` vào `dialogue_nodes` và `dialogue_transitions` mỗi lần app khởi động. JSON là nguồn chuẩn cho metadata node và nhánh; câu cố định đã có không bị ghi đè.
 
 Các biến thể mở đầu nằm trong `data/opening_line_variants.json` (12 câu cho mỗi kịch bản, gồm câu gốc). Khi khởi động, seed thêm câu còn thiếu mà không ghi đè câu đã có. Mỗi phiên mới chọn câu có `use_count` thấp nhất; `call_sessions.opening_line_id` giữ lại đúng câu đã hiển thị trong transcript.
 
 ## Nạp dữ liệu và cập nhật
 
-Lần đầu chạy, app đọc `data/scenarios/*.json`, tạo metadata, node hội thoại, nhánh và luật chấm. Việc nạp là idempotent: không tạo trùng dữ liệu khi khởi động lại và không ghi đè nội dung đã có trong PostgreSQL. Vì vậy, sửa file JSON của kịch bản đã nạp không tự cập nhật database; cần dùng migration/seed có chủ đích hoặc công cụ quản trị kịch bản ở bước sau.
+App đọc `data/scenarios/*.json` khi khởi động để tạo mới hoặc đồng bộ metadata node, transition, điểm thay đổi và timeout. Seed/migration chạy idempotent: không tạo trùng node hay câu thoại khi khởi động lại. Thay đổi diễn biến trong JSON sẽ có hiệu lực sau khi khởi động lại container; câu thoại cố định và câu LLM đã lưu trong `dialogue_lines` vẫn được giữ nguyên.
 
 Các migration schema chạy trong transaction khi app khởi động. Migration chuyển cấu trúc cũ sang các bảng mới và giữ lại nội dung kịch bản, trạng thái, điểm cùng luật ý định hiện có.
 
@@ -48,7 +48,13 @@ Các endpoint tài khoản: `POST /api/auth/register`, `POST /api/auth/login`, `
 
 API phiên chơi, lịch sử, transcript, ghi âm và đọc thoại yêu cầu đăng nhập, đồng thời kiểm tra chủ sở hữu phiên. `/api/arena/scenarios` vẫn công khai để tải danh sách tình huống. Lịch sử cũ có `user_id IS NULL` được giữ lại nhưng không tự gán cho tài khoản nào. Câu thoại và điểm ưu tiên trong `dialogue_lines` dùng chung giữa người dùng, tin nhắn và cuộc gọi.
 
-Tài khoản quản trị nội bộ được tạo khi đặt `ADMIN_USERNAME` và `ADMIN_PASSWORD` (tối thiểu 12 ký tự) trong `.env`; để trống thì không có admin. Khi triển khai sau HTTPS, đặt `AUTH_COOKIE_SECURE=true`.
+Đăng ký tài khoản qua ứng dụng như bình thường, sau đó cấp quyền quản trị trực tiếp trong PostgreSQL:
+
+```sql
+UPDATE app_users SET role = 'admin' WHERE username = 'ten_dang_nhap' RETURNING username, role;
+```
+
+Để gỡ quyền admin, đổi role về `user`. Không có tài khoản admin mặc định và ứng dụng không tự thay đổi role khi khởi động. API quản trị kiểm tra role hiện tại trong database. Tải lại trang hoặc đăng nhập lại để giao diện cập nhật quyền mới. Khi triển khai sau HTTPS, đặt `AUTH_COOKIE_SECURE=true`.
 
 ## Xem dữ liệu
 

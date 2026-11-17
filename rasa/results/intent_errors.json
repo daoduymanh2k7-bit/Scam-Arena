@@ -1,0 +1,426 @@
+[
+  {
+    "text": "tại sao ngân hàng không gửi thông báo chính thức",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.9691342711448669
+    }
+  },
+  {
+    "text": "nghe không ổn lắm",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.9999806880950928
+    }
+  },
+  {
+    "text": "tôi không tin lắm",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.9999988079071045
+    }
+  },
+  {
+    "text": "duoc, toi lam theo",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.5564157962799072
+    }
+  },
+  {
+    "text": "tôi chấp nhận làm theo yêu cầu",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.9469411373138428
+    }
+  },
+  {
+    "text": "tôi đang thực hiện giao dịch",
+    "intent": "transfer_money",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9548622369766235
+    }
+  },
+  {
+    "text": "tôi sẽ trả phí nhận quà",
+    "intent": "transfer_money",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.9999988079071045
+    }
+  },
+  {
+    "text": "anh có thể nói lại không",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9999973773956299
+    }
+  },
+  {
+    "text": "anh gọi nhầm số rồi",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9861207604408264
+    }
+  },
+  {
+    "text": "tôi không nhớ nữa",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.999997615814209
+    }
+  },
+  {
+    "text": "để tôi gọi người nhà",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.7881874442100525
+    }
+  },
+  {
+    "text": "tôi không rành việc này",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.9999991655349731
+    }
+  },
+  {
+    "text": "hình như mất sóng",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9955747127532959
+    }
+  },
+  {
+    "text": "khong lam theo yeu cau nay",
+    "intent": "refuse",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9730647206306458
+    }
+  },
+  {
+    "text": "tự dưng bắt chuyển tiền thấy kỳ quá",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "transfer_money",
+      "confidence": 0.83857661485672
+    }
+  },
+  {
+    "text": "tôi sẽ nhập thông tin theo hướng dẫn",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.8552466630935669
+    }
+  },
+  {
+    "text": "tôi sẽ cho anh xem giấy tờ tùy thân",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.852495551109314
+    }
+  },
+  {
+    "text": "toi cup may ngay",
+    "intent": "hang_up",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9686174988746643
+    }
+  },
+  {
+    "text": "hiện tại tôi chưa trả lời được",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9794267416000366
+    }
+  },
+  {
+    "text": "tôi đang ở chỗ đông người",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.7715389132499695
+    }
+  },
+  {
+    "text": "không nghe thấy gì cả",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.99954754114151
+    }
+  },
+  {
+    "text": "tôi đang không tiện nghe máy",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.9927986860275269
+    }
+  },
+  {
+    "text": "tôi chưa có câu trả lời",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9999902248382568
+    }
+  },
+  {
+    "text": "tôi sẽ gọi số điện thoại in trên thẻ",
+    "intent": "verify",
+    "intent_prediction": {
+      "name": "share_sensitive",
+      "confidence": 0.9363763332366943
+    }
+  },
+  {
+    "text": "tự mở ứng dụng ngân hàng xem thử",
+    "intent": "verify",
+    "intent_prediction": {
+      "name": "share_sensitive",
+      "confidence": 0.9148474931716919
+    }
+  },
+  {
+    "text": "đừng yêu cầu tôi làm việc đó",
+    "intent": "refuse",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9999995231628418
+    }
+  },
+  {
+    "text": "tôi không nghe nữa",
+    "intent": "hang_up",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.999998927116394
+    }
+  },
+  {
+    "text": "tôi không biết",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.8068010210990906
+    }
+  },
+  {
+    "text": "chắc là vậy",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9999643564224243
+    }
+  },
+  {
+    "text": "ừm",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9888594150543213
+    }
+  },
+  {
+    "text": "hôm nay tôi đi làm",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.7880325317382812
+    }
+  },
+  {
+    "text": "anh nói chậm lại được không",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "refuse",
+      "confidence": 0.731170654296875
+    }
+  },
+  {
+    "text": "tôi đang làm việc",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9999971389770508
+    }
+  },
+  {
+    "text": "tôi chưa tin anh",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9999990463256836
+    }
+  },
+  {
+    "text": "có gì chứng minh anh là nhân viên không",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.6077761054039001
+    }
+  },
+  {
+    "text": "tôi sẽ giữ máy và làm theo",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.9335905313491821
+    }
+  },
+  {
+    "text": "tôi sẽ bật tính năng đó lên",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.999964714050293
+    }
+  },
+  {
+    "text": "tôi sẽ làm việc đó ngay",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9801592826843262
+    }
+  },
+  {
+    "text": "tôi sẽ gửi thông tin tài khoản ngân hàng",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "transfer_money",
+      "confidence": 0.9989573955535889
+    }
+  },
+  {
+    "text": "cho tôi hỏi mấy giờ rồi",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.9976761937141418
+    }
+  },
+  {
+    "text": "toi chua co cau tra loi",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.9996306896209717
+    }
+  },
+  {
+    "text": "ừ, tôi nghe đây",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.998416543006897
+    }
+  },
+  {
+    "text": "để tôi gọi cho công an địa phương",
+    "intent": "verify",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9985173344612122
+    }
+  },
+  {
+    "text": "tôi không thực hiện giao dịch này",
+    "intent": "refuse",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.4568687975406647
+    }
+  },
+  {
+    "text": "tôi đang nghi ngờ lời anh nói",
+    "intent": "doubt",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.7014170289039612
+    }
+  },
+  {
+    "text": "cứ nói tôi cần làm gì",
+    "intent": "comply",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9997333884239197
+    }
+  },
+  {
+    "text": "tôi đồng ý cung cấp số thẻ",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.8560276031494141
+    }
+  },
+  {
+    "text": "tôi sẽ đọc số trên thẻ ngân hàng",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "verify",
+      "confidence": 0.9792770743370056
+    }
+  },
+  {
+    "text": "tôi sẽ cung cấp ngày tháng năm sinh",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "comply",
+      "confidence": 0.9991046786308289
+    }
+  },
+  {
+    "text": "tôi vừa nói mật khẩu cho người gọi",
+    "intent": "share_sensitive",
+    "intent_prediction": {
+      "name": "unknown",
+      "confidence": 0.9373226165771484
+    }
+  },
+  {
+    "text": "chuyen khoan ngay bay gio",
+    "intent": "transfer_money",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.9708398580551147
+    }
+  },
+  {
+    "text": "máy tôi sắp hết pin",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "hang_up",
+      "confidence": 0.9997904896736145
+    }
+  },
+  {
+    "text": "chuyện đó để sau nhé",
+    "intent": "unknown",
+    "intent_prediction": {
+      "name": "doubt",
+      "confidence": 0.9985221028327942
+    }
+  }
+]

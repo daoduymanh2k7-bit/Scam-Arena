@@ -9,6 +9,7 @@
     appContent.hidden = false;
     $("auth-username").textContent = user.username;
     $("account-controls").hidden = false;
+    $("admin-open").hidden = user.role !== "admin";
     if (window.ArenaHistory) window.ArenaHistory.refreshAll();
   }
 

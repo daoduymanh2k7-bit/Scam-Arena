@@ -42,6 +42,51 @@ def list_scenarios() -> list[dict[str, str]]:
         return [{"key": row["scenario_name"], "label": row["title"]} for row in cursor.fetchall()]
 
 
+def list_admin_scenario_graphs() -> list[dict[str, Any]]:
+    """Return the stored scenario and dialogue graph for the admin visualizer."""
+    with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT scenario_id,scenario_name,title,status,payload FROM scenarios ORDER BY scenario_id"
+        )
+        scenarios = cursor.fetchall()
+        result = []
+        for scenario in scenarios:
+            cursor.execute(
+                """SELECT n.node_id,n.node_key,n.stage,n.objective,n.tactic,n.requested_action,
+                          n.max_turns,n.is_start,n.is_terminal,n.outcome,n.timeout_next_node_id,
+                          COALESCE(jsonb_agg(jsonb_build_object(
+                            'line_id',l.line_id,'line_text',l.line_text,'source',l.source,
+                            'intent',l.intent,'is_reprompt',l.is_reprompt,'enabled',l.enabled,
+                            'preference_score',l.preference_score
+                          ) ORDER BY l.source,l.intent NULLS FIRST,l.is_reprompt,l.line_id)
+                          FILTER (WHERE l.line_id IS NOT NULL), '[]'::jsonb) AS lines
+                   FROM dialogue_nodes n
+                   LEFT JOIN dialogue_lines l ON l.node_id=n.node_id
+                   WHERE n.scenario_id=%s
+                   GROUP BY n.node_id ORDER BY n.is_start DESC,n.node_id""",
+                (scenario["scenario_id"],),
+            )
+            nodes = cursor.fetchall()
+            cursor.execute(
+                """SELECT t.from_node_id,t.intent,t.to_node_id,t.score_delta,t.critical,t.feedback
+                   FROM dialogue_transitions t
+                   JOIN dialogue_nodes n ON n.node_id=t.from_node_id
+                   WHERE n.scenario_id=%s ORDER BY t.from_node_id,t.intent""",
+                (scenario["scenario_id"],),
+            )
+            transitions = cursor.fetchall()
+            payload = scenario["payload"] if isinstance(scenario["payload"], dict) else {}
+            result.append({
+                "key": scenario["scenario_name"], "title": scenario["title"], "status": scenario["status"],
+                "summary": payload.get("summary", ""), "persona": payload.get("persona", {}),
+                "lesson_summary": payload.get("lesson_summary", ""), "scoring": payload.get("scoring", {}),
+                "red_flags": payload.get("red_flags", []),
+                "nodes": [dict(row) for row in nodes],
+                "transitions": [dict(row) for row in transitions],
+            })
+        return result
+
+
 def random_scenario() -> dict[str, str]:
     import random
 

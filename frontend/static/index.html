@@ -5,17 +5,118 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0f0e18">
   <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
-  <link rel="stylesheet" href="/css/style.css?v=desktop-orbit-4">
+  <link rel="stylesheet" href="/css/style.css?v=admin-dialogue-map-5">
 </head>
 <body>
   <main class="app-shell">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Scam Arena trang chủ"><span class="brand-mark">S</span><span>Scam Arena</span></a>
-      <div class="account-controls" id="account-controls" hidden>
-        <span id="auth-username"></span>
-        <button id="auth-logout" class="button button-quiet" type="button">Đăng xuất</button>
+      <div class="topbar-actions">
+        <button id="help-open" class="help-open" type="button" aria-label="Mở hướng dẫn sử dụng" title="Hướng dẫn">?</button>
+        <button id="admin-open" class="button button-quiet admin-open" type="button" hidden>Mô hình kịch bản</button>
+        <div class="account-controls" id="account-controls" hidden>
+          <span id="auth-username"></span>
+          <button id="auth-logout" class="button button-quiet" type="button">Đăng xuất</button>
+        </div>
       </div>
     </header>
+
+    <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+      <div class="help-heading">
+        <div><p class="eyebrow">SCAM ARENA</p><h2 id="help-title">Hướng dẫn sử dụng</h2></div>
+        <button id="help-close" class="help-close" type="button" aria-label="Đóng hướng dẫn">×</button>
+      </div>
+      <div class="help-layout">
+        <nav class="help-tabs" aria-label="Các mục hướng dẫn" role="tablist" aria-orientation="vertical">
+          <button id="help-tab-start" role="tab" aria-controls="help-panel-start" aria-selected="true" type="button">Bắt đầu</button>
+          <button id="help-tab-logic" role="tab" aria-controls="help-panel-logic" aria-selected="false" type="button" tabindex="-1">Logic trò chuyện</button>
+          <button id="help-tab-stages" role="tab" aria-controls="help-panel-stages" aria-selected="false" type="button" tabindex="-1">Các giai đoạn</button>
+          <button id="help-tab-ai" role="tab" aria-controls="help-panel-ai" aria-selected="false" type="button" tabindex="-1">AI và câu thoại</button>
+          <button id="help-tab-safety" role="tab" aria-controls="help-panel-safety" aria-selected="false" type="button" tabindex="-1">Tài khoản và an toàn</button>
+          <button id="help-tab-trouble" role="tab" aria-controls="help-panel-trouble" aria-selected="false" type="button" tabindex="-1">Khắc phục sự cố</button>
+        </nav>
+        <div class="help-content">
+          <section id="help-panel-start" role="tabpanel" aria-labelledby="help-tab-start">
+            <h3>Bắt đầu luyện tập</h3>
+            <ol><li>Đăng nhập hoặc tạo tài khoản.</li><li>Chọn một tình huống để bắt đầu bằng tin nhắn. Mỗi tình huống có nội dung và cách gây áp lực riêng.</li><li>Đọc tin nhắn, nhập câu trả lời rồi chọn <strong>Gửi câu trả lời</strong>. Nút ghi âm chỉ hoạt động khi trình duyệt hỗ trợ và trang được mở qua HTTPS hoặc localhost.</li><li>Dùng <strong>Kết thúc và xem điểm</strong> khi muốn dừng; xem phần nhận xét để biết lựa chọn nào an toàn hơn.</li></ol>
+            <p>Chế độ <strong>Cuộc gọi</strong> hiện là màn hình giới thiệu tĩnh. Phần luyện tập đang hoạt động là <strong>Nhắn tin</strong>.</p>
+          </section>
+          <section id="help-panel-logic" role="tabpanel" aria-labelledby="help-tab-logic" hidden>
+            <h3>Hệ thống phản hồi thế nào?</h3>
+            <ol><li>Bộ nhận diện (Rasa và các luật an toàn) phân loại câu trả lời thành một ý định: tự xác minh, từ chối, muốn kết thúc, nghi ngờ, đồng ý làm theo, chia sẻ thông tin nhạy cảm, chuyển tiền hoặc chưa rõ.</li><li>Ý định cùng giai đoạn hiện tại được dùng để chọn nhánh hội thoại và tính điểm. Một nhãn không tự kết thúc phiên: kết quả còn tùy tình huống và vị trí trong kịch bản.</li><li>Nếu nhận diện là <strong>chưa rõ</strong>, LLM có thể phân loại lại khi được bật. Nhãn mới sẽ được dùng cho nhánh và điểm; nếu LLM lỗi, hệ thống dùng cách dự phòng hiện có.</li><li>LLM viết câu trả lời của người gọi sau khi code đã chọn node đích. LLM không tự chọn nhánh, thay luật chấm điểm hay quyết định kết thúc.</li></ol>
+            <p>Nhãn dưới tin nhắn của bạn cho biết hệ thống đã nhận ý định nào. Chạm hoặc rê chuột lên biểu tượng <strong>i</strong> ở tin nhắn người gọi để xem nguồn câu trả lời và độ trễ.</p>
+          </section>
+          <section id="help-panel-stages" role="tabpanel" aria-labelledby="help-tab-stages" hidden>
+            <h3>Lộ trình thường gặp của một vụ lừa đảo</h3>
+            <p>Mỗi tình huống có biến thể riêng; các giai đoạn có thể đi vòng, lặp lại hoặc kết thúc sớm tùy phản ứng của bạn.</p>
+            <ol class="stage-list"><li><strong>Mở đầu và tạo cớ:</strong> mạo danh ngân hàng, thông báo trúng thưởng hoặc nêu một vụ việc để thu hút chú ý.</li><li><strong>Tạo áp lực:</strong> thúc giục, nói có thời hạn hoặc khuyên không nên hỏi người khác.</li><li><strong>Đáp lại nghi ngờ:</strong> giải thích hoặc trấn an để giữ cuộc trò chuyện tiếp tục.</li><li><strong>Đưa ra hành động rủi ro:</strong> hướng người nghe tới việc làm theo, cung cấp thông tin nhạy cảm hoặc chuyển tiền.</li><li><strong>Gây sức ép lần cuối:</strong> nhắc lại yêu cầu hoặc thời hạn khi người nghe còn do dự.</li><li><strong>Xác minh và kết quả:</strong> tự liên hệ kênh chính thức hoặc dừng chia sẻ thường dẫn tới nhánh an toàn; làm theo yêu cầu rủi ro có thể dẫn tới nhánh không an toàn.</li></ol>
+            <p><strong>Ví dụ theo tình huống:</strong> ngân hàng thường mở bằng giao dịch bất thường; trúng thưởng bằng thông báo nhận giải; giả công an bằng cáo buộc liên quan vụ án. Hãy chú ý yêu cầu thực tế và xác minh độc lập, không chỉ dựa vào danh xưng.</p>
+          </section>
+          <section id="help-panel-ai" role="tabpanel" aria-labelledby="help-tab-ai" hidden>
+            <h3>AI và kho câu thoại</h3>
+            <ul><li>Khi bật cấu hình LLM, hệ thống ưu tiên Gemini, sau đó thử Groq rồi OpenRouter nếu nhà cung cấp trước gặp lỗi.</li><li>Câu do LLM tạo có thể được lưu trong bảng <code>dialogue_lines</code> của PostgreSQL chung để tái sử dụng; lượt sau có thể thấy câu đã lưu thay vì phát sinh yêu cầu mới.</li><li>Nút <strong>Trả lời lại câu này</strong> tạo một biến thể và giảm mức ưu tiên của câu cũ. Nút thích tăng ưu tiên câu được đánh giá tốt.</li><li>LLM chỉ diễn đạt lời thoại của nhánh đã chọn. Câu mở đầu được lấy từ các biến thể có sẵn trong kịch bản; câu ở node kết thúc vẫn cố định.</li><li>Nếu LLM tắt, hết hạn mức hoặc gặp lỗi, ứng dụng dùng câu dự phòng của kịch bản.</li></ul>
+          </section>
+          <section id="help-panel-safety" role="tabpanel" aria-labelledby="help-tab-safety" hidden>
+            <h3>Tài khoản, dữ liệu và an toàn</h3>
+            <ul><li>Lịch sử luyện tập gắn với tài khoản của bạn; kho câu thoại và đánh giá được dùng chung để cải thiện trải nghiệm.</li><li>Email và các dãy số dài được che trước khi gửi nội dung cần thiết cho LLM hoặc lưu theo luồng tương ứng. Dù vậy, đừng nhập mật khẩu, OTP, số thẻ hay dữ liệu thật.</li><li>Đây là mô phỏng đào tạo, không phải cuộc gọi hoặc tư vấn từ ngân hàng, cơ quan nhà nước hay tổ chức thật.</li><li>Khi gặp tình huống ngoài đời, hãy ngắt liên lạc và tự tìm số/kênh chính thức để xác minh.</li></ul>
+          </section>
+          <section id="help-panel-trouble" role="tabpanel" aria-labelledby="help-tab-trouble" hidden>
+            <h3>Khắc phục nhanh</h3>
+            <ul><li><strong>Không vào được web:</strong> khi chạy trên máy cá nhân, kiểm tra Docker Desktop và mở <code>http://localhost:8000</code>.</li><li><strong>Không ghi âm được:</strong> cấp quyền microphone; trên thiết bị khác, trình duyệt thường cần HTTPS.</li><li><strong>LLM không hoạt động:</strong> kiểm tra LINE_LLM_ENABLED và API key trong cấu hình máy chủ. Lỗi nhà cung cấp không ngăn phiên chơi; ứng dụng sẽ dùng câu dự phòng.</li><li><strong>Muốn biết câu do đâu:</strong> mở biểu tượng <strong>i</strong> ở cuối tin nhắn người gọi; nguồn có thể là LLM mới tạo, kho câu đã lưu hoặc câu cố định.</li></ul>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="admin-dialog" class="help-dialog admin-dialog" aria-labelledby="admin-title">
+      <div class="help-heading">
+        <div><p class="eyebrow">KHU VỰC QUẢN TRỊ</p><h2 id="admin-title">Sơ đồ kịch bản</h2></div>
+        <button id="admin-close" class="help-close" type="button" aria-label="Đóng sơ đồ">×</button>
+      </div>
+      <div class="admin-toolbar">
+        <label for="admin-scenario-select">Kịch bản</label>
+        <select id="admin-scenario-select" aria-label="Chọn kịch bản"></select>
+        <span id="admin-scenario-status" class="admin-status"></span>
+      </div>
+      <div class="admin-map-tools" role="group" aria-label="Thu phóng sơ đồ">
+        <button id="admin-zoom-out" type="button" aria-label="Thu nhỏ sơ đồ" title="Thu nhỏ">−</button>
+        <span id="admin-zoom-level" aria-live="polite">100%</span>
+        <button id="admin-zoom-in" type="button" aria-label="Phóng to sơ đồ" title="Phóng to">+</button>
+        <button id="admin-zoom-fit" type="button" title="Vừa khung">Vừa khung</button>
+        <span class="admin-zoom-hint">Rê để xem trước · bấm thẻ để ghim/đổi đường · bấm đúp để mở danh sách thoại · lăn chuột để zoom</span>
+      </div>
+      <p id="admin-error" class="error" role="alert" hidden></p>
+      <div class="admin-legend" aria-label="Chú giải sơ đồ">
+        <span><i class="legend-start"></i>Bắt đầu / giai đoạn</span><span><i class="legend-safe"></i>Kết thúc an toàn</span>
+        <span><i class="legend-risk"></i>Kết thúc rủi ro</span><span><i class="legend-timeout"></i>Hết thời gian</span>
+      </div>
+      <div class="admin-workspace">
+        <div class="admin-map-column">
+          <p id="admin-path-status" class="admin-path-status" aria-live="polite">Bấm vào thẻ để ghim đường đi; bấm lại để đổi giữa các đường khác.</p>
+          <div id="admin-graph-scroll" class="admin-graph-scroll" tabindex="0" aria-label="Sơ đồ luồng hội thoại; cuộn để xem toàn bộ">
+            <svg id="admin-graph" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sơ đồ các node và nhánh kịch bản"></svg>
+          </div>
+        </div>
+        <aside class="admin-side-column">
+          <details id="admin-scenario-overview" class="admin-scenario-overview" open>
+            <summary>Tổng quan kịch bản, dấu hiệu cảnh báo và bài học</summary>
+            <div id="admin-scenario-overview-content"></div>
+          </details>
+          <section id="admin-node-details" class="admin-node-details" aria-live="polite">
+            <h3>Chọn một node để xem chi tiết</h3><p>Bấm node để mở toàn bộ lời thoại; phần này hiển thị mục tiêu và các nhánh chấm điểm.</p>
+          </section>
+        </aside>
+      </div>
+    </dialog>
+
+    <dialog id="admin-lines-dialog" class="help-dialog admin-lines-dialog" aria-labelledby="admin-lines-title">
+      <div class="help-heading">
+        <div><p class="eyebrow">NỘI DUNG NODE</p><h2 id="admin-lines-title">Lời thoại theo giai đoạn</h2></div>
+        <button id="admin-lines-close" class="help-close" type="button" aria-label="Đóng danh sách lời thoại">×</button>
+      </div>
+      <p id="admin-lines-summary" class="admin-lines-summary"></p>
+      <div id="admin-lines-content" class="admin-lines-content"></div>
+    </dialog>
 
     <section id="auth-panel" class="panel auth-panel">
       <p class="eyebrow">TÀI KHOẢN</p>
@@ -130,7 +231,9 @@
   <script src="/js/api.js"></script>
   <script src="/js/arena/arena.js"></script>
   <script src="/js/arena/history.js"></script>
-  <script src="/js/auth.js"></script>
+  <script src="/js/auth.js?v=admin-graphs-1"></script>
   <script src="/js/app-mode.js"></script>
+  <script src="/js/help.js"></script>
+  <script src="/js/admin-graph.js?v=path-highlight-3"></script>
 </body>
 </html>

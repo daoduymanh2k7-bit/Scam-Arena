@@ -117,18 +117,3 @@ def require_admin(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Chức năng dành cho quản trị viên.")
     return user
 
-
-def bootstrap_admin() -> None:
-    """Optionally provision the internal review account from environment settings."""
-    username = os.getenv("ADMIN_USERNAME", "").strip().lower()
-    password = os.getenv("ADMIN_PASSWORD", "")
-    if not username and not password:
-        return
-    if not username or len(password) < 12:
-        raise RuntimeError("Cần đặt đồng thời ADMIN_USERNAME và ADMIN_PASSWORD dài ít nhất 12 ký tự.")
-    with get_connection_pool().connection() as connection, connection.cursor() as cursor:
-        cursor.execute(
-            """INSERT INTO app_users(username,password_hash,role) VALUES(%s,%s,'admin')
-               ON CONFLICT(username) DO UPDATE SET password_hash=EXCLUDED.password_hash,role='admin'""",
-            (username, _hash_password(password)),
-        )

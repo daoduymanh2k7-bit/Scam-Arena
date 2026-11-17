@@ -1,0 +1,1626 @@
+version: "3.1"
+
+nlu:
+- intent: verify
+  examples: |
+    - Anh cho tôi xin họ tên và số hiệu của anh được không
+    - Anh công tác ở đơn vị nào vậy
+    - Cho em hỏi anh thuộc phòng ban nào của ngân hàng
+    - Tôi muốn kiểm tra lại danh tính của anh trước đã
+    - Anh đọc giúp tôi số hiệu công an của anh
+    - Anh gửi cho tôi giấy triệu tập có dấu đỏ xem được không
+    - Số điện thoại này có phải của ngân hàng không vậy
+    - Tôi sẽ đến trực tiếp chi nhánh để xác minh
+    - Anh cho tôi số tổng đài để tôi gọi lại
+    - Làm sao tôi biết anh là nhân viên thật
+    - Anh có thẻ nhân viên không cho tôi xem
+    - Cho tôi xin mã nhân viên của anh
+    - Em muốn xác thực xem đây có đúng là cơ quan điều tra không
+    - Xin lỗi anh cho em hỏi địa chỉ trụ sở của đơn vị anh
+    - Tôi cần xem quyết định bằng văn bản trước
+    - Anh nhắn tin chính thức qua số hotline được không
+    - Để tôi tra cứu số này trên trang web chính thức đã
+    - Anh đọc số chứng minh thư của anh để tôi đối chiếu nhé
+    - Chị cho em xin tên đầy đủ của chị với
+    - Anh ở phòng nào của công an quận vậy
+    - Cho tôi số máy bàn của đơn vị anh để tôi gọi kiểm tra
+    - Tôi phải xác nhận lại với chi nhánh nơi tôi mở tài khoản
+    - Anh nói rõ mã vụ án giúp tôi xem
+    - Số hồ sơ của tôi là bao nhiêu anh đọc thử xem
+    - Trong hệ thống của anh tên tôi đầy đủ là gì
+    - Anh nói đúng ngày sinh của tôi trước đi rồi tôi tin
+    - Anh biết số tài khoản của tôi thì đọc thử xem nào
+    - Bên anh có gửi thư mời hay công văn nào đến nhà tôi chưa
+    - Tôi tắt máy rồi gọi lại vào số hotline in trên thẻ nhé
+    - Anh cho em xin cái tên của cấp trên anh được không
+    - Anh cho tôi biết giấy tờ này do cơ quan nào cấp
+    - Đơn vị anh có website không cho tôi xin địa chỉ
+    - Anh gửi email từ địa chỉ có đuôi gov chính thức nhé
+    - Tôi cần anh xuất trình thẻ ngành qua video
+    - Anh đang gọi từ số máy nào vậy sao nhìn lạ thế
+    - Cho tôi hỏi anh gọi từ tỉnh nào
+    - Số điện thoại hiển thị của anh có phải đầu số ngân hàng không
+    - Tôi hỏi lại chi nhánh gần nhà trước rồi mới tính
+    - Tôi sẽ nhờ luật sư xác minh giúp
+    - Anh đọc tên ngân hàng và chi nhánh đầy đủ giúp tôi
+    - Cho em số CMND của anh để em tra trên mạng
+    - Anh có thể cung cấp biên bản làm việc cho tôi không
+    - Giấy tờ của anh đâu cho tôi xem trước đã
+    - Nhân viên chăm sóc khách hàng mà sao anh không xưng tên
+    - Xin anh nhắc lại tên và đơn vị rõ hơn tôi nghe không rõ
+    - Em nghe chưa rõ anh là ai thuộc cơ quan nào ạ
+    - Anh cho cháu xin tên bác và số điện thoại cơ quan với
+    - Tôi muốn nói chuyện với người phụ trách cấp cao hơn
+    - Cho tôi gặp trưởng phòng của anh
+    - Anh cho tôi xin số hotline chính thống để xác minh
+    - Anh xác nhận giúp tôi mã giao dịch bị nghi vấn là gì
+    - Khoản nợ đó là của tháng nào năm nào anh nói cụ thể coi
+    - Anh chứng minh tôi đang bị điều tra như thế nào
+    - Cho xem lệnh bắt hoặc lệnh khám xét nào đó đi
+    - Anh gửi hình ảnh quyết định đó qua Zalo của cơ quan
+    - Tôi sẽ xác minh qua ứng dụng chính thức của ngân hàng
+    - Em vào trang web của công an kiểm tra tên anh được không
+    - Anh tên là gì viết ra giúp tôi từng chữ
+    - Đơn vị anh thuộc bộ nào
+    - Cho tôi biết số quyết định và ngày ban hành
+    - Phòng của anh ở tầng mấy toà nhà nào
+    - Tôi muốn biết đường dây nóng nào của bên anh để gọi lại
+    - Chị đọc giúp em mã số nhân viên và chi nhánh
+    - Anh cung cấp mã số thuế của công ty anh được không
+    - Tôi xin số giấy phép hoạt động của bên anh
+    - Làm thế nào tôi xác thực anh là người của VNPT
+    - Anh có thể đọc lại số hợp đồng của tôi không
+    - Tôi phải xem thông báo chính thức trên app trước
+    - Để tôi hỏi lại nhân viên giao dịch ở quầy đã
+    - Anh cho tôi thời gian xác minh với tổng đài viên khác
+    - Xin anh gửi lại thông báo bằng tin nhắn brandname chính thức
+    - Tôi chưa thấy tin nhắn nào của ngân hàng về việc này anh chứng minh đi
+    - Anh gọi bằng số cá nhân thì sao tôi biết thật hay giả
+    - Anh có biết tôi mở tài khoản ở chi nhánh nào không nói thử xem
+    - Để tôi kiểm tra số điện thoại anh trên danh bạ chống lừa đảo
+    - Tôi cần anh đọc đúng số CCCD của tôi rồi mới nói tiếp
+    - Anh có chứng nhận gì chứng minh anh làm ở đó
+    - Cho tôi hỏi mã số cán bộ của anh nhé
+    - anh cho tôi xin ten va so hieu cua anh
+    - ban la ai o don vi nao the
+    - cho toi so tong dai de goi lai
+    - anh co the xac minh danh tinh cho toi khong
+    - toi muon xem giay to cua anh
+    - tôi xác minh lại với ngân hàng đã
+    - để em gọi tổng đài hỏi lại xem
+    - anh chị cho em xin tên với đơn vị công tác
+    - số hiệu anh bao nhiêu nhỉ
+    - anh thuộc cơ quan nào ạ
+    - bên nào vậy anh nói lại giúp em
+    - đơn vị nào đấy cho tôi xin thông tin
+    - tôi gọi lại hotline nhé
+    - cho em xin mã nhân viên
+    - anh có giấy giới thiệu không
+    - xin số tổng đài để em kiểm tra
+    - tui muốn coi thẻ nhân viên của ông trước
+    - ông cho tui biết ông làm ở phòng nào
+    - bà cho con xin tên bà với bà làm ở đâu
+    - Dạ cho em hỏi anh tên gì ạ
+    - Dạ anh làm bên nào vậy anh
+    - Dạ anh cho em số hotline chính thức em gọi lại nha
+    - Anh nói tên cơ quan đầy đủ chứ đừng nói tắt
+    - Anh đọc lại họ tên đầy đủ kèm cấp bậc nhé
+    - Phiền anh cho biết số điện thoại cố định của cơ quan
+    - Anh cho phép tôi xác minh số này với công an phường nhé
+    - Tôi sẽ đến phường hỏi xem có vụ việc này không
+    - Để tôi hỏi con trai tôi làm bên ngân hàng xem có đúng quy trình này không
+    - Anh cho xin địa chỉ văn phòng để tôi đến gặp trực tiếp
+    - Anh hẹn gặp mặt ở trụ sở được không để tôi xem giấy tờ
+    - Gửi cho tôi quyết định bằng văn bản có chữ ký và con dấu
+    - Tôi cần thấy văn bản gốc có số công văn
+    - Anh có thể chuyển máy cho người giám sát của anh không
+    - Tôi muốn ghi lại tên anh để sau này tra cứu
+    - Anh đọc chậm lại tên và mã số để tôi ghi chép
+    - Anh cho tôi biết đầu số này đăng ký cho đơn vị nào
+    - Tôi gọi vào số tổng đài trên mặt sau thẻ ATM nhé
+    - Vừa rồi tôi nhận tin nhắn nào của ngân hàng đâu anh xác nhận dùm
+    - Ai là người đứng đầu đơn vị của anh
+    - Tôi cần anh xác thực bằng cách gọi từ số hotline chính thức
+    - Anh xác nhận giúp mã khách hàng của tôi trong hệ thống
+    - Anh đọc 4 số cuối thẻ của tôi xem đúng không rồi tôi nói tiếp
+    - Tên đệm của tôi là gì anh nói thử xem
+    - Anh nói địa chỉ thường trú của tôi đúng không đã
+    - Hồ sơ gốc của tôi nằm ở đâu anh nói rõ
+    - Anh làm việc ở cơ quan được bao lâu rồi tên trưởng phòng là gì
+    - Anh cho tôi xin số điện thoại của thủ trưởng đơn vị
+    - Chờ chút tôi mở trang web chính thức xem có tên anh không
+    - Tôi nhờ người nhà kiểm tra giúp số hiệu này nhé
+    - Anh có chứng từ nào cho thấy tôi nợ không gửi cho tôi xem
+    - Cho tôi xem lệnh thi hành bằng hình ảnh
+    - Anh có nhận dạng được tôi bằng thông tin gì chưa công khai không
+    - Bên anh có số hotline 1800 hay 1900 nào thì cho tôi
+    - Anh cho biết phòng nghiệp vụ nào đang xử lý hồ sơ của tôi
+    - Cho em số của anh để em gọi lại sau khi xác minh
+    - Chờ em hỏi lại chi nhánh xác nhận cái đã rồi em nói tiếp
+    - Em xin phép xác nhận với người quen trong ngành công an
+    - Làm phiền anh xác nhận giúp em đây có phải cuộc gọi thật của ngân hàng không
+    - Phiền chị cho em biết mã tra cứu để em kiểm tra online
+    - Cho tôi tra mã vụ việc trên cổng thông tin chính thức nhé
+    - Anh vui lòng cho biết thông tin cá nhân của anh để tôi đối chiếu
+    - Tôi muốn nghe lại ghi âm tổng đài về cuộc gọi này
+    - Anh đưa tôi số tổng đài rồi tôi sẽ gọi cho anh sau
+    - Tôi sẽ gọi vào số máy bàn của đơn vị anh trên mạng và nhờ chuyển máy
+    - Anh có tài khoản Zalo OA chính thức của cơ quan không
+    - Cho tôi xin tên cán bộ phụ trách vụ việc để tôi liên hệ
+    - Anh đọc tên người báo án giúp tôi
+    - Ai đã báo cáo vụ việc này anh cho tôi biết với
+    - Mã đơn khiếu nại bên anh nhận là gì
+    - Tôi cần email công vụ của anh để gửi hồ sơ
+    - Anh gửi thư mời qua đường bưu điện đến địa chỉ nhà tôi đi
+    - Anh nói rõ cơ sở pháp lý anh áp dụng là điều khoản nào
+    - Anh nêu tên điều luật nào tôi vi phạm
+    - Cho tôi hỏi rõ tên chi nhánh ngân hàng đang giữ hồ sơ
+    - Nếu anh là thật thì anh cho tôi số điện thoại để tôi gọi lại
+    - Tôi sẽ xác minh danh tính anh qua cổng dịch vụ công
+    - Xin anh vui lòng cho biết bộ phận nào đang gọi cho tôi
+    - Tên thật của anh là gì chứ không phải tên giả
+    - Anh cho cháu xin thẻ ngành qua camera
+    - Gọi video đi tôi muốn thấy mặt và giấy tờ của anh
+    - Đọc giúp tôi số điện thoại đường dây nóng của trụ sở chính
+    - Tôi sẽ lên mạng tra thông tin của đơn vị anh trước
+    - Nhờ anh nhắc lại tên đơn vị lần nữa tôi chưa ghi kịp
+    - Bạn cho mình hỏi bạn là nhân viên bộ phận nào
+    - Bạn có thể xác thực danh tính giúp mình được không
+    - Mình muốn gọi lại số hotline chính thức được không
+    - Bác cho cháu xin số hiệu của bác với ạ
+    - Chú ơi chú tên gì và làm ở đồn nào vậy chú
+    - Thầy cho em hỏi thầy thuộc cơ quan nào ạ
+    - Cho hỏi quý ngân hàng chi nhánh nào đang gọi đây
+    - Xin cho biết họ tên và chức danh người đang gọi
+    - Mời anh cho biết mã số định danh của anh
+    - Anh trả lời giúp tôi anh gọi theo yêu cầu của phòng nào
+    - Phiền anh gửi thông tin xác thực nhân viên qua email
+    - Anh xác nhận bằng cách nhắn tin vào số của tôi từ đầu số chính thức nhé
+    - Số này có đăng ký chính chủ cho cơ quan nào không
+    - Anh biết thông tin của tôi vậy cho tôi hỏi anh lấy từ đâu ra
+    - Cho tôi hỏi anh lấy số điện thoại của tôi ở đâu
+    - Anh xưng là cảnh sát giao thông hay hình sự cho tôi biết rõ
+    - Đội nào phòng nào thuộc công an thành phố nào xin nói rõ
+    - Chưa tin được nên anh làm ơn gửi thông tin chính thức nhé
+    - Anh xác nhận giúp tôi tên đơn vị và địa chỉ làm việc
+    - Anh làm ở đội nào của phòng cảnh sát hình sự vậy
+    - Tôi muốn nói chuyện với giám đốc chi nhánh để xác nhận
+    - Anh cho tôi biết số quyết định khởi tố vụ án là gì
+    - Anh gửi tôi bản scan giấy tờ để tôi mang đi hỏi công an phường
+    - Cuộc gọi này có được ghi âm và có mã tra cứu không
+    - Anh cho tôi xin số điện thoại của tổng đài viên cấp trên
+    - Tôi cần biết anh thuộc đầu mối nào của ngân hàng trung ương
+    - Xin anh đọc tên viết tắt của đơn vị và tên đầy đủ luôn
+    - Để tôi hỏi cán bộ khu phố xem có cán bộ tên đó không
+    - Anh có phải cán bộ ở Cục An ninh mạng không cho tôi xin mã cán bộ
+    - Anh nói tên người đứng đầu đơn vị để tôi tra cứu thử
+    - Em gọi lại sau khi xác nhận với phòng giao dịch nhé
+    - Bên anh gửi thông báo vào ứng dụng ngân hàng của tôi đi để tôi xác thực
+    - Cho tôi số fax hoặc email chính thức của đơn vị anh
+    - Anh đọc số quyết định bằng lời để tôi ghi lại và tra cứu
+    - Anh chứng minh bằng cách nhắn tin từ số tổng đài có tên thương hiệu đi
+    - Tôi cần anh xác minh bằng giấy tờ chứ không phải bằng lời nói
+    - Anh vui lòng gửi giấy mời làm việc đến địa chỉ nhà tôi để tôi xác thực
+    - Cho em xin tên phòng ban và tên trưởng phòng bên anh
+    - Số điện thoại của anh có phải số công vụ không
+
+- intent: doubt
+  examples: |
+    - Nghe có vẻ giống lừa đảo quá
+    - Tôi thấy chuyện này lạ lắm
+    - Tôi không tin đâu
+    - Có phải anh đang lừa tôi không
+    - Hôm qua tôi mới đọc báo về mấy vụ giả danh công an rồi
+    - Nghe không hợp lý chút nào
+    - Em thấy có gì đó không ổn
+    - Anh nói nghe khả nghi quá
+    - Sao ngân hàng lại gọi điện thế này
+    - Tôi nghi ngờ cuộc gọi này lắm
+    - Làm gì có chuyện cơ quan công an đòi tiền qua điện thoại
+    - Thật không vậy anh
+    - Tôi chưa từng làm gì sai sao lại bị điều tra
+    - Lạ thật tôi có vay mượn gì đâu
+    - Tôi đâu có mở tài khoản nào như thế
+    - Nghe cứ như trò lừa
+    - Sao tôi thấy không đúng quy trình lắm
+    - Từ trước tới giờ chưa ai gọi tôi như vậy cả
+    - Thật sự là tôi rất hoang mang không biết có thật không
+    - Tôi cảm giác anh đang dắt tôi vào cái bẫy nào đó
+    - Có khi nào đây là lừa đảo không nhỉ
+    - Nghe giọng anh cứ như đọc kịch bản
+    - Anh nói nhanh quá làm tôi càng thấy nghi
+    - Tại sao lại gấp gáp như vậy
+    - Sao cứ phải làm ngay lập tức vậy
+    - Thường thì ngân hàng đâu có gọi như thế
+    - Công an mà gọi điện bảo chuyển tiền á nghe vô lý ghê
+    - Em không tin lắm đâu anh ạ
+    - Em thấy chuyện này hơi kỳ kỳ
+    - Cháu thấy bác nói không giống người của cơ quan nhà nước
+    - Tôi nghe nói dạo này nhiều người bị lừa kiểu này lắm
+    - Báo đài vừa cảnh báo đúng y chang chiêu này
+    - Sao nghe giống mấy vụ lừa trên mạng xã hội thế
+    - Tôi thấy có mùi lừa đảo ở đây
+    - Mới sáng ra đã có người gọi bảo tôi dính vào vụ án thì nghe thiếu thuyết phục
+    - Chuyện hoang đường quá
+    - Nghe vô lý hết sức
+    - Anh nói như vậy tôi càng không tin
+    - Mọi thứ nghe quá trùng hợp
+    - Sao anh biết tên tôi mà tôi thấy vẫn chưa yên tâm
+    - Có gì đó sai sai ở đây
+    - Tôi thấy rất đáng ngờ
+    - Không giống cách làm việc của cơ quan chức năng
+    - Tôi nghĩ đây là cuộc gọi lừa đảo
+    - Thiệt không đó
+    - Có thật không vậy trời
+    - Giả hay thật vậy anh
+    - Tôi chưa tin được những gì anh nói
+    - Điều anh nói không khớp với những gì tôi biết
+    - Nghe không thuyết phục tí nào
+    - Thế này thì tôi khó tin quá
+    - Anh nói tôi nợ tiền mà tôi có vay đâu
+    - Sao tôi lại bị liên quan đến đường dây rửa tiền được
+    - Tôi còn chẳng ra khỏi nhà mà sao dính án được
+    - Anh có chắc là không nhầm người không
+    - Có khi nào anh gọi nhầm số không
+    - Tôi thấy giọng anh không giống nhân viên ngân hàng
+    - Anh nghe giống người nước ngoài gọi sang
+    - Tiếng ồn xung quanh anh nghe như quán net
+    - Sao nghe như đang gọi từ call center lạ vậy
+    - Nghe có vẻ không đáng tin
+    - Đúng là tôi bắt đầu thấy nghi
+    - Em nghĩ đây là chiêu mới của bọn lừa rồi
+    - Mẹ tôi mới bị lừa kiểu này tuần trước
+    - Cô giáo dạy bọn tôi cách nhận biết mấy cuộc gọi như thế này rồi
+    - Tôi mới xem video cảnh báo y hệt kịch bản này
+    - Chuyện này có vẻ không bình thường
+    - Sao tôi cứ thấy kỳ lạ
+    - Anh làm tôi thấy bất an và nghi ngờ
+    - Nghe qua đã thấy có vấn đề
+    - Cảm giác như bị gài bẫy
+    - Nghe như phim vậy anh ơi
+    - Làm gì có chuyện đó
+    - Chắc không phải đâu
+    - Tôi hơi nghi anh đó
+    - Em thấy hơi lạ nha
+    - Hổng có tin đâu
+    - Nghe lạ hoắc
+    - Sao mà tin nổi
+    - Chuyện nghe không ổn rồi
+    - Nghe thấy lừa đảo kiểu gì ấy
+    - sao nghe giong lua dao the
+    - toi thay chuyen nay khong dung lam
+    - co phai lua dao khong day
+    - nghe vo ly qua
+    - hơi nghi nghi
+    - chưa tin lắm
+    - nghe không ổn
+    - sao lạ vậy
+    - tôi nghi lắm đó
+    - lừa đảo hả
+    - anh có đang lừa em không
+    - có chắc không đó
+    - Tôi ngờ ngợ chuyện này
+    - Trong lòng tôi bắt đầu thấy lấn cấn
+    - Tôi thấy chuyện này không bình thường chút nào
+    - Sao chỉ gọi điện mà đòi giải quyết hết mọi việc
+    - Ai lại điều tra án qua điện thoại bao giờ
+    - Làm gì có chuyện bắt người qua điện thoại
+    - Chuyện này nghe sai sai so với những gì tôi biết về pháp luật
+    - Theo tôi biết thì công an đâu làm việc như vậy
+    - Ngân hàng đâu có yêu cầu như thế bao giờ
+    - Tôi nhớ ngân hàng dặn không ai được hỏi mã OTP mà
+    - Sao lại bắt tôi giữ bí mật vụ này
+    - Tại sao anh lại bảo tôi không được nói với ai
+    - Anh bảo đừng nói với người nhà nghe càng đáng ngờ
+    - Thôi đi anh định lừa tôi chứ gì
+    - Nghe như chuyện bịa vậy
+    - Tôi nghĩ anh đang nói dối
+    - Sao tôi nghe mà không thấy thật
+    - Tôi thấy có điều gì đó mờ ám
+    - Thật là khó hiểu và nghi ngờ
+    - Đúng là nghe mà rợn người nhưng tôi vẫn nghi
+    - Hơi bất thường đó nha
+    - Tôi cũng nghi nhưng nói thử xem
+    - Em nghi lắm anh à nhưng anh cứ nói tiếp đi
+    - Nếu thật thì sao anh lại gọi kiểu này
+    - Sao mà trùng hợp thế không biết
+    - Nghe mơ hồ lắm
+    - Tôi cảm thấy bị dọa
+    - Nghe như đang dọa tôi vậy
+    - Anh dọa tôi à sao nghe giống lừa đảo thế
+    - Chiêu này tôi nghe nói rồi
+    - Cái này là lừa đảo trực tuyến phải không
+    - Anh có phải một trong những kẻ lừa đảo trên mạng không
+    - Tôi mà tin thì tôi dại rồi
+    - Làm sao tôi dám tin lời anh
+    - Anh gọi điện bất ngờ vậy tôi cảnh giác lắm
+    - Cảnh giác chút vẫn hơn
+    - Đầu dây bên kia nghe không đáng tin
+    - Cuộc gọi này thật đáng ngờ
+    - Mới nghe đã thấy sai sai
+    - Sao tôi có cảm giác bị lừa
+    - Mọi chuyện nghe cứ như dàn dựng
+    - Vụ này có phải dàn cảnh không vậy
+    - Chuyện bất ngờ quá tôi thấy khả nghi
+    - Tôi vẫn còn ngờ vực lắm
+    - Đây có phải trò đùa không
+    - Anh nói mà tôi thấy cứ sao sao ấy
+    - Mình thấy hơi lạ lạ
+    - Tớ thấy nghi nghi đó
+    - Con thấy lạ lắm bác ơi
+    - Em ngờ ngợ không biết có phải thật không anh
+    - Cô thấy hơi đáng ngờ đó cháu
+    - Nghe quen quen như tin cảnh báo lừa đảo
+    - Dạo này lừa đảo nhiều nên tôi không thể tin ngay
+    - Giờ lừa đảo tinh vi lắm nên tôi phải nghi
+    - Tôi chưa nghe nói đến thủ tục này bao giờ
+    - Từ lúc mở tài khoản đến giờ chưa ai bảo thế
+    - Hình như tôi từng đọc trên báo về cách làm này của kẻ lừa đảo
+    - Những gì anh nói giống hệt cảnh báo của ngân hàng về lừa đảo
+    - Tôi nghe nói cơ quan công an không bao giờ gọi điện yêu cầu như vậy
+    - Nếu đúng như anh nói thì sao không gửi giấy mời
+    - Sao anh không gửi giấy triệu tập về nhà tôi
+    - Giấy mời đâu mà gọi điện thế
+    - Tôi không nhận được thông báo nào cả nên thấy lạ
+    - Chuyện anh nói có bằng chứng gì không tôi thấy chưa thuyết phục
+    - Thế mà không có văn bản gì à nghe thiếu thuyết phục lắm
+    - Tôi nghe thấy có gì đó không khớp
+    - Kỳ lạ tôi nhớ rõ mình không làm gì cả
+    - Nghi lắm nhưng mà thôi anh nói tiếp xem
+    - Anh nói gì tôi cũng thấy giống lừa đảo
+    - Ôi trời nghe như lừa đảo
+    - Ơ sao lạ vậy
+    - Hả sao lại thế được
+    - Ủa thật hả
+    - Chắc không đó anh
+    - Nghe sai sai làm sao ấy
+    - Sao lại vậy ta
+    - Xạo hả
+    - Khó tin thiệt
+    - Tôi thấy chuyện này không thể tin được
+    - Tôi không thể tin chuyện này là thật
+    - Thật đáng nghi ngờ
+    - Tôi không dễ bị lừa đâu
+    - Anh đừng hòng lừa được tôi
+    - Tôi biết thừa chiêu này rồi
+    - Đừng tưởng tôi không biết mấy trò lừa đảo này
+    - Em biết đây là chiêu lừa đảo rồi nha
+    - Tôi thấy anh giống lừa đảo hơn là công an
+    - Nghe anh nói mà tôi cứ rùng mình vì thấy giống lừa đảo
+    - Chỉ nghe điện thoại mà bị kết tội thì tôi thấy rất khó tin
+    - Sao lại có chuyện tài khoản tôi dính vào đường dây ma túy được
+    - Có phải anh đang cố hù dọa để tôi hoảng không
+    - Tôi thấy anh cố tình làm tôi lo sợ thì phải
+    - Tôi tự hỏi sao cơ quan nhà nước lại thúc giục tôi như vậy
+    - Nghe cái kiểu bắt tôi giữ bí mật là tôi thấy nghi rồi
+    - Chưa bao giờ nghe cơ quan nào bảo nộp tiền qua tài khoản cá nhân
+    - Em thấy có điều gì đó không đúng với cách ngân hàng vẫn làm
+    - Tôi vừa xem tin cảnh báo hôm qua mà nghe giống y chang
+    - Chuyện này nghe lùm xùm quá tôi không dám tin
+    - Số tài khoản cá nhân á nghe kỳ lắm
+    - Sao tôi nghe mùi lừa đảo nồng nặc thế này
+    - Có thể đây là chiêu giả danh nhân viên nhà nước cũng nên
+    - Tôi hơi lấn cấn không biết đây có phải bẫy không
+    - Hình như tôi từng nghe kịch bản này ở đâu rồi
+    - Nghe quen quen như bài lừa đảo trên mạng mà tôi từng đọc
+    - Không hiểu sao tôi cứ thấy cuộc gọi này kỳ cục
+    - Mọi thứ nghe như vở kịch dàn dựng sẵn
+    - Tôi thấy lập luận của anh có nhiều điểm vô lý
+
+- intent: transfer_money
+  examples: |
+    - Tôi chuyển tiền ngay đây
+    - Anh cho tôi số tài khoản để tôi chuyển
+    - Chuyển cho anh bao nhiêu tiền vậy
+    - Số tài khoản nhận là gì anh đọc đi
+    - Em đang mở app ngân hàng để chuyển khoản đây
+    - Tôi chuyển xong rồi anh kiểm tra giúp
+    - Tôi vừa chuyển khoản rồi đó
+    - Để tôi ra cây ATM chuyển cho anh
+    - Tôi sẽ nộp tiền vào tài khoản đó ngay
+    - Anh đọc chậm số tài khoản để tôi ghi lại chuyển cho
+    - Tôi chuyển năm mươi triệu được không
+    - Chuyển hết số tiền tiết kiệm của tôi sang tài khoản an toàn đúng không
+    - Tôi đang chuyển tiền đây anh chờ chút
+    - Em chuyển vào tài khoản nào ạ
+    - Tên chủ tài khoản là gì để tôi nhập
+    - Chi nhánh ngân hàng nào vậy anh để tôi chuyển
+    - Nội dung chuyển khoản ghi gì anh nhỉ
+    - Tôi nhập số tiền rồi anh bảo tôi bấm xác nhận chưa
+    - Chuyển bằng cách nào anh hướng dẫn tôi với
+    - Tôi chuyển cho anh một trăm triệu nhé
+    - Tôi sẽ rút tiền mặt rồi nộp cho anh
+    - Mai tôi ra ngân hàng chuyển cho anh
+    - Tôi đang trên đường tới ngân hàng để chuyển tiền
+    - Tôi gom tiền chuyển cho anh liền
+    - Để tôi bán vàng lấy tiền chuyển cho anh
+    - Tôi sẽ vay thêm để chuyển cho đủ số tiền anh cần
+    - Bao nhiêu thì đủ để xong vụ này anh nói đi tôi chuyển
+    - Tôi chuyển tiền bảo lãnh luôn nhé
+    - Chuyển vào tài khoản tạm giữ đúng không anh
+    - Phí đảm bảo là bao nhiêu để tôi chuyển
+    - Tôi nộp tiền phạt qua tài khoản này được chứ
+    - Tôi sẽ chuyển tiền xác minh ngay
+    - Tôi chuyển khoản qua mobile banking nhé
+    - Em quét mã QR để chuyển nhé
+    - Anh gửi mã QR cho tôi quét chuyển tiền
+    - Anh gửi lại số tài khoản qua tin nhắn tôi chuyển
+    - Tôi chuyển được rồi đây
+    - Giao dịch thành công rồi anh
+    - Chuyển xong tôi chụp màn hình gửi anh nhé
+    - Tôi gửi biên lai chuyển tiền cho anh đây
+    - Tiền đã chuyển anh kiểm tra tài khoản đi
+    - Anh nhận được tiền chưa tôi mới chuyển
+    - Tôi đã chuyển hai lần rồi anh xem nhận chưa
+    - Chuyển thêm lần nữa đúng không
+    - Tôi chuyển tiếp phần còn lại nhé
+    - Tôi gửi tiền vào ví điện tử của anh được không
+    - Tôi nạp tiền vào ví Momo cho anh nhé
+    - Em chuyển qua Zalo Pay được không
+    - Tôi chuyển qua Viettel Money cho anh
+    - Tôi sẽ gửi tiền qua tài khoản chứng khoán đó
+    - Tôi chuyển tiền vào tài khoản của cơ quan điều tra nhé
+    - Giờ tôi chuyển cho anh cái khoản phí đó
+    - Số tiền bao nhiêu để tôi chuẩn bị chuyển
+    - Tôi cần chuyển tổng cộng bao nhiêu anh nói rõ
+    - Tôi chuyển tiền đi đây
+    - Chuyển liền
+    - Chuyển tiền nhé
+    - Để em chuyển
+    - Tôi chuyển rồi đấy
+    - Chuyển khoản xong rồi nha
+    - Rồi tôi chuyển cho
+    - Dạ em chuyển liền đây
+    - Em chuyển nhé anh
+    - Đang chuyển nè
+    - cho toi so tai khoan de toi chuyen
+    - chuyen bao nhieu tien vay anh
+    - toi chuyen khoan xong roi
+    - em ra atm chuyen day
+    - anh doc so tai khoan di
+    - tôi đang nhập số tài khoản
+    - Số tài khoản của anh là gì tôi nhập vào app
+    - Tôi chuyển vào số tài khoản vừa rồi đúng không
+    - Đọc lại giúp tôi số tài khoản tôi nhập sai
+    - Mã ngân hàng là gì để tôi chọn đúng
+    - Tôi chọn ngân hàng nào để chuyển vậy
+    - Tôi nhập số tiền hai trăm triệu đúng không
+    - Nhập số tiền xong tôi bấm gì tiếp
+    - Tôi thấy hiện ra tên người nhận rồi tôi chuyển nhé
+    - Hiện tên người nhận là một người lạ tôi cứ chuyển đúng không
+    - Tôi đã bấm chuyển rồi
+    - Tôi chuyển thêm nữa nhé
+    - Tôi chuyển xong rồi anh cho tôi cái xác nhận
+    - Để tôi chuyển tiền mặt qua máy ATM có nhận tiền
+    - Tôi nộp tiền mặt vào cây ATM nhé
+    - Em sẽ đến quầy giao dịch chuyển tiền
+    - Tôi đến cửa hàng tiện lợi nạp tiền được không
+    - Tôi mua thẻ nạp rồi đọc mã cho anh nhé
+    - Tôi mua thẻ quà tặng gửi anh nhé
+    - Tôi sẽ chuyển bằng tiền điện tử cho anh
+    - Anh cho tôi địa chỉ ví để chuyển
+    - Tôi gửi tiền qua Western Union nhé
+    - Tôi ra bưu điện chuyển tiền cho anh
+    - Tôi chuyển tiền cọc ngay bây giờ
+    - Em chuyển trước một nửa được không
+    - Tôi chuyển một phần trước nhé
+    - Tôi chuyển ba triệu trước được không
+    - Tôi chuyển từng đợt được chứ
+    - Anh đợi tôi mười phút tôi chuyển
+    - Cho tôi năm phút tôi chuyển khoản
+    - Chờ chút tôi chuyển tiền cho
+    - Chờ em xíu em chuyển
+    - Hôm nay tôi chuyển được tối đa năm chục triệu
+    - Hạn mức của tôi chỉ chuyển được một lần hai chục triệu thôi
+    - Tôi bị giới hạn hạn mức chuyển khoản anh hướng dẫn tăng hạn mức nhé
+    - Hướng dẫn tôi nâng hạn mức rồi tôi chuyển
+    - Tôi chuyển được ngay sau khi nâng hạn mức
+    - Tôi chuyển tiền để đóng phí kích hoạt đúng không
+    - Phí này chuyển xong là xong hết đúng không anh
+    - Chuyển tiền xong thì tôi được hoàn lại đúng không
+    - Tôi chuyển tiền để chứng minh tài sản hợp pháp đúng không
+    - Tôi chuyển để tiền được kiểm tra rồi hoàn lại hả
+    - Tôi nên chuyển vào tài khoản nào cho an toàn
+    - Anh cho tôi tài khoản giám sát tôi chuyển vào
+    - Chuyển tiền vào tài khoản của anh để kiểm tra là xong đúng không
+    - Vâng tôi chuyển khoản liền
+    - Ok tôi chuyển
+    - Ừ để tôi chuyển
+    - Được rồi tôi chuyển cho anh
+    - Thôi được rồi tôi chuyển tiền
+    - Đồng ý tôi chuyển
+    - Tôi sẽ chuyển trong hôm nay
+    - Chiều nay tôi chuyển nhé
+    - Trưa nay tôi ra ngân hàng chuyển cho
+    - Tôi sẽ chuyển ngay khi có tiền
+    - Bà con cho tôi mượn tiền tôi chuyển luôn
+    - Tôi đã gom đủ tiền để chuyển
+    - Tôi vay được tiền rồi chuyển cho anh liền
+    - Tôi đang rút sổ tiết kiệm để chuyển cho anh
+    - Tôi tất toán sổ tiết kiệm rồi chuyển ngay
+    - Em vừa tất toán tiết kiệm chuyển được rồi
+    - Chuyển ngay và luôn
+    - Tôi chuyển tiền ngay lập tức
+    - Để em chuyển ngay không là lỡ mất
+    - Tôi đang thao tác chuyển
+    - Tôi đang thực hiện chuyển khoản
+    - Đã bấm chuyển tiền xong
+    - Màn hình báo chuyển tiền thành công rồi
+    - Giao dịch hoàn tất tôi chụp hình gửi cho anh
+    - Có cần giữ biên lai chuyển tiền không anh
+    - Nội dung chuyển tiền tôi ghi tên tôi đúng không
+    - Cho em số tài khoản và tên người thụ hưởng
+    - Tên thụ hưởng viết hoa không dấu đúng không anh
+    - Anh đọc từng số một cho tôi nhập nhé
+    - Số tài khoản có mười hai số đúng không anh
+    - Anh cho tôi số tài khoản lần nữa tôi nhập chưa kịp
+    - Tôi chuyển bằng Internet Banking
+    - Tôi chuyển qua ứng dụng ngân hàng của tôi
+    - Tôi đăng nhập app rồi chuyển khoản
+    - Tôi đã đăng nhập app ngân hàng rồi anh nói tiếp đi
+    - Em chuyển bằng Napas 247
+    - Tôi chuyển nhanh 24/7 nhé
+    - Tôi chuyển bao nhiêu thì anh tha cho
+    - Chuyển khoản như vậy đã đủ chưa anh
+    - Tôi chuyển như vậy được chưa
+    - Nộp bao nhiêu thì xong vụ này
+    - Phải nộp bao nhiêu anh nói thật đi
+    - Tôi phải đóng bao nhiêu tiền
+    - Tôi nộp phạt bao nhiêu
+    - Số tiền cần chuyển tổng là bao nhiêu
+    - Thế tôi phải chuyển khoản bao nhiêu
+    - Đóng tiền bảo lãnh ở đâu anh
+    - Cho tôi biết địa điểm nộp tiền
+    - Nếu chuyển khoản được thì anh cho tôi tài khoản nhé
+    - Tôi chuyển khoản được mà
+    - Anh bảo chuyển thì tôi chuyển
+    - Anh bảo chuyển bao nhiêu tôi chuyển bấy nhiêu
+    - Tôi nghe anh chuyển tiền đây
+    - Em sẽ chuyển như anh hướng dẫn
+    - Tiền trong tài khoản tôi có tám chục triệu tôi chuyển hết nhé
+    - Tôi còn ba chục triệu tôi chuyển hết cho anh
+    - Tôi có hai tài khoản tôi chuyển từ cả hai
+    - Tôi dùng thẻ tín dụng chuyển được không
+    - Tôi rút tiền từ thẻ tín dụng chuyển cho anh nhé
+    - Tôi sẽ chuyển tiền từ tài khoản của vợ tôi
+    - Con trai tôi chuyển giúp tôi nhé
+    - Em nhờ chồng em chuyển giúp nhé
+    - Chuyển tiền nhanh giúp tôi cái ngay giờ
+    - Tôi tới ngân hàng chuyển nhanh đây
+    - Tôi chuyển tiền ở đâu cũng được đúng không
+    - Chuyển khoản ngay thôi
+    - Em đang trên đường tới ngân hàng chuyển cho anh
+    - Cho tôi hỏi tôi chuyển cho ai trong số này
+    - Chuyển cho tài khoản mang tên nào anh nhỉ
+    - Anh gửi thông tin tài khoản để tôi chuyển nhé
+    - Tôi vào tài khoản chuyển cho anh liền nhé
+    - Anh chờ tôi chuyển xong rồi báo lại
+    - Tôi chuyển ngay khoản đầu tiên nhé
+    - Cho tôi xin lại số tài khoản để tôi chuyển nốt
+    - Tôi đã chuyển đủ số tiền anh yêu cầu
+    - Tôi chuyển bằng tài khoản công ty được không
+    - Tôi nộp tiền bằng cây ATM gần nhà ngay đây
+    - Tôi chuyển tiền vào ví anh bằng mã QR rồi
+    - Giao dịch chuyển tiền của tôi báo đang xử lý
+    - Tôi chuyển tiền xong anh xác nhận cho tôi
+    - Em còn chuyển thêm khoản nữa nhé
+    - Cho tôi hỏi tôi chuyển tiền vào lúc mấy giờ là kịp
+    - Tôi chuyển tiền trong buổi sáng mai được không
+    - Tôi đã chuyển tiền bảo đảm theo hướng dẫn
+    - Tôi chuyển tiền nộp phạt qua tài khoản anh gửi
+    - Tôi bấm chuyển tiền rồi nè
+
+- intent: unknown
+  examples: |
+    - Alo
+    - Alo alo anh nghe rõ không
+    - Hả
+    - Dạ
+    - Ờ
+    - Ừm
+    - Ừm ừm
+    - Ờ thì
+    - À
+    - Hửm
+    - Gì cơ
+    - Anh nói gì cơ
+    - Anh nói lại được không tôi nghe không rõ
+    - Tín hiệu kém quá anh nói lại đi
+    - Sóng yếu quá tôi không nghe thấy gì
+    - Anh nói to lên chút được không
+    - Hình như mất sóng rồi
+    - Nghe rè rè quá
+    - Anh ơi anh có nghe tôi nói không
+    - Đợi chút để tôi lấy điện thoại
+    - Chờ tôi một chút nhé
+    - Khoan đã
+    - Để tôi suy nghĩ chút
+    - Tôi đang nấu cơm nè
+    - Tôi đang bận chút xíu
+    - Con tôi đang khóc để tôi dỗ nó
+    - Chó nhà tôi sủa quá
+    - Hôm nay trời nóng thật
+    - Trời mưa to quá
+    - Sáng nay tôi ăn phở
+    - Trưa nay ăn gì nhỉ
+    - Tối qua tôi ngủ muộn
+    - Mấy giờ rồi anh
+    - Hôm nay là thứ mấy vậy
+    - Mai là thứ mấy nhỉ
+    - Anh ăn cơm chưa
+    - Dạo này anh thế nào
+    - Hà Nội hôm nay lạnh không
+    - Bên anh thời tiết sao
+    - Anh ở thành phố nào vậy
+    - Anh người miền nào
+    - Giọng anh nghe hay đấy
+    - Anh nói tiếng Việt giỏi quá
+    - Tôi đang xem tivi
+    - Tôi đang xem bóng đá
+    - Đội nào thắng rồi
+    - Tối nay có trận nào hay không
+    - Giá xăng hôm nay bao nhiêu
+    - Giá vàng hôm nay lên hay xuống
+    - Tôi đang đi chợ
+    - Tôi vừa ra khỏi nhà
+    - Tôi đang ở quán cà phê
+    - Tôi đang đi làm
+    - Tôi đang đi bộ ngoài đường
+    - Xe đang kẹt quá trời
+    - Còi xe ồn quá
+    - Ở đây ồn lắm
+    - Xung quanh tôi đang ồn
+    - Mẹ ơi con đây
+    - Ông ơi ra ăn cơm
+    - Con ơi vào nhà đi
+    - Anh ơi cho em hai ly trà đá
+    - Bao nhiêu một ký vậy chị
+    - Cái này giá bao nhiêu
+    - Cho tôi lấy cái này
+    - Điện thoại của tôi sắp hết pin
+    - Pin điện thoại còn ít quá
+    - Wifi nhà tôi lại chậm
+    - Điện thoại tôi hay bị treo
+    - Tôi mới đổi điện thoại mới
+    - Tôi vừa mới thức dậy
+    - Tôi vừa ăn xong
+    - Tôi chưa ăn sáng
+    - Tôi buồn ngủ quá
+    - Tôi mệt quá
+    - Tôi đau đầu quá
+    - Khụ khụ
+    - Ho ho
+    - Hắt xì
+    - Ha ha ha
+    - Hì hì
+    - Hehe
+    - Ối giời
+    - Trời ơi
+    - Chết rồi
+    - Úi
+    - Ê
+    - Này
+    - Nè
+    - Ê ê
+    - Hê
+    - Thôi
+    - Thế à
+    - Vậy hả
+    - Vậy thôi hả
+    - Thế thôi á
+    - Ra vậy
+    - À ra thế
+    - Ờ ra vậy
+    - Ồ vậy hả
+    - Thế nào
+    - Là sao
+    - Sao cơ
+    - Sao
+    - Cái gì
+    - Gì
+    - Nghĩa là gì
+    - Nghĩa là sao
+    - Tức là sao
+    - Ý anh là gì
+    - Anh nói chậm lại được không
+    - Anh nói nhanh quá tôi không theo kịp
+    - Tôi không hiểu anh nói gì
+    - Em chưa hiểu ý anh lắm
+    - Tôi nghe không hiểu
+    - Tôi chưa hiểu lắm
+    - Em không nghe rõ
+    - Anh nhắc lại đi
+    - Lặp lại giúp tôi
+    - Anh vừa nói gì
+    - Anh vừa bảo gì vậy
+    - Câu đầu anh nói gì tôi nghe không kịp
+    - Anh gọi tôi có việc gì vậy
+    - Anh gọi cho ai vậy
+    - Anh có nhầm số không
+    - Anh gọi nhầm người rồi
+    - Tôi không biết anh là ai
+    - Anh là ai vậy
+    - Ai đấy
+    - Ai gọi thế
+    - Ai vậy ta
+    - Ai thế
+    - Ai nói chuyện đó
+    - Số này lạ quá
+    - Số của anh sao dài thế
+    - Số máy này ở đâu
+    - Anh bán hàng gì vậy
+    - Anh bán bảo hiểm hả
+    - Anh mời tôi mua hàng hả
+    - Anh chào hàng đúng không
+    - Cho tôi hỏi anh gọi có việc gì
+    - Anh cần gì ở tôi
+    - Có chuyện gì vậy
+    - Việc gì thế
+    - Tôi có nghe nhầm không
+    - Hình như tôi nghe nhầm
+    - Chắc tôi nghe lộn
+    - Tôi nghe không ra
+    - Lúc nãy mất tiếng
+    - Hình như có tiếng vọng
+    - Có tiếng vọng quá
+    - Nghe tiếng vọng hoài
+    - Tiếng xì xào gì đây
+    - Có ai đó đang nói
+    - Em nghe loáng thoáng thôi
+    - Em đang học bài
+    - Tôi đang ngủ
+    - Tôi đang tập thể dục
+    - Tôi đang tưới cây
+    - Hôm nay tôi trồng rau
+    - Hoa nhà tôi nở đẹp lắm
+    - Mèo nhà tôi đâu rồi nhỉ
+    - Con mèo nhảy lên bàn kìa
+    - Em bé nhà tôi vừa tập đi
+    - Con tôi vừa thi xong
+    - Mai tôi đi chợ sớm
+    - Tuần sau tôi đi du lịch
+    - Tôi sắp đi Đà Nẵng chơi
+    - Tết này tôi về quê
+    - Hôm qua tôi đi đám cưới
+    - Tôi vừa xem phim hay lắm
+    - Bài hát này hay quá
+    - Mở nhạc lên đi
+    - Tắt tivi đi con
+    - Tắt đèn giúp mẹ cái
+    - Trưa rồi mà chưa ăn gì
+    - Lát nữa tôi ăn
+    - Lát tôi nói sau
+    - Chiều nay tôi rảnh
+    - Nay tôi đi họp
+    - Tôi đang họp
+    - Công ty tôi đang bận
+    - Sếp tôi đang gọi
+    - Có ai gọi vào máy tôi nữa
+    - Có cuộc gọi khác đến
+    - Tôi nghe máy khác chút
+    - toi nghe khong ro
+    - ha cai gi
+    - alo ai do
+    - dang an com
+    - hom nay nong qua
+    - may gio roi
+    - dạ gì vậy ạ
+    - Dạ ai vậy ạ
+    - Dạ cháu nghe
+    - Dạ vâng
+    - Dạ ạ
+    - Dạ có chuyện gì không ạ
+    - Dạ cho con hỏi
+    - Dạ bác nói gì ạ
+
+- intent: share_sensitive
+  examples: |
+    - Mã OTP của tôi là 482915
+    - OTP vừa gửi về là 730162
+    - Anh ghi giúp mã xác nhận là 915274
+    - Mã xác thực tôi nhận được là 604839
+    - Tôi đọc mã OTP cho anh đây
+    - Mã vừa nhắn về máy tôi là 281047
+    - Mã OTP là sáu số tám bốn hai một ba
+    - Số căn cước công dân của tôi là 034085012345
+    - Số CCCD của em là 079201004567
+    - Số chứng minh nhân dân của tôi là 012345678
+    - Số CMND tôi là 025896314
+    - Tôi đọc số căn cước cho anh nhé
+    - Số thẻ ATM của tôi là 9704 1234 5678 9012
+    - Số thẻ của em là 4111 2222 3333 4444
+    - Tôi đọc số thẻ cho anh đây
+    - Mặt sau thẻ có ba số CVV là 372
+    - Mã CVV của tôi là 518
+    - Ngày hết hạn thẻ là 08 trên 29
+    - Thẻ của tôi hết hạn tháng mười hai năm hai bảy
+    - Mật khẩu ngân hàng của tôi là tôi đọc nhé
+    - Mật khẩu tài khoản của tôi là matkhau2024
+    - Mật khẩu app ngân hàng của em là em đọc đây
+    - Mã PIN của tôi là 5821
+    - Mã PIN thẻ là bốn số một hai ba bảy
+    - Tôi đọc mật khẩu đăng nhập cho anh
+    - Tài khoản đăng nhập của tôi là tên số điện thoại
+    - Tên đăng nhập của tôi là nguyenvan1985
+    - Tôi đọc tên đăng nhập và mật khẩu cho anh nhé
+    - Số tài khoản của tôi là 0123456789
+    - Số tài khoản ngân hàng của em là 1903 4567 8901
+    - Tôi đọc số tài khoản của mình nhé
+    - Số dư tài khoản của tôi hiện giờ khoảng tám mươi triệu
+    - Trong tài khoản tôi còn khoảng ba trăm triệu
+    - Tôi có một sổ tiết kiệm năm trăm triệu ở Vietcombank
+    - Tôi có hai tài khoản ở Techcombank và BIDV
+    - Tài khoản của tôi ở Agribank
+    - Tôi dùng ngân hàng Vietinbank
+    - Ngày sinh của tôi là mười lăm tháng ba năm chín mươi hai
+    - Tôi sinh ngày 20 tháng 7 năm 1988
+    - Em sinh năm hai nghìn lẻ ba
+    - Tôi sinh năm 1975
+    - Tên đầy đủ của tôi là Nguyễn Văn Hùng
+    - Tôi tên là Trần Thị Mai
+    - Họ tên đầy đủ của em là Lê Minh Anh
+    - Tên mẹ tôi là Lê Thị Lan
+    - Tên đệm của tôi là Văn
+    - Quê tôi ở Nam Định
+    - Địa chỉ nhà tôi là số 25 phố Lê Lợi quận Hà Đông
+    - Tôi ở số 12 ngõ 45 đường Nguyễn Trãi
+    - Em ở tòa A1 chung cư Mỹ Đình
+    - Nhà tôi ở phường Phú Diễn quận Bắc Từ Liêm
+    - Tôi đọc địa chỉ thường trú cho anh nhé
+    - Địa chỉ tạm trú của em là phòng 305 khu trọ Cầu Giấy
+    - Tôi làm ở công ty FPT số 17 Duy Tân
+    - Tôi làm kế toán ở công ty ABC
+    - Số điện thoại của tôi là 0912345678
+    - Số điện thoại của em là không chín tám bảy sáu năm bốn ba hai một
+    - Số điện thoại còn lại của tôi là 0345 678 901
+    - Số của vợ tôi là 0987654321
+    - Tôi cung cấp số điện thoại người thân cho anh
+    - Email của tôi là nguyenvan@gmail.com
+    - Địa chỉ email của em là mai.tran92@gmail.com
+    - Mật khẩu email của tôi là gì đó tôi đọc luôn
+    - Tôi đọc mật khẩu Zalo cho anh
+    - Tôi cho anh mã xác thực Zalo
+    - Mã đăng nhập Facebook của tôi là 392817
+    - Tôi đưa anh tài khoản Facebook
+    - Mã khôi phục của tôi là 118274
+    - Tôi gửi anh ảnh hai mặt căn cước nhé
+    - Tôi chụp căn cước gửi qua Zalo cho anh
+    - Tôi gửi ảnh chân dung cầm căn cước cho anh
+    - Em chụp thẻ ATM hai mặt gửi anh nhé
+    - Tôi gửi ảnh thẻ ngân hàng cho anh
+    - Để tôi chụp màn hình tin nhắn OTP gửi anh
+    - Tôi chụp màn hình app ngân hàng gửi anh nhé
+    - Tôi đọc luôn tin nhắn vừa nhận được
+    - Tin nhắn vừa nhận có mã là 647190
+    - Có tin nhắn gửi đến mã là 551203
+    - Mã gồm sáu chữ số là 209384
+    - Tôi đọc mã xác nhận nhé một hai ba bốn năm sáu
+    - Số tôi nhận được là bảy chín không ba hai một
+    - Chín tám bảy sáu năm bốn đó là mã
+    - Tôi đọc luôn đây là ba hai chín bảy một không
+    - Mã của tôi là không không tám tám bảy sáu
+    - Đọc xong rồi mã là 846205
+    - Mã OTP là tám bốn sáu hai không năm
+    - Dạ mã là 107385 anh ơi
+    - Mã nè 553920
+    - Ok mã là 748301
+    - Đây mã OTP 190274
+    - otp la 482913
+    - ma otp cua toi la 592810
+    - toi doc so can cuoc nhe
+    - so the cua toi la
+    - mat khau cua toi la
+    - tôi đọc số tài khoản nhé
+    - số cccd của em là
+    - Tôi cho anh biết mật khẩu nhé
+    - Mật khẩu là một hai ba bốn năm sáu
+    - Mật khẩu của tôi đơn giản lắm là tên con cộng ngày sinh
+    - Mật khẩu tôi đặt là ngày sinh của tôi
+    - Mật khẩu của em là tên chó cộng số điện thoại
+    - Tôi dùng chung một mật khẩu cho tất cả là abc12345
+    - Mật khẩu giao dịch của tôi là 270384
+    - Mật khẩu thanh toán của tôi là sáu số ngày sinh
+    - Mã bảo mật của thẻ là 904
+    - Số thẻ tín dụng của tôi là 5500 1111 2222 3333
+    - Tôi có thẻ Visa đọc số cho anh nhé
+    - Thẻ Mastercard của em số là
+    - Em đọc ba số cuối ở mặt sau thẻ nhé
+    - Tôi đọc bốn số cuối của thẻ là 6024
+    - Bốn số cuối tài khoản của tôi là 7731
+    - Số hộ chiếu của tôi là B1234567
+    - Số hộ chiếu em là C9876543
+    - Số bảo hiểm xã hội của tôi là 0123456789
+    - Mã số thuế của tôi là 8012345678
+    - Biển số xe của tôi là 29A1 123.45
+    - Số sổ hộ khẩu nhà tôi là
+    - Tôi cho anh số sổ đỏ nhà tôi nhé
+    - Tên ngân hàng và số tài khoản của tôi đây
+    - Thông tin tài khoản của tôi đây anh ghi lại
+    - Anh ghi thông tin của tôi nhé họ tên ngày sinh địa chỉ
+    - Tôi đọc hết thông tin cá nhân cho anh
+    - Anh cần gì tôi cung cấp hết
+    - Em cung cấp đầy đủ thông tin cho anh
+    - Căn cước tôi cấp ngày mười tháng năm năm hai không hai mốt
+    - Nơi cấp căn cước là Cục Cảnh sát quản lý hành chính
+    - Ngày cấp thẻ căn cước của em là 12 tháng 4 năm 2022
+    - Tôi đã mở tài khoản ngày mùng năm tháng tám năm ngoái
+    - Tôi mở tài khoản chi nhánh Cầu Giấy
+    - Chi nhánh tôi mở tài khoản là Đống Đa
+    - Tôi hay giao dịch ở chi nhánh Thanh Xuân
+    - Tôi dùng sim Viettel số 0961234567
+    - Số sim của tôi là 0338 123 456
+    - Tôi đăng ký sim bằng căn cước của chính tôi
+    - Số điện thoại đăng ký ngân hàng của em là 0399887766
+    - Tôi đọc mã token cho anh
+    - Mã token của tôi hiện lên là 538201
+    - Mã smart OTP hiện trên app là 417390
+    - Mã xác nhận giao dịch hiện lên là 285016
+    - Tôi nhập mã rồi đây mã là 693847
+    - Mã đây anh ghi nhanh 802517
+    - Tôi đọc cho anh nghe số trên màn hình 150786
+    - Trên màn hình hiện chữ số 735894
+    - Tôi thấy hiện số 468120 là mã đúng không
+    - Mã tôi vừa nhận là 308765 anh kiểm tra giúp
+    - Anh cần mã thì đây 921046
+    - Mã bảo mật là 264813 tôi đọc rồi đó
+    - Mã này nè 749301
+    - Tôi gửi anh mã đây 018462
+    - Đây là OTP của tôi 836290
+    - Tôi nhận được một dãy số là 574109
+    - Dãy số tôi nhận là 631028
+    - Tôi đưa anh mã luôn nhé 295740
+    - Mã của tôi gồm các số 4 7 1 9 3 0
+    - Số thứ nhất 5 số thứ hai 8 số thứ ba 2 số thứ tư 6 số thứ năm 1 số thứ sáu 9
+    - Tôi đọc cho anh số tài khoản chín không một hai ba bốn năm sáu
+    - Số tài khoản bắt đầu bằng ba bốn rồi tới năm sáu bảy
+    - Số thẻ của em bắt đầu bằng chín bảy không bốn
+    - Mật khẩu của tôi có chữ hoa và số tôi đọc nhé
+    - Mật khẩu tôi đặt là Hanoi2020
+    - Mật khẩu app của em là Mai@1990
+    - Mật khẩu của tôi là tên người yêu và năm sinh
+    - Câu hỏi bảo mật của tôi trả lời là Hà Nội
+    - Tên trường tiểu học của tôi là trường Kim Đồng
+    - Tên thú cưng của tôi là Mực
+    - Tên đầu tiên của con tôi là Bi
+    - Nơi sinh của tôi là bệnh viện Phụ sản Hà Nội
+    - Tôi cho anh thông tin người thân nhé
+    - Tên vợ tôi là Phạm Thị Hoa
+    - Tên chồng em là Nguyễn Văn Nam
+    - Số điện thoại bố tôi là 0904111222
+    - Tôi cho anh địa chỉ cơ quan
+    - Tôi cung cấp tên công ty và chức vụ
+    - Thu nhập của tôi khoảng mười lăm triệu một tháng
+    - Lương của tôi chuyển về tài khoản Techcombank
+    - Tôi có khoản vay ở ngân hàng khoảng hai trăm triệu
+    - Tôi đang nợ thẻ tín dụng năm chục triệu
+    - Anh muốn biết số dư thì tôi báo là khoảng sáu mươi triệu
+    - Số tiền tiết kiệm của tôi là bảy trăm triệu
+    - Tôi có ví Momo đăng ký bằng số này
+    - Mã PIN ví Momo của tôi là 3306
+    - Mật khẩu ví điện tử của tôi là
+    - Tôi đã cài app và đây là mã đăng nhập
+    - Mã đăng nhập vào app là 612947
+    - Tôi đọc mã xác minh khuôn mặt
+    - Tôi sẽ cung cấp mã xác minh sinh trắc học
+    - Tôi quét khuôn mặt và gửi ảnh cho anh nhé
+    - Tôi gửi video quay khuôn mặt cho anh
+    - Tôi chụp ảnh chân dung gửi anh nhé
+    - Tôi gửi giấy tờ tùy thân cho anh qua Zalo
+    - Em gửi ảnh bằng lái xe cho anh
+    - Số bằng lái xe của tôi là 010123456789
+    - Tôi gửi hộ chiếu cho anh
+    - Tôi đọc số tài khoản và mật khẩu của tôi cho anh luôn
+    - Vâng tôi sẽ cung cấp thông tin
+    - Dạ em đọc thông tin cho anh đây
+    - Được rồi tôi nói thông tin của tôi
+    - Ok tôi đọc thông tin nhé anh ghi lại
+    - Tôi cung cấp thông tin cho anh xác minh đây
+
+- intent: comply
+  examples: |
+    - Vâng tôi làm theo anh
+    - Dạ em làm theo hướng dẫn của anh
+    - Được rồi tôi làm theo
+    - Tôi nghe anh đây anh cứ nói
+    - Anh hướng dẫn đi tôi làm theo
+    - Dạ vâng anh nói tiếp đi
+    - Vâng tôi đang nghe
+    - Tôi hiểu rồi tôi sẽ làm ngay
+    - Dạ rõ anh
+    - Rõ rồi
+    - Rồi tôi biết rồi
+    - Tôi đồng ý
+    - Em đồng ý hợp tác
+    - Tôi sẽ hợp tác với cơ quan điều tra
+    - Tôi sẵn sàng hợp tác
+    - Tôi sẽ làm đúng như anh yêu cầu
+    - Anh bảo gì tôi làm nấy
+    - Anh yêu cầu gì tôi cũng làm
+    - Tôi tin anh tôi sẽ làm theo
+    - Vậy thì tôi tin anh
+    - Thôi được tôi tin anh
+    - Ok tôi làm
+    - Ok anh
+    - Ừ được
+    - Được thôi
+    - Được ạ
+    - Vâng ạ
+    - Dạ được ạ
+    - Dạ vâng em hiểu
+    - Dạ em nghe rõ rồi ạ
+    - Tôi cài ứng dụng ngay đây
+    - Tôi đang bấm vào đường link đây
+    - Tôi bấm vào link rồi
+    - Tôi tải ứng dụng về rồi
+    - Tôi đã cài xong ứng dụng
+    - Cài xong rồi tôi mở lên rồi đó
+    - Tôi đang tải app về máy
+    - Tôi vào cửa hàng ứng dụng tải rồi
+    - Tôi mở CH Play tải app anh nói
+    - Tôi vào App Store tìm ứng dụng đó
+    - Ứng dụng tên gì anh để tôi tìm tải về
+    - Tôi đã bấm cho phép truy cập
+    - Tôi bật quyền truy cập rồi
+    - Tôi bấm cho phép hết rồi
+    - Tôi cấp quyền cho ứng dụng rồi
+    - Tôi mở cài đặt rồi bật như anh nói
+    - Tôi đã bật chia sẻ màn hình
+    - Tôi bật chia sẻ màn hình rồi anh xem được chưa
+    - Tôi cài phần mềm điều khiển từ xa cho anh
+    - Tôi đưa anh quyền điều khiển máy nhé
+    - Anh cứ điều khiển máy tôi
+    - Tôi mở máy tính lên rồi
+    - Tôi bật máy tính rồi anh
+    - Tôi đang mở máy tính đây
+    - Tôi vào trang web anh bảo rồi
+    - Tôi đang truy cập vào trang web đó
+    - Trang web hiện ra rồi tôi làm gì tiếp
+    - Tôi thấy trang đó rồi giờ làm gì
+    - Tôi thấy nút đăng nhập rồi
+    - Tôi bấm đăng nhập rồi
+    - Tôi đăng nhập rồi đây
+    - Đăng nhập xong rồi anh hướng dẫn tiếp đi
+    - Tôi bấm xác nhận rồi
+    - Tôi bấm vào nút anh bảo rồi
+    - Tôi nhấn đồng ý rồi
+    - Tôi nhấn tiếp tục rồi
+    - Giờ tôi làm gì tiếp theo
+    - Bước tiếp theo là gì anh
+    - Rồi tiếp theo thì sao
+    - Tiếp theo tôi làm gì
+    - Xong bước này rồi anh
+    - Anh nói tiếp bước sau đi
+    - Bước hai là gì anh nói đi
+    - Tôi làm xong bước một rồi
+    - Tôi làm xong rồi đây
+    - Tôi đã làm xong rồi
+    - Em làm xong rồi anh
+    - Em thực hiện xong rồi ạ
+    - Xong rồi anh ơi
+    - Em đang làm đây anh chờ em chút
+    - Anh chờ tôi một chút tôi đang làm
+    - Để tôi làm ngay
+    - Để em làm liền
+    - Để tôi mở lên làm theo
+    - Tôi làm ngay bây giờ
+    - Tôi làm ngay đây
+    - Em làm ngay đây ạ
+    - Tôi sẽ làm ngay lập tức
+    - Tôi sẽ không nói với ai đâu
+    - Tôi sẽ giữ bí mật
+    - Tôi không nói với người nhà đâu
+    - Tôi sẽ không báo cho ai biết
+    - Tôi hứa sẽ không tiết lộ
+    - Tôi tuân thủ yêu cầu của cơ quan chức năng
+    - Tôi sẽ tuân thủ đúng chỉ đạo
+    - Tôi làm đúng như chỉ đạo
+    - Tôi sẽ có mặt khi được yêu cầu
+    - Tôi ở nhà chờ anh
+    - Tôi ở yên tại nhà không đi đâu
+    - Tôi sẽ không ra khỏi nhà
+    - Tôi sẽ không tắt máy
+    - Tôi giữ máy và không cúp
+    - Tôi vẫn giữ liên lạc với anh
+    - Tôi mở điện thoại suốt cho anh liên lạc
+    - Tôi sẽ chờ cuộc gọi của anh
+    - Tôi sẽ nhắn tin lại cho anh qua Zalo
+    - Tôi kết bạn Zalo với anh rồi
+    - Tôi thêm anh vào Zalo rồi đó
+    - Tôi nhấn vào đường dẫn tham gia nhóm
+    - Tôi quét mã QR rồi
+    - Tôi quét mã QR anh gửi rồi
+    - Tôi đã quét xong
+    - Tôi chụp màn hình rồi
+    - Tôi chụp màn hình gửi anh rồi
+    - Tôi đã chụp ảnh gửi anh
+    - Tôi chuyển sang dùng số khác như anh bảo
+    - Tôi chuyển sang gọi video như anh nói
+    - Tôi bật camera lên rồi
+    - Tôi bật micro rồi
+    - Tôi tắt hết ứng dụng khác như anh bảo
+    - Tôi tắt wifi và bật dữ liệu di động rồi
+    - Tôi cài lại điện thoại như anh nói
+    - Tôi đã làm theo mọi bước anh nói
+    - Tôi làm đúng từng bước rồi
+    - Tôi làm từng bước theo anh
+    - Anh nói chậm để tôi làm theo kịp
+    - Anh đọc từng bước để tôi làm
+    - Anh hướng dẫn tôi từng bước một nhé
+    - Anh chỉ tôi cách làm đi
+    - Chỉ em cách làm với
+    - Anh giúp tôi làm cho xong
+    - Nhờ anh giúp tôi giải quyết
+    - Mong anh giúp đỡ tôi
+    - Mong cơ quan giúp tôi giải quyết nhanh
+    - Cảm ơn anh đã giúp tôi
+    - Cảm ơn anh đã thông báo cho tôi
+    - Cảm ơn anh đã nhắc tôi
+    - Vâng cảm ơn anh em sẽ làm ngay
+    - Em cảm ơn anh nhiều ạ
+    - Tôi biết ơn anh lắm
+    - Thật may là anh gọi báo cho tôi
+    - May mà anh báo tôi chứ không tôi không biết
+    - Trời ơi may quá anh nói đi tôi làm
+    - Em lo quá anh bảo em làm gì em làm
+    - Tôi hoảng quá anh giúp tôi với
+    - Tôi lo lắm anh chỉ tôi cách giải quyết đi
+    - Em rất lo xin anh giúp em
+    - Tôi không muốn bị rắc rối tôi làm theo anh
+    - Tôi không muốn dính vào vụ này anh bảo sao tôi làm vậy
+    - Thôi anh nói sao em làm vậy
+    - Anh nói sao tôi nghe vậy
+    - Vậy thì làm theo anh
+    - Làm theo anh vậy
+    - Vậy tôi sẽ làm như vậy
+    - Vậy được tôi sẽ làm
+    - Vậy thì được tôi làm
+    - Vậy tôi bắt đầu làm nhé
+    - Tôi bắt đầu làm đây
+    - Bắt đầu đi anh
+    - Bắt đầu thôi
+    - Bắt đầu nhé anh
+    - Mình bắt đầu làm đi
+    - Vâng mình làm thôi
+    - Ừ làm thôi
+    - Làm đi
+    - Làm luôn
+    - Làm liền
+    - Làm theo nè
+    - Làm rồi nè
+    - Vâng vâng
+    - Ừ ừ
+    - Vâng đúng rồi
+    - Đúng rồi anh
+    - Đúng vậy
+    - Đúng ạ
+    - Chính xác
+    - Vâng tôi là người đó
+    - Vâng tôi là chủ tài khoản đó
+    - Đúng tôi là Nguyễn Văn An đây
+    - Đúng rồi tôi có tài khoản ở ngân hàng đó
+    - Vâng đúng là số của tôi
+    - Mời anh nói tôi nghe
+    - Mời anh cứ nói
+    - Anh cứ nói tôi nghe
+    - Anh nói đi em nghe
+    - Dạ anh nói đi ạ
+    - Dạ mời anh
+    - Vâng mời anh hướng dẫn
+    - Em sẵn sàng rồi
+    - Tôi sẵn sàng rồi
+    - Tôi chuẩn bị xong rồi
+    - Tôi đã chuẩn bị đầy đủ
+    - Tôi có giấy bút đây anh đọc đi
+    - Chờ tôi lấy giấy bút ghi lại
+    - toi lam theo anh
+    - vang toi dong y
+    - em lam ngay day
+    - toi cai app roi
+    - duoc roi toi lam
+    - da vang anh noi di
+
+- intent: refuse
+  examples: |
+    - Tôi từ chối
+    - Tôi không đồng ý
+    - Tôi không cung cấp thông tin
+    - Tôi không đưa mã OTP cho ai cả
+    - Mã OTP là bí mật tôi không đọc
+    - Tôi sẽ không chuyển một đồng nào
+    - Không chuyển tiền
+    - Tôi không cài ứng dụng đó
+    - Tôi sẽ không bấm vào đường link nào hết
+    - Tôi không tải gì về máy cả
+    - Tôi không đọc số thẻ cho anh
+    - Tôi không nói số căn cước cho người lạ
+    - Mật khẩu là của riêng tôi không nói
+    - Tôi không cung cấp thông tin cá nhân qua điện thoại
+    - Thông tin cá nhân tôi không chia sẻ
+    - Tôi không chia sẻ màn hình
+    - Tôi không cho anh điều khiển máy tôi
+    - Tôi sẽ không làm theo anh
+    - Tôi không nghe theo anh đâu
+    - Tôi không muốn nói chuyện nữa
+    - Tôi không muốn tiếp tục
+    - Tôi không muốn tham gia
+    - Tôi không quan tâm
+    - Tôi chẳng quan tâm
+    - Không cần đâu
+    - Không đời nào
+    - Đừng hòng
+    - Không có chuyện đó đâu
+    - Không nhé
+    - Không được đâu
+    - Không làm
+    - Không đưa
+    - Không nói
+    - Không cho
+    - Không chuyển
+    - Không cài
+    - Không bấm
+    - Em không làm đâu
+    - Em từ chối nhé
+    - Em không đồng ý ạ
+    - Dạ em không làm được
+    - Dạ con không cung cấp ạ
+    - Cháu không đưa đâu bác ạ
+    - Con sẽ không làm gì hết
+    - Tôi nói không là không
+    - Nói không là không
+    - Tôi đã nói là không rồi mà
+    - Tôi đã nói không rồi anh đừng nài nữa
+    - Anh đừng ép tôi
+    - Anh đừng ép tôi làm điều đó
+    - Anh có nói gì tôi cũng không làm
+    - Anh có dọa tôi cũng không làm
+    - Dọa tôi cũng vô ích
+    - Anh nói thế nào thì tôi cũng không đưa
+    - Tôi không bị dọa đâu
+    - Anh đừng dọa tôi
+    - Tôi không sợ đâu
+    - Tôi không sợ mấy lời dọa đó
+    - Có bắt tôi cũng không đưa
+    - Anh cứ gửi giấy triệu tập về nhà tôi tôi mới làm việc
+    - Tôi chỉ làm việc trực tiếp tại cơ quan thôi
+    - Tôi sẽ không xử lý qua điện thoại
+    - Tôi không giải quyết việc này qua điện thoại
+    - Việc này tôi sẽ đến cơ quan giải quyết chứ không qua điện thoại
+    - Tôi sẽ không giao dịch qua điện thoại
+    - Tôi không giao dịch với người lạ
+    - Tôi không đưa tiền cho người lạ
+    - Tôi không tin nên tôi không làm
+    - Tôi không tin nên tôi không đưa gì hết
+    - Tôi biết đây là lừa đảo nên tôi không làm theo
+    - Tôi không bị lừa đâu
+    - Anh đi tìm người khác mà lừa
+    - Đừng gọi cho tôi nữa
+    - Đừng gọi lại nữa
+    - Đừng làm phiền tôi
+    - Đừng liên lạc với tôi nữa
+    - Xin đừng gọi cho tôi nữa
+    - Làm ơn đừng gọi nữa
+    - Tôi không muốn bị làm phiền
+    - Tôi không cần anh giúp
+    - Tôi không cần anh tư vấn
+    - Tôi không có nhu cầu
+    - Tôi không có hứng thú
+    - Tôi không mua gì hết
+    - Tôi không đầu tư gì cả
+    - Tôi không tham gia đầu tư
+    - Tôi không nhận thưởng gì hết
+    - Tôi không nhận quà
+    - Tôi không đăng ký chương trình nào cả
+    - Tôi không đóng phí gì hết
+    - Tôi không đóng tiền
+    - Tôi không nộp tiền
+    - Tôi không nộp phạt qua điện thoại
+    - Tôi không nộp tiền bảo lãnh
+    - Tôi không nợ nần gì cả
+    - Tôi không đưa tiền vì tôi không nợ ai
+    - Tôi không có gì để nói
+    - Tôi không có gì để cung cấp
+    - Tôi không có tiền đâu
+    - Tôi không có tài khoản nào hết
+    - Tôi không dùng ngân hàng đó
+    - Tôi không có thẻ ngân hàng
+    - Tôi không biết gì hết
+    - Tôi không biết gì về vụ việc này
+    - Tôi không liên quan gì hết
+    - Tôi không làm gì sai nên tôi không phải nói
+    - Tôi sẽ không trả lời câu hỏi này
+    - Tôi từ chối trả lời
+    - Tôi xin từ chối cung cấp
+    - Xin lỗi tôi không thể cung cấp
+    - Xin lỗi tôi không làm được
+    - Xin lỗi tôi không đồng ý
+    - Xin lỗi em không thể làm theo
+    - Xin lỗi anh nhưng tôi không làm
+    - Cảm ơn nhưng tôi không cần
+    - Cảm ơn anh nhưng em không làm đâu
+    - Cảm ơn nhé nhưng tôi không tham gia
+    - Thôi tôi không làm đâu
+    - Thôi khỏi
+    - Khỏi đi
+    - Khỏi cần
+    - Thôi đi
+    - Thôi nhé tôi không làm
+    - Thôi tôi không đưa đâu
+    - Thôi tôi không chuyển
+    - Thôi tôi không cần nữa
+    - Dẹp đi
+    - Bỏ đi
+    - Thôi bỏ đi
+    - Anh nói nữa tôi cũng không làm
+    - Có nói gì thì tôi cũng không đồng ý
+    - Anh nói nhiều cũng vậy thôi tôi không làm
+    - Nói mấy lần tôi cũng không làm
+    - Nói đến sáng tôi cũng không làm
+    - Tôi không bao giờ đọc OTP cho ai
+    - Ngân hàng dặn tôi không được đọc OTP cho bất kỳ ai
+    - Ngân hàng dặn không được cung cấp mã nên tôi không đọc
+    - Công an không bao giờ yêu cầu như vậy nên tôi không làm
+    - Tôi chỉ làm việc theo giấy tờ chính thức
+    - Tôi sẽ làm việc với cơ quan chức năng khi có giấy mời
+    - Tôi chỉ tin giấy tờ có dấu đỏ thôi
+    - Tôi chỉ chuyển tiền cho người tôi biết
+    - Tôi chỉ đưa thông tin tại ngân hàng
+    - Tôi sẽ không trả lời bất kỳ thông tin nào
+    - Tôi sẽ không tiết lộ gì cả
+    - Tôi không tiết lộ thông tin
+    - Tôi không tiết lộ mã số
+    - Tôi không tiết lộ mật khẩu
+    - Tôi không đọc số thẻ
+    - Tôi không gửi ảnh căn cước
+    - Tôi không gửi hình giấy tờ cho ai
+    - Tôi không chụp căn cước gửi anh đâu
+    - Tôi không gửi ảnh mặt cho anh
+    - Tôi không bấm vào mã QR lạ
+    - Tôi không kết bạn Zalo với người lạ
+    - Tôi không vào nhóm đó đâu
+    - Tôi không cho phép truy cập
+    - Tôi không cấp quyền cho ứng dụng lạ
+    - Tôi sẽ không cài phần mềm lạ
+    - Tôi không cho ai điều khiển điện thoại của tôi
+    - Tôi không mở link anh gửi
+    - Tôi không bật camera
+    - khong chuyen tien dau
+    - toi khong doc otp
+    - khong dua dau
+    - tui hổng làm đâu
+    - Tui không đưa đâu nha
+    - Hổng chịu đâu
+    - Hông có đâu
+    - Hổng có chuyển tiền đâu
+    - Tui hổng tin nên hổng làm
+    - Ông đừng có gọi tui nữa
+    - Bà không làm đâu
+    - Dạ em xin từ chối ạ
+    - Dạ em không muốn cung cấp ạ
+    - Em không đưa đâu anh
+    - Em không chuyển đâu anh
+    - Em không cung cấp đâu anh
+    - Cháu không cung cấp đâu bác
+    - Mình không làm đâu bạn
+    - Mình không cung cấp thông tin đâu
+    - Mình không chuyển tiền cho bạn đâu
+    - Tớ không đưa đâu
+    - Tao không làm
+    - Không làm theo ai hết
+    - Đừng mơ tôi làm theo
+    - Đừng có mơ
+    - Đừng mơ
+    - Còn lâu
+    - Còn lâu tôi mới làm
+    - Còn lâu mới đưa
+    - Đời nào tôi đưa
+    - Đời nào tôi chuyển
+    - Có chết tôi cũng không làm
+    - Nhất định không
+    - Tuyệt đối không
+    - Tôi quyết không làm
+    - Tôi kiên quyết từ chối
+    - Tôi nhất định không chuyển tiền
+    - Tôi nhất định không làm theo
+
+- intent: hang_up
+  examples: |
+    - Tôi cúp máy đây
+    - Tôi cúp máy nhé
+    - Tôi tắt máy đây
+    - Tôi ngắt máy nhé
+    - Tôi sẽ cúp máy ngay bây giờ
+    - Thôi tôi cúp máy
+    - Thôi tôi dập máy đây
+    - Thôi tôi tắt máy
+    - Thôi tôi không nghe nữa tôi cúp
+    - Em cúp máy nhé
+    - Em xin phép cúp máy
+    - Em tắt máy đây ạ
+    - Dạ con cúp máy nha
+    - Cháu cúp máy đây bác
+    - Mình cúp máy nhé
+    - Tui cúp máy đây
+    - Tui dập máy nha
+    - Tôi cúp máy luôn
+    - Cúp máy
+    - Dập máy
+    - Tắt máy
+    - Cúp máy nhé
+    - Cúp luôn
+    - Dập luôn
+    - Tắt luôn
+    - Ngắt máy
+    - Ngắt máy luôn
+    - Tôi không nói chuyện nữa
+    - Tôi không nói chuyện với anh nữa
+    - Tôi không muốn nói chuyện thêm
+    - Tôi không nghe thêm nữa
+    - Tôi không nghe nữa
+    - Tôi không muốn nghe nữa
+    - Em không nghe nữa đâu
+    - Tôi hết muốn nghe rồi
+    - Nói chuyện đến đây thôi
+    - Cuộc nói chuyện kết thúc ở đây
+    - Kết thúc cuộc gọi tại đây
+    - Chúng ta dừng ở đây
+    - Dừng ở đây thôi
+    - Đến đây thôi nhé
+    - Tới đây thôi
+    - Thế thôi nhé
+    - Vậy thôi nhé
+    - Vậy nhé tôi cúp đây
+    - Vậy nhé em cúp máy
+    - Vậy tôi cúp máy nhé
+    - Thôi chào anh
+    - Thôi chào nhé
+    - Chào anh
+    - Chào nhé
+    - Tạm biệt anh
+    - Tạm biệt
+    - Tạm biệt nhé
+    - Bye
+    - Bye bye
+    - Chào tạm biệt
+    - Hẹn không gặp lại
+    - Tôi đi đây
+    - Tôi dừng cuộc gọi nhé
+    - Tôi kết thúc cuộc gọi
+    - Tôi kết thúc cuộc trò chuyện này
+    - Tôi không tiếp tục cuộc gọi này nữa
+    - Tôi sẽ không tiếp tục cuộc gọi
+    - Tôi chấm dứt cuộc gọi này
+    - Tôi chặn số này luôn
+    - Tôi sẽ chặn số của anh
+    - Tôi chặn số anh bây giờ
+    - Tôi chặn số này đây
+    - Tôi block số này nhé
+    - Em chặn số anh nhé
+    - Tôi sẽ báo công an về cuộc gọi này
+    - Tôi báo công an đây
+    - Tôi sẽ báo cáo số này lên cơ quan chức năng
+    - Tôi sẽ trình báo công an phường
+    - Tôi đi báo công an luôn đây
+    - Tôi sẽ báo số này là số lừa đảo rồi cúp máy
+    - Tôi tố cáo số này đây rồi cúp máy
+    - Tôi báo cho ngân hàng rồi cúp máy
+    - Tôi gọi lại tổng đài chính thức đây cúp máy nhé
+    - Tôi tắt máy gọi hotline ngân hàng đây
+    - Tôi sẽ cúp máy rồi tự gọi cho ngân hàng
+    - Tôi cúp đây để tôi hỏi lại công an phường
+    - Để tôi tắt máy rồi gọi cho người nhà
+    - Tôi cúp máy để hỏi con tôi
+    - Tôi cúp máy rồi hỏi người thân
+    - Tôi phải cúp máy đây có việc bận
+    - Tôi phải đi rồi
+    - Tôi phải đi đây
+    - Tôi đang bận phải cúp máy đây
+    - Có việc gấp tôi cúp máy
+    - Em có việc gấp em cúp máy nhé
+    - Pin sắp hết em cúp máy đây
+    - Có khách tôi cúp máy
+    - Tôi hết thời gian rồi cúp đây
+    - Tôi không có thời gian cho anh
+    - Tôi không rảnh nói chuyện với anh
+    - Tôi không rảnh cúp đây
+    - Tôi chẳng rảnh để nghe anh
+    - Tôi không có thời gian nghe nữa
+    - Tôi chán nghe rồi
+    - Nghe đủ rồi tôi cúp
+    - Đủ rồi tôi cúp máy
+    - Đủ rồi cúp máy đi
+    - Đủ rồi tôi tắt máy
+    - Đủ rồi dừng lại
+    - Đủ rồi thôi
+    - Thôi đủ rồi
+    - Tôi nghe đủ rồi nhé tôi cúp
+    - Anh khỏi gọi lại
+    - Đừng gọi lại nữa tôi cúp máy đây
+    - Đừng gọi nữa tôi tắt máy
+    - Tôi tắt máy đây đừng gọi nữa
+    - Anh đừng gọi cho tôi nữa tôi cúp máy
+    - Anh lừa người khác đi tôi cúp máy đây
+    - Anh đi mà lừa người khác tôi cúp
+    - Tôi biết anh lừa đảo tôi cúp máy
+    - Anh là lừa đảo tôi cúp máy
+    - Biết rồi lừa đảo tôi cúp
+    - Lừa đảo cúp máy
+    - Lừa đảo tôi dập máy
+    - Anh định lừa tôi hả tôi cúp máy
+    - Anh lừa tôi không được đâu tôi cúp
+    - Không nói nữa cúp máy
+    - Không nói nữa tôi tắt máy
+    - Không nói nữa tôi cúp
+    - Hết chuyện để nói rồi tôi cúp
+    - Không còn gì để nói tôi cúp
+    - Không còn gì để nói nữa cúp máy
+    - Chẳng còn gì để nói nữa
+    - Chẳng có gì để nói thêm nữa tôi cúp
+    - Tôi cúp máy luôn đây không nói nữa
+    - Tôi cúp máy luôn đó nha
+    - Tôi cúp máy luôn nhé
+    - Tôi cúp luôn đây
+    - Cúp luôn đây
+    - Cúp máy luôn nha
+    - Cúp máy nha
+    - Cúp nha
+    - Cúp nhé
+    - Dập máy nhé
+    - Dập nha
+    - Tắt máy nhé
+    - Tắt nha
+    - Ngắt nha
+    - Em tắt nha
+    - Cháu cúp máy nha bác
+    - Con cúp máy nha
+    - Tôi đặt máy xuống đây
+    - Tôi đặt điện thoại xuống
+    - Tôi bỏ điện thoại xuống
+    - Tôi đặt máy xuống đây không nói nữa
+    - Tôi gác máy
+    - Tôi gác máy đây
+    - Gác máy nhé
+    - Gác máy
+    - Gác máy đây
+    - Xin phép gác máy
+    - Xin phép cúp máy
+    - Xin phép kết thúc cuộc gọi
+    - Xin phép dừng cuộc gọi ở đây
+    - Xin cúp máy
+    - Làm ơn đừng gọi nữa tôi cúp máy
+    - Làm phiền anh đến đây thôi tôi cúp
+    - Cảm ơn anh tôi cúp máy
+    - Cảm ơn tôi cúp máy đây
+    - Cảm ơn nhé tôi cúp máy
+    - Cảm ơn và chào anh
+    - Cảm ơn anh chào anh nhé
+    - Dạ cảm ơn anh em cúp máy ạ
+    - Dạ chào anh em xin phép cúp
+    - Dạ thôi em cúp máy đây
+    - Dạ thôi con cúp máy ạ
+    - Dạ chào bác con cúp máy
+    - Thôi em cúp đây anh
+    - Thôi cháu cúp đây
+    - Thôi con cúp đây
+    - Thôi tui cúp đây
+    - Thôi mình cúp nhé
+    - Thôi tạm biệt
+    - Thôi bye
+    - Thôi chào
+    - Thôi xin chào
+    - Thôi nhé chào anh
+    - Thôi hết rồi cúp
+    - Hết rồi cúp
+    - Xong rồi cúp
+    - Xong cuộc gọi
+    - Xong rồi tôi cúp
+    - Xong rồi tắt máy
+    - Rồi tôi cúp
+    - Rồi cúp máy
+    - Rồi tắt máy
+    - Rồi tôi tắt máy đây
+    - Rồi tôi dập máy đây
+    - bye bye anh
+    - thoi toi cup nhe
+    - em cup may nha
+    - chan so nay luon
+    - toi bao cong an day roi cup may

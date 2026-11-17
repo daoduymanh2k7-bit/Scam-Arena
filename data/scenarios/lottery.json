@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "lottery",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "title": "Giả trúng thưởng",
   "category": "fake_prize",
@@ -60,7 +60,7 @@
       "default_next_stage_id": "intro"
     },
     {
-      "timeout_next_stage_id": "ask_action",
+      "timeout_next_stage_id": "rebuttal",
       "requested_action": "keep_secret",
       "opening_line": "Giải chỉ được giữ trong hôm nay. Anh/chị cần xác nhận ngay để không mất quyền lợi.",
       "max_turns": 2,
@@ -76,33 +76,37 @@
       "transitions": [
         {
           "on_intent": "verify",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "verify_pressure"
         },
         {
           "on_intent": "refuse",
-          "next_stage_id": "END_SAFE"
-        },
-        {
-          "on_intent": "hang_up",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "doubt",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "comply",
           "next_stage_id": "ask_action"
         },
         {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
           "on_intent": "transfer_money",
           "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
         }
       ],
       "default_next_stage_id": "pressure"
     },
     {
-      "timeout_next_stage_id": "END_NEUTRAL",
+      "timeout_next_stage_id": "reassurance",
       "requested_action": "transfer_money",
       "opening_line": "Để nhận thưởng, anh/chị chuyển trước 2 triệu đồng phí thủ tục vào tài khoản này.",
       "max_turns": 2,
@@ -116,13 +120,143 @@
       "id": "ask_action",
       "transitions": [
         {
-          "on_intent": "transfer_money",
-          "next_stage_id": "END_UNSAFE"
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "reassurance"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "reassurance"
         },
         {
           "on_intent": "comply",
           "next_stage_id": "END_UNSAFE"
         },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "ask_action"
+    },
+    {
+      "id": "reassurance",
+      "requested_action": "transfer_money",
+      "opening_line": "Tôi hiểu anh/chị muốn kiểm tra, nhưng giải có thời hạn. Anh/chị xác nhận xong thì tôi mới giữ được phần thưởng.",
+      "max_turns": 2,
+      "objective": "Trấn an thêm một lần, làm nhẹ mối lo của người nghe rồi thúc họ ra quyết định.",
+      "fallback_lines": [
+        "Anh/chị có muốn tiếp tục để tôi hoàn tất việc này không?"
+      ],
+      "tactics": [
+        "trấn an",
+        "giảm nhẹ rủi ro"
+      ],
+      "timeout_next_stage_id": "final_pressure",
+      "default_next_stage_id": "reassurance",
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ]
+    },
+    {
+      "id": "rebuttal",
+      "requested_action": "keep_secret",
+      "opening_line": "Tôi hiểu anh/chị bất ngờ. Để tôi nói rõ hơn về bước xác nhận phần thưởng rồi anh/chị hãy quyết định.",
+      "objective": "Đáp lại sự nghi ngờ, duy trì sự chú ý và tiếp tục dẫn tới bước nhận thưởng.",
+      "tactics": [
+        "trấn an",
+        "hứa hẹn lợi ích"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Anh/chị còn nghe máy chứ? Tôi giải thích nốt cách xác nhận giải nhé."
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "rebuttal"
+    },
+    {
+      "id": "verify_pressure",
+      "requested_action": "keep_secret",
+      "opening_line": "Anh/chị đừng ngắt máy để kiểm tra lúc này, vì thời hạn giữ giải có thể hết. Tôi sẽ giải thích tiếp.",
+      "objective": "Dùng nguy cơ mất phần thưởng để cản việc xác minh độc lập.",
+      "tactics": [
+        "ngăn xác minh độc lập",
+        "tạo khan hiếm"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Anh/chị cứ nghe hết thông tin trước khi quyết định nhé."
+      ],
+      "max_turns": 2,
+      "transitions": [
         {
           "on_intent": "verify",
           "next_stage_id": "END_SAFE"
@@ -132,15 +266,73 @@
           "next_stage_id": "END_SAFE"
         },
         {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
           "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "verify_pressure"
+    },
+    {
+      "id": "final_pressure",
+      "requested_action": "transfer_money",
+      "opening_line": "Thời hạn giữ giải sắp hết. Anh/chị xác nhận theo hướng dẫn thì tôi mới hoàn tất hồ sơ nhận thưởng.",
+      "objective": "Nhắc lại yêu cầu thanh toán đáng ngờ và thúc giục quyết định.",
+      "tactics": [
+        "khẩn cấp",
+        "thúc giục hành động"
+      ],
+      "timeout_next_stage_id": "END_NEUTRAL",
+      "fallback_lines": [
+        "Anh/chị có đồng ý làm theo hướng dẫn để hoàn tất nhận thưởng không?"
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
           "next_stage_id": "END_SAFE"
         },
         {
           "on_intent": "doubt",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
           "next_stage_id": "END_SAFE"
         }
       ],
-      "default_next_stage_id": "ask_action"
+      "default_next_stage_id": "final_pressure"
     }
   ],
   "red_flags": [
@@ -214,6 +406,6 @@
   },
   "lesson_summary": "Yêu cầu đóng phí trước để nhận thưởng là dấu hiệu rủi ro. Không chuyển tiền và kiểm tra độc lập với đơn vị tổ chức.",
   "created_at": "2026-11-05T00:00:00Z",
-  "updated_at": "2026-11-05T00:00:00Z",
+  "updated_at": "2026-11-17T00:00:00Z",
   "published_at": "2026-11-05T00:00:00Z"
 }

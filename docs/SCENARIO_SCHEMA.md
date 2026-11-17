@@ -68,9 +68,9 @@ Validation errors should identify the JSON path, such as `stages[1].transitions[
 
 ## JSON source and PostgreSQL runtime
 
-Keep one authoring file per scenario at `data/scenarios/<id>.json`. On startup, the application imports scenario metadata into `scenarios`, each stage's caller line into `dialogue_nodes`, and each stage intent route into `dialogue_transitions`. PostgreSQL is the runtime source after import; edit-through-admin and controlled re-import are later work.
+Keep one authoring file per scenario at `data/scenarios/<id>.json`. On startup, the application synchronizes published scenario node metadata and intent routes into `dialogue_nodes` and `dialogue_transitions`. For those graph fields, the JSON files are authoritative: edits are applied to PostgreSQL at the next application start. Missing fixed lines are inserted, but existing fixed text is not overwritten. PostgreSQL still stores runtime sessions, generated lines, preferences, and the current graph.
 
-The JSON file remains the reviewable source in Git. It is not rewritten by PostgreSQL, and editing an already seeded file does not overwrite runtime rows automatically. The runtime database stores one current row per scenario; this implementation does not preserve content revisions in PostgreSQL.
+The JSON file remains the reviewable source in Git and is not rewritten by PostgreSQL. The runtime database stores one current row per scenario; this implementation does not preserve graph content revisions in PostgreSQL.
 
 ## Example authoring rules
 

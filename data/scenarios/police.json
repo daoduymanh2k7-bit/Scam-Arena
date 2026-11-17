@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "police",
-  "version": 1,
+  "version": 2,
   "status": "published",
   "title": "Giả công an điều tra",
   "category": "law_enforcement_impersonation",
@@ -60,7 +60,7 @@
       "default_next_stage_id": "intro"
     },
     {
-      "timeout_next_stage_id": "ask_action",
+      "timeout_next_stage_id": "rebuttal",
       "requested_action": "keep_secret",
       "opening_line": "Đây là việc khẩn cấp, anh/chị không được kể với ai để tránh ảnh hưởng điều tra.",
       "max_turns": 2,
@@ -76,33 +76,37 @@
       "transitions": [
         {
           "on_intent": "verify",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "verify_pressure"
         },
         {
           "on_intent": "refuse",
-          "next_stage_id": "END_SAFE"
-        },
-        {
-          "on_intent": "hang_up",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "doubt",
-          "next_stage_id": "END_SAFE"
+          "next_stage_id": "rebuttal"
         },
         {
           "on_intent": "comply",
           "next_stage_id": "ask_action"
         },
         {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
           "on_intent": "transfer_money",
           "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
         }
       ],
       "default_next_stage_id": "pressure"
     },
     {
-      "timeout_next_stage_id": "END_NEUTRAL",
+      "timeout_next_stage_id": "reassurance",
       "requested_action": "transfer_money",
       "opening_line": "Để chứng minh vô tội, anh/chị cần chuyển tiền vào tài khoản tạm giữ.",
       "max_turns": 2,
@@ -116,13 +120,143 @@
       "id": "ask_action",
       "transitions": [
         {
-          "on_intent": "transfer_money",
-          "next_stage_id": "END_UNSAFE"
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "reassurance"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "reassurance"
         },
         {
           "on_intent": "comply",
           "next_stage_id": "END_UNSAFE"
         },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "ask_action"
+    },
+    {
+      "id": "reassurance",
+      "requested_action": "transfer_money",
+      "opening_line": "Nếu anh/chị phối hợp ngay, tôi có thể ghi nhận nội dung trao đổi vào hồ sơ đang xử lý.",
+      "max_turns": 2,
+      "objective": "Trấn an thêm một lần, làm nhẹ mối lo của người nghe rồi thúc họ ra quyết định.",
+      "fallback_lines": [
+        "Anh/chị có muốn tiếp tục để tôi hoàn tất việc này không?"
+      ],
+      "tactics": [
+        "trấn an",
+        "giảm nhẹ rủi ro"
+      ],
+      "timeout_next_stage_id": "final_pressure",
+      "default_next_stage_id": "reassurance",
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "final_pressure"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ]
+    },
+    {
+      "id": "rebuttal",
+      "requested_action": "keep_secret",
+      "opening_line": "Tôi hiểu anh/chị lo lắng. Đây mới là bước trao đổi ban đầu; anh/chị bình tĩnh nghe tôi giải thích tiếp.",
+      "objective": "Đáp lại sự phủ nhận hoặc nghi ngờ, giữ người nghe trong cuộc gọi.",
+      "tactics": [
+        "trấn an có điều kiện",
+        "tạo uy quyền"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Anh/chị còn nghe máy chứ? Tôi cần nói rõ bước tiếp theo."
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "verify_pressure"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "rebuttal"
+    },
+    {
+      "id": "verify_pressure",
+      "requested_action": "keep_secret",
+      "opening_line": "Anh/chị không nên tự gọi nơi khác khi hồ sơ đang xử lý. Tôi sẽ hướng dẫn từng bước ngay trên cuộc gọi.",
+      "objective": "Ngăn người nghe kiểm tra qua kênh độc lập và tiếp tục gây áp lực.",
+      "tactics": [
+        "ngăn xác minh độc lập",
+        "tạo uy quyền"
+      ],
+      "timeout_next_stage_id": "ask_action",
+      "fallback_lines": [
+        "Anh/chị hãy nghe hết phần trao đổi rồi quyết định."
+      ],
+      "max_turns": 2,
+      "transitions": [
         {
           "on_intent": "verify",
           "next_stage_id": "END_SAFE"
@@ -132,15 +266,73 @@
           "next_stage_id": "END_SAFE"
         },
         {
+          "on_intent": "doubt",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "ask_action"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
           "on_intent": "hang_up",
+          "next_stage_id": "END_SAFE"
+        }
+      ],
+      "default_next_stage_id": "verify_pressure"
+    },
+    {
+      "id": "final_pressure",
+      "requested_action": "transfer_money",
+      "opening_line": "Thời gian xác minh có hạn. Anh/chị hãy làm theo yêu cầu vừa rồi để chúng tôi tiếp tục xử lý hồ sơ.",
+      "objective": "Nhắc lại yêu cầu chuyển tiền giả danh quy trình và ép quyết định.",
+      "tactics": [
+        "khẩn cấp",
+        "thúc giục hành động"
+      ],
+      "timeout_next_stage_id": "END_NEUTRAL",
+      "fallback_lines": [
+        "Anh/chị có đồng ý làm theo yêu cầu để tiếp tục xử lý không?"
+      ],
+      "max_turns": 2,
+      "transitions": [
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
           "next_stage_id": "END_SAFE"
         },
         {
           "on_intent": "doubt",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "share_sensitive",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "transfer_money",
+          "next_stage_id": "END_UNSAFE"
+        },
+        {
+          "on_intent": "hang_up",
           "next_stage_id": "END_SAFE"
         }
       ],
-      "default_next_stage_id": "ask_action"
+      "default_next_stage_id": "final_pressure"
     }
   ],
   "red_flags": [
@@ -214,6 +406,6 @@
   },
   "lesson_summary": "Cơ quan chức năng không yêu cầu chuyển tiền để chứng minh vô tội. Hãy cúp máy và liên hệ cơ quan bằng số công khai.",
   "created_at": "2026-11-05T00:00:00Z",
-  "updated_at": "2026-11-05T00:00:00Z",
+  "updated_at": "2026-11-17T00:00:00Z",
   "published_at": "2026-11-05T00:00:00Z"
 }
