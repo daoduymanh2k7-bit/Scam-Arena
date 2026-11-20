@@ -336,6 +336,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 
 ## Tài liệu bổ sung
 
+- [Tự động triển khai VPS bằng GitHub Actions](docs/GITHUB_ACTIONS_DEPLOY.md)
 - [Schema PostgreSQL](docs/POSTGRESQL.md)
 - [Schema kịch bản](docs/SCENARIO_SCHEMA.md)
 - [Thiết kế và nhãn nhận diện intent](docs/INTENT_DETECTION.md)
