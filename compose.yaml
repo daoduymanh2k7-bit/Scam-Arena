@@ -25,14 +25,13 @@ services:
         condition: service_healthy
       rasa:
         condition: service_healthy
-      whisper-cpp:
-        condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scam_arena}:${POSTGRES_PASSWORD:-scam_arena_local_dev}@db:5432/${POSTGRES_DB:-scam_arena}
       WHISPER_MODEL: ${WHISPER_MODEL:-base}
-      STT_PROVIDER: ${STT_PROVIDER:-whisper_cpp}
+      STT_PROVIDER: ${STT_PROVIDER:-faster_whisper}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
       WHISPER_CPP_URL: http://whisper-cpp:8080
       WHISPER_CPP_MODEL: ${WHISPER_CPP_MODEL:-base-q8_0}
       WHISPER_CPP_TIMEOUT_SECONDS: ${WHISPER_CPP_TIMEOUT_SECONDS:-45}
@@ -73,6 +72,7 @@ services:
       start_period: 20s
 
   whisper-cpp:
+    profiles: ["whisper-cpp"]
     build:
       context: .
       dockerfile: deployment/whisper-cpp/Dockerfile

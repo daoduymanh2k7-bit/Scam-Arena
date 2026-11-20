@@ -324,6 +324,7 @@
       const text = result.text.trim();
       if (!text) throw new Error("Chưa nghe rõ câu vừa rồi.");
       const recognition = [result.engine || "Whisper", result.model,
+        typeof result.compute_type === "string" ? result.compute_type.toUpperCase() : null,
         Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null].filter(Boolean).join(" · ");
       await handleReply(text, elapsed, run, recognition);
     } catch (error) {

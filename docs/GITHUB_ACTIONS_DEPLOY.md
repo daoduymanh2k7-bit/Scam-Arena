@@ -91,7 +91,7 @@ Workflow lần đầu có thể đã báo đỏ trước khi secrets được th
 **Re-run all jobs** hoặc **Run workflow** để chạy lại.
 
 1. `test`: chạy test backend và quy trình duyệt dữ liệu, kiểm tra cú pháp shell.
-2. `deploy`: xác thực SSH, gửi source đúng commit, build image web, Rasa và whisper.cpp trên VPS.
+2. `deploy`: xác thực SSH, gửi source đúng commit, build image web/Rasa và engine được chọn trên VPS.
 3. Lưu backup DB tại `/opt/scam-arena-backups/`, đồng bộ source, khởi động dịch vụ.
 4. Chờ DB, Rasa, ứng dụng healthy rồi kiểm tra `/health` nội bộ.
 
@@ -100,7 +100,9 @@ kiểm tra chất lượng giọng nói, micro, LLM hoặc HTTPS bên ngoài.
 
 Sau đó mỗi lần push/merge vào `main` đều chạy quy trình trên. Không cần máy cá nhân mở.
 Build dùng cache Docker hiện có; đổi dữ liệu/model Rasa vẫn có thể train lại lâu.
-Lần đầu tích hợp whisper.cpp cần biên dịch C++ và tải model lượng tử hóa.
+Chỉ khi chọn `STT_PROVIDER=whisper_cpp` mới build/chạy dịch vụ C++.
+Với mặc định Faster-Whisper INT8, dịch vụ C++ cũ được dừng sau khi app mới healthy để giải phóng RAM.
+Deploy cũng kiểm tra model Faster-Whisper nạp được trong container; kiểm tra này chưa đánh giá chất lượng nhận diện.
 VPS 2 CPU build có thể làm bản đang chạy chậm; khi đổi image có thể gián đoạn ngắn.
 
 ## Những gì giữ nguyên và giới hạn

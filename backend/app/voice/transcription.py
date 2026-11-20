@@ -34,7 +34,7 @@ def speech_to_text(audio_bytes: bytes) -> str:
     # Do not accumulate a long request queue or run multiple CPU decoders at once.
     if not _inference_lock.acquire(blocking=False):
         raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
-    provider = os.getenv("STT_PROVIDER", "whisper_cpp")
+    provider = os.getenv("STT_PROVIDER", "faster_whisper")
     started = time.monotonic()
     try:
         if provider == "whisper_cpp":
@@ -51,8 +51,10 @@ def speech_to_text(audio_bytes: bytes) -> str:
 
 
 def _faster_whisper(audio_bytes: bytes) -> str:
-    is_wav = audio_bytes.startswith(b"RIFF") and audio_bytes[8:12] == b"WAVE"
-    file_descriptor, path = tempfile.mkstemp(suffix=".wav" if is_wav else ".webm")
+    from app.voice.whisper_cpp import normalize_audio
+
+    audio_bytes = normalize_audio(audio_bytes)
+    file_descriptor, path = tempfile.mkstemp(suffix=".wav")
     try:
         with os.fdopen(file_descriptor, "wb") as audio_file:
             audio_file.write(audio_bytes)
@@ -60,3 +62,15 @@ def _faster_whisper(audio_bytes: bytes) -> str:
         return "".join(segment.text for segment in segments).strip()
     finally:
         Path(path).unlink(missing_ok=True)
+
+
+def warmup_speech() -> None:
+    """Preload the selected local model without racing an incoming request."""
+    if os.getenv("STT_PROVIDER", "faster_whisper") != "faster_whisper":
+        return
+    if not _inference_lock.acquire(blocking=False):
+        return
+    try:
+        _get_model()
+    finally:
+        _inference_lock.release()

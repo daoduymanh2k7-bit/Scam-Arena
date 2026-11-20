@@ -4,6 +4,7 @@ import json
 import struct
 import threading
 import wave
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -99,6 +100,46 @@ def test_explicit_legacy_provider(monkeypatch):
     with patch.object(transcription, "_faster_whisper", return_value="Alo") as old:
         assert transcription.speech_to_text(b"audio") == "Alo"
         old.assert_called_once_with(b"audio")
+
+
+def test_default_selects_faster_whisper(monkeypatch):
+    monkeypatch.delenv("STT_PROVIDER", raising=False)
+    with patch.object(transcription, "_faster_whisper", return_value="Tôi không đồng ý.") as selected:
+        assert transcription.speech_to_text(b"audio") == "Tôi không đồng ý."
+        selected.assert_called_once_with(b"audio")
+
+
+def test_faster_normalizes_audio_and_removes_temporary_file():
+    paths = []
+
+    def decode(path, **kwargs):
+        from pathlib import Path
+
+        paths.append(Path(path))
+        with wave.open(path) as wav:
+            assert (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) == (16000, 1, 2)
+        assert kwargs["language"] == "vi"
+        return iter([SimpleNamespace(text="Tôi không chuyển tiền.")]), None
+
+    with patch.object(transcription, "_get_model", return_value=SimpleNamespace(transcribe=decode)):
+        assert transcription._faster_whisper(wav_bytes(48000, 2)) == "Tôi không chuyển tiền."
+    assert paths and not paths[0].exists()
+
+
+def test_warmup_only_loads_selected_engine_and_respects_inference(monkeypatch):
+    with patch.object(transcription, "_get_model") as load:
+        monkeypatch.setenv("STT_PROVIDER", "whisper_cpp")
+        transcription.warmup_speech()
+        load.assert_not_called()
+        monkeypatch.setenv("STT_PROVIDER", "faster_whisper")
+        transcription._inference_lock.acquire()
+        try:
+            transcription.warmup_speech()
+            load.assert_not_called()
+        finally:
+            transcription._inference_lock.release()
+        transcription.warmup_speech()
+        load.assert_called_once()
 
 
 def client():

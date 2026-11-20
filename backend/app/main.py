@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+import asyncio
+import logging
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -13,13 +15,27 @@ from app.scenario_visualizer import generate_scenario_map
 ROOT = Path(__file__).resolve().parents[2]
 STATIC_DIR = ROOT / "frontend" / "static"
 
+
+async def _warm_speech() -> None:
+    from app.voice.transcription import warmup_speech
+
+    try:
+        await asyncio.to_thread(warmup_speech)
+    except Exception:
+        logging.getLogger(__name__).exception("Speech model preload failed; a later request may retry")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
     generate_scenario_map()
+    warmup = asyncio.create_task(_warm_speech())
     try:
         yield
     finally:
+        warmup.cancel()
+        with suppress(asyncio.CancelledError):
+            await warmup
         close_database()
 
 

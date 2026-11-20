@@ -27,8 +27,17 @@ tar -xzf "$archive" -C "$release"
 test -f "$release/compose.yaml"
 test -f "$release/Dockerfile"
 
+# Only build the selected engine. Source defaults are used without changing .env.
+release_compose=(docker compose -p scam-arena --env-file "$app/.env" -f "$release/compose.yaml")
+provider=$("${release_compose[@]}" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["scam-arena"]["environment"]["STT_PROVIDER"])')
+build_services=(scam-arena rasa)
+case "$provider" in
+  whisper_cpp) build_services+=(whisper-cpp) ;;
+  faster_whisper) ;;
+  *) echo "Unsupported STT_PROVIDER" >&2; exit 1 ;;
+esac
 # Keep the running installation untouched if the new images cannot build.
-docker compose -p scam-arena --env-file "$app/.env" -f "$release/compose.yaml" build scam-arena rasa whisper-cpp
+"${release_compose[@]}" build "${build_services[@]}"
 
 cd "$app"
 backup="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-$revision.dump"
@@ -45,7 +54,15 @@ rsync -a --delete \
   --exclude='/deployment/database.dump' \
   "$release/" "$app/"
 
+if [[ "$provider" == whisper_cpp ]]; then
+  docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 whisper-cpp
+fi
 docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 scam-arena
 curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8000/health
+if [[ "$provider" == faster_whisper ]]; then
+  # Also verify the selected model can load; web health alone cannot prove ASR readiness.
+  docker compose -p scam-arena exec -T scam-arena python -c 'from app.voice.transcription import warmup_speech; warmup_speech(); print("Faster-Whisper model load verified")'
+  docker compose -p scam-arena stop whisper-cpp
+fi
 printf '\n%s\n' "$revision" > "$app/.deployed-revision"
 printf '\nDeployed %s. Database backup: %s\n' "$revision" "$backup"

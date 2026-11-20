@@ -30,11 +30,12 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
     try:
         started = time.monotonic()
         text = await run_in_threadpool(speech_to_text, content)
-        cpp = os.getenv("STT_PROVIDER", "whisper_cpp") == "whisper_cpp"
+        cpp = os.getenv("STT_PROVIDER", "faster_whisper") == "whisper_cpp"
         return {
             "text": text,
             "engine": "whisper.cpp" if cpp else "Faster-Whisper",
             "model": os.getenv("WHISPER_CPP_MODEL", "base-q8_0") if cpp else os.getenv("WHISPER_MODEL", "base"),
+            "compute_type": "" if cpp else os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
             "elapsed_ms": round((time.monotonic() - started) * 1000),
         }
     except SpeechBusy as exc:

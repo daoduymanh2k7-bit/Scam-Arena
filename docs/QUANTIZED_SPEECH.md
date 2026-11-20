@@ -1,14 +1,15 @@
 # whisper.cpp lượng tử hóa cho Scam Arena
 
-Mặc định mới: `STT_PROVIDER=whisper_cpp`, model Whisper **base đa ngôn ngữ Q8_0**.
-Đây là thay engine nhận diện, không huấn luyện lại Rasa và không thay đổi schema DB.
+Mặc định hiện tại: **Faster-Whisper base INT8**, theo [phép so sánh local](STT_ENGINE_COMPARISON.md).
+whisper.cpp được giữ là tùy chọn đối chứng với model Whisper **base đa ngôn ngữ Q8_0/Q5_1**.
+Chuyển engine không huấn luyện lại Rasa và không thay đổi schema DB.
 
 ## Lượng tử hóa đang được áp dụng thế nào?
 
 | File chính thức | Kích thước file | Mục đích |
 | --- | --- | --- |
 | `ggml-base.bin` | khoảng 148 MB | Bản thường để tham khảo kích thước |
-| `ggml-base-q8_0.bin` | 81.768.585 byte | Mặc định; chọn mức lượng tử ít mạnh hơn Q5 để ưu tiên giữ chất lượng |
+| `ggml-base-q8_0.bin` | 81.768.585 byte | Mặc định khi chọn engine C++; mức lượng tử ít mạnh hơn Q5 |
 | `ggml-base-q5_1.bin` | 59.707.625 byte | Tùy chọn nhẹ hơn để thử nghiệm |
 
 Kích thước file không phải tổng RAM khi nhận diện. Q8 nhỏ hơn bản thường khoảng 45%,
@@ -24,7 +25,7 @@ Dockerfile pin source whisper.cpp v1.8.4 vào commit
 `5359861c739e955e79d9a303bcbc70fb988958b1`, kiểm tra SHA-256 theo từng biến thể.
 Không tải bản `.en` vì sản phẩm dùng tiếng Việt. Model không nằm trong Git.
 
-## Kiến trúc
+## Kiến trúc khi chọn whisper.cpp
 
 1. Trình duyệt vẫn thu tự động, gửi WAV hoặc WebM qua API có đăng nhập.
 2. FastAPI đưa tác vụ nhận diện vào threadpool, không chặn event loop.
@@ -38,7 +39,7 @@ Container C++ chạy bằng user không phải root và không publish port ra I
 DB/API key không gửi sang dịch vụ này. Model được nạp trước khi dịch vụ health báo OK.
 Giữ nguyên Whisper đa ngôn ngữ; lượng tử hóa không đồng nghĩa model chuyên tiếng Việt.
 
-API trả thêm `engine`, `model`, `elapsed_ms`. Nút ⓘ của phụ đề người dùng hiển thị
+API trả thêm `engine`, `model`, `compute_type`, `elapsed_ms`. Nút ⓘ của phụ đề người dùng hiển thị
 các trường này cùng nhãn và cách gán nhãn. Thời gian đo gồm đổi định dạng/gọi engine,
 không gồm thời gian người dùng đang nói, upload, Rasa, LLM hoặc đọc giọng.
 
@@ -49,17 +50,20 @@ Tác vụ C++ có thể còn chạy sau khi client hết timeout; timeout không
 
 ## Khởi động và triển khai
 
+Đặt `STT_PROVIDER=whisper_cpp` trong `.env`, sau đó:
+
 ```bash
-docker compose up -d --build scam-arena
+docker compose up -d --build --wait whisper-cpp scam-arena
 ```
 
-Lệnh tự build và chạy thêm dependency `whisper-cpp`. Lần đầu cần tải công cụ C++,
+Chỉ định rõ dịch vụ C++ sẽ kích hoạt profile tùy chọn. Lệnh mặc định chỉ chạy web,
+DB và Rasa, không khởi động C++. Lần đầu bật C++ cần tải công cụ,
 biên dịch engine và tải model ~82 MB. Những lần sau Docker dùng cache.
 Build dùng hai job, tạo nhiều biến thể CPU để image không phụ thuộc CPU của máy build.
 Không nên lấy thời gian build làm thời gian nhận diện.
 
-GitHub Actions đã được cập nhật để build cả `whisper-cpp` trước khi đồng bộ source.
-Nếu `.env` VPS chưa có các biến mới thì Compose dùng mặc định Q8, không cần chép đè `.env`.
+GitHub Actions đọc provider từ cấu hình Compose: chỉ build/start `whisper-cpp` khi
+được chọn. Nếu `.env` VPS chưa có biến mới thì dùng Faster-Whisper INT8.
 
 ```bash
 docker compose ps
@@ -80,10 +84,10 @@ STT_PROVIDER=whisper_cpp
 WHISPER_CPP_MODEL=base-q5_1
 ```
 
-Sau đó build/recreate cả dependency lẫn app để thông tin model trên phụ đề đồng bộ:
+Sau đó build/recreate cả C++ lẫn app để thông tin model trên phụ đề đồng bộ:
 
 ```bash
-docker compose up -d --build scam-arena
+docker compose up -d --build --wait whisper-cpp scam-arena
 ```
 
 Muốn quay lại Q8, đổi thành `WHISPER_CPP_MODEL=base-q8_0` và chạy lại lệnh trên.
@@ -99,13 +103,17 @@ WHISPER_MODEL=base
 ```
 
 ```bash
-docker compose up -d --no-build --no-deps scam-arena
+docker compose up -d --build scam-arena
 ```
 
-Chuyển engine tường minh, không tự chạy hai model khi timeout. Sidecar C++ vẫn
-được Compose giữ như dependency; không tiết kiệm toàn bộ RAM của sidecar khi đổi provider.
-Lệnh `--no-deps` dùng khi DB/Rasa hiện có vẫn đang chạy, cho phép đổi engine kể cả
-khi sidecar C++ chưa healthy.
+Sau khi app healthy, dừng C++ nếu trước đó đã khởi động thủ công:
+
+```bash
+docker compose stop whisper-cpp
+```
+
+Chuyển engine tường minh, không tự chạy hai model khi timeout. C++ là profile tùy chọn,
+không còn là dependency bắt buộc của web. Actions tự dừng C++ khi chọn Faster-Whisper.
 Ngoài Docker, cần đặt `WHISPER_CPP_URL` đúng máy chủ whisper.cpp, hoặc chọn engine cũ.
 
 ## Đánh giá cần làm với người dùng thật
