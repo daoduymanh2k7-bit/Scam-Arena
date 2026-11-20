@@ -5,3 +5,4 @@ __pycache__/
 .env
 voices/*
 !voices/.gitkeep
+rasa/evaluation/.local/

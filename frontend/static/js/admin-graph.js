@@ -1,16 +1,19 @@
 (() => {
   const dialog = document.getElementById("admin-dialog");
   const openButton = document.getElementById("admin-open");
-  const select = document.getElementById("admin-scenario-select");
+  const scenarioSelect = document.getElementById("admin-scenario-select");
+  const stageLinesTitle = document.getElementById("admin-stage-lines-title");
+  const stageLines = document.getElementById("admin-stage-lines");
   const graph = document.getElementById("admin-graph");
-  const details = document.getElementById("admin-node-details");
+  const nodeOpen = document.getElementById("admin-node-open");
   const overview = document.getElementById("admin-scenario-overview-content");
+  const overviewDialog = document.getElementById("admin-overview-dialog");
+  const overviewButton = document.getElementById("admin-overview-open");
   const error = document.getElementById("admin-error");
   const status = document.getElementById("admin-scenario-status");
   const graphScroll = document.getElementById("admin-graph-scroll");
   const zoomLabel = document.getElementById("admin-zoom-level");
   const linesDialog = document.getElementById("admin-lines-dialog");
-  const linesSummary = document.getElementById("admin-lines-summary");
   const linesContent = document.getElementById("admin-lines-content");
   if (!dialog || !openButton) return;
 
@@ -25,6 +28,7 @@
     keep_secret: "Giữ bí mật", other: "Khác",
   };
   let scenarios = [];
+  let selectedScenarioKey = null;
   let baseWidth = 1, baseHeight = 1, mapZoom = 1;
   let resetTimer = null, resetFrame = null;
 
@@ -92,17 +96,14 @@
     });
     parent.appendChild(lineList);
   }
-  function openNodeLines(scenario, node) {
+  function openNodeDetails(scenario, node) {
     linesDialog.querySelector("#admin-lines-title").textContent = `${scenario.title} · ${nodeTitle(node)}`;
-    linesSummary.textContent = `${node.lines?.length || 0} câu thoại trong node này. Câu cố định và câu LLM được liệt kê cùng trạng thái và điểm ưu tiên.`;
-    linesContent.replaceChildren();
-    appendDialogueLines(linesContent, node);
+    renderNodeDetails(linesContent, scenario, node);
+    linesContent.scrollTop = 0;
     if (!linesDialog.open) linesDialog.showModal();
   }
-  function setDetails(scenario, node) {
+  function renderNodeDetails(details, scenario, node) {
     details.replaceChildren();
-    const heading = addHtml(details, "h3", "", `${nodeTitle(node)}${node.is_start ? " · Điểm bắt đầu" : ""}`);
-    heading.tabIndex = -1;
     if (node.is_terminal) {
       addHtml(details, "p", "", `Kết quả của nhánh này: ${node.outcome === "safe" ? "an toàn" : node.outcome === "scammed" ? "không an toàn" : "hết thời gian"}.`);
     } else {
@@ -110,12 +111,6 @@
       addHtml(details, "p", "", `Mục tiêu: ${node.objective || "Chưa có mô tả."}`);
       addHtml(details, "p", "", `Chiến thuật: ${node.tactic || "Chưa ghi chú."}`);
       addHtml(details, "p", "", `Hành động người gọi hướng tới: ${actionLabels[node.requested_action] || node.requested_action}`);
-    }
-    if (node.lines?.length) {
-      addHtml(details, "h4", "", `Tất cả câu thoại trong giai đoạn này · ${node.lines.length}`);
-      appendDialogueLines(details, node);
-    } else {
-      addHtml(details, "p", "", "Giai đoạn này chưa có câu thoại nào trong kho.");
     }
     const outgoing = scenario.transitions.filter((edge) => edge.from_node_id === node.node_id);
     if (node.timeout_next_node_id) outgoing.push({ intent: "timeout", to_node_id: node.timeout_next_node_id, score_delta: 0, feedback: "Tự chuyển sau khi chờ quá thời gian." });
@@ -193,32 +188,52 @@
 
     const edges = [...(scenario.transitions || []).map((edge) => ({ ...edge, timeout: false }))];
     nodes.filter((node) => node.timeout_next_node_id).forEach((node) => edges.push({ from_node_id: node.node_id, to_node_id: node.timeout_next_node_id, intent: "timeout", score_delta: 0, timeout: true }));
+    const outgoing = new Map();
+    edges.forEach((edge, index) => {
+      if (!byId.has(edge.from_node_id) || !byId.has(edge.to_node_id)) return;
+      if (!outgoing.has(edge.from_node_id)) outgoing.set(edge.from_node_id, new Map());
+      const destinations = outgoing.get(edge.from_node_id);
+      if (!destinations.has(edge.to_node_id)) destinations.set(edge.to_node_id, []);
+      destinations.get(edge.to_node_id).push(index);
+    });
     let hoveredPathNodeId = null;
     let lockedPathNodeId = null;
     let lockedPathIndex = 0;
+    stageLinesTitle.textContent = "Lời thoại theo giai đoạn";
+    stageLines.replaceChildren();
+    addHtml(stageLines, "p", "", "Bấm vào một thẻ trên sơ đồ để xem lời thoại.");
+    nodeOpen.disabled = true;
+    nodeOpen.onclick = () => {
+      const node = byId.get(lockedPathNodeId);
+      if (node) openNodeDetails(scenario, node);
+    };
     const pathStatus = document.getElementById("admin-path-status");
+    const routeCache = new Map();
+    const maxRoutes = 120;
     function getPathsTo(targetId) {
-      const startNode = nodes.find((node) => node.is_start);
-      if (!startNode || targetId == null) return [];
+      if (!start || targetId == null) return { paths: [], truncated: false };
+      if (routeCache.has(targetId)) return routeCache.get(targetId);
       const found = [];
-      const maxPaths = 120;
       function visit(currentId, visitedNodes, pathEdges) {
-        if (found.length >= maxPaths) return;
         if (currentId === targetId) {
-          found.push({ nodes: [...visitedNodes], edges: [...pathEdges] });
+          found.push({ nodes: visitedNodes, edges: pathEdges });
           return;
         }
-        edges.forEach((edge, edgeIndex) => {
-          if (found.length >= maxPaths || edge.from_node_id !== currentId || visitedNodes.includes(edge.to_node_id)) return;
-          visit(edge.to_node_id, [...visitedNodes, edge.to_node_id], [...pathEdges, edgeIndex]);
-        });
+        for (const [nextId, indexes] of outgoing.get(currentId) || []) {
+          if (found.length > maxRoutes) break;
+          if (visitedNodes.includes(nextId)) continue;
+          visit(nextId, [...visitedNodes, nextId], [...pathEdges, indexes[0]]);
+        }
       }
-      visit(startNode.node_id, [startNode.node_id], []);
-      return found.sort((a, b) => a.edges.length - b.edges.length);
+      visit(start.node_id, [start.node_id], []);
+      found.sort((a, b) => a.nodes.length - b.nodes.length);
+      const result = { paths: found.slice(0, maxRoutes), truncated: found.length > maxRoutes };
+      routeCache.set(targetId, result);
+      return result;
     }
     function applyPathHighlight() {
       const targetId = hoveredPathNodeId ?? lockedPathNodeId;
-      const paths = getPathsTo(targetId);
+      const { paths, truncated } = getPathsTo(targetId);
       const selectedIndex = targetId === lockedPathNodeId ? lockedPathIndex : 0;
       const path = paths.length ? paths[Math.min(selectedIndex, paths.length - 1)] : null;
       const pathNodes = new Set(path?.nodes || []);
@@ -231,52 +246,66 @@
       });
       edgeLayer.querySelectorAll("[data-edge-index]").forEach((item) => {
         const onPath = pathEdges.has(Number(item.dataset.edgeIndex));
-        item.classList.toggle("is-dim", !onPath);
         item.classList.toggle("is-path", onPath);
       });
       if (pathStatus) {
-        if (lockedPathNodeId == null) pathStatus.textContent = "Bấm vào thẻ để ghim đường đi; bấm lại để đổi giữa các đường khác.";
+        if (targetId == null) pathStatus.textContent = "Bấm vào thẻ để ghim tuyến. Bấm lại để đổi tuyến.";
         else {
-          const target = byId.get(lockedPathNodeId);
-          const routeNumber = Math.min(lockedPathIndex, Math.max(0, paths.length - 1)) + 1;
+          const target = byId.get(targetId);
+          const prefix = targetId === lockedPathNodeId ? "Tuyến" : "Xem trước tuyến";
+          const routeNumber = selectedIndex + 1;
           pathStatus.textContent = paths.length
-            ? `Đường ${routeNumber}/${paths.length} tới ${nodeTitle(target)} · bấm lại thẻ để đổi đường${paths.length >= 120 ? " (đã giới hạn danh sách)" : ""}`
+            ? `${prefix} ${routeNumber}/${paths.length}${truncated ? "+" : ""} tới ${nodeTitle(target)}`
             : `Không có đường đi từ node bắt đầu tới ${nodeTitle(target)}.`;
         }
       }
     }
     function selectPath(node) {
       if (lockedPathNodeId === node.node_id) {
-        const paths = getPathsTo(node.node_id);
+        const { paths } = getPathsTo(node.node_id);
         if (paths.length > 1) lockedPathIndex = (lockedPathIndex + 1) % paths.length;
       } else {
         lockedPathNodeId = node.node_id;
         lockedPathIndex = 0;
+        stageLinesTitle.textContent = `${nodeTitle(node)} · ${node.lines?.length || 0} câu`;
+        stageLines.replaceChildren();
+        appendDialogueLines(stageLines, node);
+        stageLines.scrollTop = 0;
       }
-      setDetails(scenario, node);
+      nodeOpen.disabled = false;
       applyPathHighlight();
     }
     function drawEdges() {
       edgeLayer.replaceChildren();
       edges.forEach((edge, edgeIndex) => {
-      const from = positions.get(edge.from_node_id), to = positions.get(edge.to_node_id);
-      if (!from || !to) return;
-      const x1 = from.x + nodeWidth, y1 = from.y + nodeHeight / 2;
-      const x2 = to.x, y2 = to.y + nodeHeight / 2;
-      const distanceX = x2 > x1 ? x2 - x1 : 46;
-      const bend = Math.max(36, Math.min(110, Math.abs(y2 - y1) * .38));
-      const curve = x2 > x1
-        ? `M ${x1} ${y1} C ${x1 + distanceX * .45} ${y1}, ${x2 - distanceX * .45} ${y2}, ${x2} ${y2}`
-        : `M ${x1} ${y1} C ${x1 + bend} ${y1 + bend}, ${x2 - bend} ${y2 + bend}, ${x2} ${y2}`;
-      const target = byId.get(edge.to_node_id);
-      const targetClass = target?.outcome === "safe" ? "safe" : target?.outcome === "scammed" ? "risk" : "normal";
-      edgeLayer.appendChild(element("path", { d: curve, "data-edge-index": edgeIndex, class: `graph-edge${edge.timeout ? " timeout" : ""} ${targetClass}` }));
-      const labelText = edge.timeout ? "Hết giờ" : `${labels[edge.intent] || edge.intent} ${edge.score_delta > 0 ? "+" : ""}${edge.score_delta}`;
-      const labelX = (x1 + x2) / 2;
-      const labelY = (y1 + y2) / 2 - 5;
-      const textWidth = Math.min(120, Math.max(54, labelText.length * 6.1 + 12));
-      edgeLayer.appendChild(element("rect", { x: labelX - textWidth / 2, y: labelY - 11, width: textWidth, height: 19, rx: 6, "data-edge-index": edgeIndex, class: "graph-edge-label-bg" }));
-      edgeLayer.appendChild(element("text", { x: labelX, y: labelY + 2, "data-edge-index": edgeIndex, class: "graph-edge-label", "text-anchor": "middle" }, labelText));
+        const from = positions.get(edge.from_node_id), to = positions.get(edge.to_node_id);
+        if (!from || !to) return;
+        const indexes = outgoing.get(edge.from_node_id).get(edge.to_node_id);
+        if (edgeIndex !== indexes[0]) return;
+        const x1 = from.x + nodeWidth, y1 = from.y + nodeHeight / 2;
+        const x2 = to.x, y2 = to.y + nodeHeight / 2;
+        const forward = x2 > x1;
+        const bendX = forward ? (x2 - x1) * .45 : Math.max(36, Math.min(110, Math.abs(y2 - y1) * .38));
+        const bendY = forward ? 0 : bendX;
+        const curve = `M ${x1} ${y1} C ${x1 + bendX} ${y1 + bendY}, ${x2 - bendX} ${y2 + bendY}, ${x2} ${y2}`;
+        const target = byId.get(edge.to_node_id);
+        const targetClass = target?.outcome === "safe" ? "safe" : target?.outcome === "scammed" ? "risk" : "normal";
+        const branches = indexes.map((index) => edges[index]);
+        const branchLabels = branches.map((branch) => branch.timeout
+          ? "Hết giờ"
+          : `${labels[branch.intent] || branch.intent} ${branch.score_delta > 0 ? "+" : ""}${branch.score_delta}`);
+        const timeoutOnly = branches.every((branch) => branch.timeout);
+        const line = element("path", { d: curve, "data-edge-index": edgeIndex, class: `graph-edge${timeoutOnly ? " timeout" : ""} ${targetClass}` });
+        line.appendChild(element("title", {}, branchLabels.join("\n")));
+        const caption = branches.length > 1 ? `${branches.length} điều kiện` : branchLabels[0];
+        const labelX = (x1 + x2) / 2;
+        const labelY = (y1 + y2) / 2 + bendY * .75 - 5;
+        const textWidth = Math.min(120, Math.max(54, caption.length * 6.1 + 12));
+        edgeLayer.append(
+          line,
+          element("rect", { x: labelX - textWidth / 2, y: labelY - 11, width: textWidth, height: 19, rx: 6, "data-edge-index": edgeIndex, class: "graph-edge-label-bg" }),
+          element("text", { x: labelX, y: labelY + 2, "data-edge-index": edgeIndex, class: "graph-edge-label", "text-anchor": "middle" }, caption)
+        );
       });
       applyPathHighlight();
     }
@@ -325,7 +354,7 @@
       const group = element("g", { class: `graph-node ${type}`, tabindex: "0", role: "button", "aria-label": nodeTitle(node), "data-node-id": node.node_id });
       nodeElements.set(node.node_id, group);
       group.appendChild(element("rect", { x, y, width: nodeWidth, height: nodeHeight, rx: 13, class: "graph-node-card" }));
-      group.setAttribute("aria-label", `${nodeTitle(node)} · ${node.lines?.length || 0} câu thoại · bấm để ghim đường và xem chi tiết, bấm đúp để mở danh sách`);
+      group.setAttribute("aria-label", `${nodeTitle(node)} · ${node.lines?.length || 0} câu thoại · bấm để ghim tuyến, bấm đúp để mở chi tiết`);
       group.appendChild(element("text", { x: x + 10, y: y + 16, class: "graph-node-tag" }, node.is_terminal ? "KẾT THÚC" : node.is_start ? "BẮT ĐẦU" : "GIAI ĐOẠN"));
       const title = nodeTitle(node);
       const titleLines = title.match(/.{1,16}(?:\s|$)|.{1,16}/g) || [title];
@@ -336,7 +365,6 @@
       const previewNode = () => {
         hoveredPathNodeId = node.node_id;
         applyPathHighlight();
-        setDetails(scenario, node);
       };
       group.addEventListener("mouseenter", previewNode);
       group.addEventListener("focus", previewNode);
@@ -394,7 +422,7 @@
       group.addEventListener("pointercancel", finishDrag);
       group.addEventListener("dblclick", (event) => {
         event.preventDefault();
-        openNodeLines(scenario, node);
+        openNodeDetails(scenario, node);
       });
       group.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -405,11 +433,9 @@
       nodeLayer.appendChild(group);
     });
     applyPathHighlight();
-    details.replaceChildren();
-    addHtml(details, "h3", "", scenario.title);
-    addHtml(details, "p", "", `${scenario.summary || ""} · Trạng thái: ${scenario.status}`);
-    addHtml(details, "p", "", "Rê chuột hoặc chọn một node để xem mục tiêu, toàn bộ câu thoại, nhánh tiếp theo và điểm.");
+    document.getElementById("admin-overview-title").textContent = `Tổng quan · ${scenario.title}`;
     overview.replaceChildren();
+    if (scenario.summary) addHtml(overview, "p", "", scenario.summary);
     const persona = scenario.persona || {};
     addHtml(overview, "p", "", `Nhân vật: ${persona.name || "—"} · Vai giả danh: ${persona.claimed_role || "—"} · Mức áp lực: ${persona.pressure_level ?? "—"}/5`);
     if (persona.speaking_style) addHtml(overview, "p", "", `Cách nói: ${persona.speaking_style}`);
@@ -437,30 +463,31 @@
       overview.appendChild(list);
     }
   }
-  function selectScenario() {
-    const scenario = scenarios.find((item) => item.key === select.value);
-    if (!scenario) return;
+  function selectScenario(scenario) {
+    if (selectedScenarioKey === scenario.key) return;
+    selectedScenarioKey = scenario.key;
+    scenarioSelect.value = scenario.key;
     status.textContent = `${scenario.status} · ${scenario.nodes.length} node · ${scenario.transitions.length} nhánh`;
     drawGraph(scenario);
+    overviewButton.disabled = false;
   }
   async function loadScenarios() {
     error.hidden = true;
-    select.disabled = true;
     status.textContent = "Đang tải kịch bản…";
     try {
       const response = await fetch("/api/arena/admin/scenarios/graphs");
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || "Không tải được danh sách kịch bản.");
       scenarios = payload;
-      select.replaceChildren(...scenarios.map((scenario) => {
-        const option = document.createElement("option");
-        option.value = scenario.key;
-        option.textContent = `${scenario.title} · ${scenario.status}`;
-        return option;
-      }));
-      select.disabled = !scenarios.length;
-      if (!scenarios.length) { status.textContent = "Chưa có kịch bản."; return; }
-      selectScenario();
+      scenarioSelect.replaceChildren(...scenarios.map((scenario) =>
+        new Option(`${scenario.title} · ${scenario.status}`, scenario.key)
+      ));
+      scenarioSelect.disabled = !scenarios.length;
+      if (!scenarios.length) {
+        status.textContent = "Chưa có kịch bản.";
+        return;
+      }
+      selectScenario(scenarios[0]);
     } catch (err) {
       status.textContent = "";
       error.textContent = err.message;
@@ -472,10 +499,45 @@
     if (!scenarios.length) loadScenarios();
   });
   document.getElementById("admin-close").addEventListener("click", () => dialog.close());
-  select.addEventListener("change", selectScenario);
-  document.getElementById("admin-zoom-in").addEventListener("click", () => setZoom(mapZoom + 0.15));
-  document.getElementById("admin-zoom-out").addEventListener("click", () => setZoom(mapZoom - 0.15));
+  scenarioSelect.addEventListener("change", () => {
+    const scenario = scenarios.find((item) => item.key === scenarioSelect.value);
+    if (scenario) selectScenario(scenario);
+  });
+  overviewButton.addEventListener("click", () => {
+    overview.scrollTop = 0;
+    overviewDialog.showModal();
+  });
+  document.getElementById("admin-overview-close").addEventListener("click", () => overviewDialog.close());
+  overviewDialog.addEventListener("click", (event) => { if (event.target === overviewDialog) overviewDialog.close(); });
   document.getElementById("admin-zoom-fit").addEventListener("click", fitGraph);
+  let pan = null;
+  graphScroll.addEventListener("pointerdown", (event) => {
+    if (pan || event.pointerType !== "mouse" || event.button !== 0 || event.target.closest(".graph-node")) return;
+    const bounds = graphScroll.getBoundingClientRect();
+    const x = event.clientX - bounds.left - graphScroll.clientLeft;
+    const y = event.clientY - bounds.top - graphScroll.clientTop;
+    if (x < 0 || y < 0 || x >= graphScroll.clientWidth || y >= graphScroll.clientHeight) return;
+    event.preventDefault();
+    pan = {
+      pointerId: event.pointerId, x: event.clientX, y: event.clientY,
+      left: graphScroll.scrollLeft, top: graphScroll.scrollTop,
+    };
+    graphScroll.setPointerCapture(event.pointerId);
+    graphScroll.classList.add("is-panning");
+  });
+  graphScroll.addEventListener("pointermove", (event) => {
+    if (!pan || event.pointerId !== pan.pointerId) return;
+    graphScroll.scrollLeft = pan.left + pan.x - event.clientX;
+    graphScroll.scrollTop = pan.top + pan.y - event.clientY;
+  });
+  function stopPan(event) {
+    if (!pan || event.pointerId !== pan.pointerId) return;
+    pan = null;
+    graphScroll.classList.remove("is-panning");
+  }
+  graphScroll.addEventListener("pointerup", stopPan);
+  graphScroll.addEventListener("pointercancel", stopPan);
+  graphScroll.addEventListener("lostpointercapture", stopPan);
   graphScroll.addEventListener("wheel", (event) => {
     event.preventDefault();
     const bounds = graphScroll.getBoundingClientRect();

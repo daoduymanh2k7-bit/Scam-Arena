@@ -21,7 +21,8 @@ def _get_model():
 
 
 def speech_to_text(audio_bytes: bytes) -> str:
-    file_descriptor, path = tempfile.mkstemp(suffix=".webm")
+    is_wav = audio_bytes.startswith(b"RIFF") and audio_bytes[8:12] == b"WAVE"
+    file_descriptor, path = tempfile.mkstemp(suffix=".wav" if is_wav else ".webm")
     try:
         with os.fdopen(file_descriptor, "wb") as audio_file:
             audio_file.write(audio_bytes)

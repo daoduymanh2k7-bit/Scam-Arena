@@ -36,7 +36,7 @@ def main():
                             break
                         if not line: break
                         with get_connection_pool().connection() as insert_conn,insert_conn.cursor() as insert_cur:
-                            insert_cur.execute("INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,line_text,source,model,prompt_version) VALUES(%s,%s,%s,NULL,%s,'llm',%s,%s) ON CONFLICT DO NOTHING RETURNING line_id",(node['node_id'],intent,reprompt,line,os.getenv('GEMINI_MODEL','gemini-2.5-flash'),os.getenv('LINE_PROMPT_VERSION','v2')))
+                            insert_cur.execute("INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,line_text,source,model,prompt_version) VALUES(%s,%s,%s,NULL,%s,'llm',%s,%s) ON CONFLICT DO NOTHING RETURNING line_id",(node['node_id'],intent,reprompt,line,context.get('_generated_model',os.getenv('GEMINI_MODEL','gemini-2.5-flash')),os.getenv('LINE_PROMPT_VERSION','v2')))
                             if not insert_cur.fetchone(): break
                     if quota_exhausted: return
 if __name__=='__main__': main()

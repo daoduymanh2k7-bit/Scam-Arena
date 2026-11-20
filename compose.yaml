@@ -39,6 +39,12 @@ services:
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openrouter/free}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+      XAPIKEY_BASE_URL: ${XAPIKEY_BASE_URL:-https://api.x-apikey.com/v1}
+      XAPIKEY_CALL_API_KEY: ${XAPIKEY_CALL_API_KEY:-}
+      XAPIKEY_CALL_MODEL: ${XAPIKEY_CALL_MODEL:-minimax-m3.1-flash}
+      XAPIKEY_MESSAGE_API_KEY: ${XAPIKEY_MESSAGE_API_KEY:-}
+      XAPIKEY_MESSAGE_MODEL: ${XAPIKEY_MESSAGE_MODEL:-gpt-6-luna}
+      XAPIKEY_TIMEOUT_SECONDS: ${XAPIKEY_TIMEOUT_SECONDS:-15}
       LINE_LLM_ENABLED: ${LINE_LLM_ENABLED:-false}
       LINE_LLM_TIMEOUT_SECONDS: ${LINE_LLM_TIMEOUT_SECONDS:-3}
       LINE_POOL_SIZE: ${LINE_POOL_SIZE:-5}
@@ -46,10 +52,12 @@ services:
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       RASA_NLU_URL: http://rasa:5005/model/parse
       RASA_NLU_TIMEOUT_SECONDS: ${RASA_NLU_TIMEOUT_SECONDS:-2}
+      RASA_REVIEW_DIR: /dataset
     volumes:
       - whisper-cache:/models/huggingface
       - ./voices:/app/voices
       - ./data:/app/data:ro
+      - ./rasa/evaluation/.local/review-workflow:/dataset
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]

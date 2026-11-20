@@ -10,8 +10,23 @@ from urllib.request import Request, urlopen
 from app.arena.intent_detector import Intent
 
 
+_CONTEXT_PREFIX = "scam-arena-context-v1 "
+
+
 def classify_with_rasa(text: str) -> tuple[Intent | None, float]:
     """Return a Rasa intent when the service is configured and reachable."""
+    return _classify(text)
+
+
+def classify_context_with_rasa(caller_line: str, polarity: str) -> tuple[Intent | None, float]:
+    """Ask Rasa to interpret a short yes/no reply using the actual caller line."""
+    if not caller_line.strip():
+        return None, 0.0
+    context = json.dumps({"caller_line": caller_line[-600:], "polarity": polarity}, ensure_ascii=False)
+    return _classify(_CONTEXT_PREFIX + context, contextual=True)
+
+
+def _classify(text: str, *, contextual: bool = False) -> tuple[Intent | None, float]:
     endpoint = os.getenv("RASA_NLU_URL", "").strip()
     if not endpoint or not text.strip():
         return None, 0.0
@@ -36,6 +51,8 @@ def classify_with_rasa(text: str) -> tuple[Intent | None, float]:
         return None, 0.0
     prediction = payload.get("intent") or {}
     if not isinstance(prediction, dict):
+        return None, 0.0
+    if contextual and prediction.get("contextual") is not True:
         return None, 0.0
     label = prediction.get("name")
     try:

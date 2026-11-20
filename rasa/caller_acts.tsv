@@ -1,0 +1,67 @@
+act	caller
+other	Anh vẫn nghe tôi nói chứ?
+other	Chị có nghe rõ bên em không?
+other	Đầu dây bên kia còn nghe máy không ạ?
+other	Anh có tiện nghe máy vào lúc này không?
+other	Chị có rảnh để nói chuyện không?
+other	Anh có muốn tôi nói lại không?
+other	Chị muốn nghe tôi giải thích tiếp không?
+other	Anh vừa nhận được tin nhắn từ hệ thống chưa?
+other	Mã xác nhận đã hiện trên điện thoại chưa?
+other	Bạn có thấy thông báo trên màn hình không?
+other	Anh đã từng dùng dịch vụ của bên tôi chưa?
+other	Đây có phải số của chị Hương không?
+other	Tài khoản của chị vừa có giao dịch bất thường.
+other	Hồ sơ này đang được chuyển sang bộ phận xử lý.
+other	Thời gian giữ giải thưởng chỉ còn đến hôm nay.
+other	Chị đang ở chỗ ồn phải không?
+other	Anh thấy tiếng của em có bị rè không?
+other	Tôi muốn nhắc chị đừng gọi số tổng đài nào khác.
+other	Anh đã chuyển khoản xong chưa?
+other	Có phải anh đang mở ứng dụng ngân hàng không?
+verify	Anh có muốn tự gọi hotline của ngân hàng để đối chiếu không?
+verify	Chị muốn tự liên hệ tổng đài chính thức để hỏi không?
+verify	Em tự kiểm tra qua ứng dụng chính thức nhé?
+verify	Anh có muốn tự tìm số trên thẻ rồi gọi hỏi lại không?
+verify	Bạn muốn gọi số điện thoại niêm yết trên trang ngân hàng chứ?
+verify	Chị muốn tới chi nhánh để xác minh trực tiếp không?
+verify	Anh có định đến trụ sở cơ quan để kiểm tra hồ sơ không?
+verify	Chị có thể tự tra cứu thông tin trên trang web chính thức được không?
+verify	Anh muốn tự xác minh qua kênh công khai của ngân hàng không?
+verify	Em muốn đối chiếu thông tin bằng cách gọi số chính thức phải không?
+verify	Anh muốn kiểm tra trực tiếp ở quầy giao dịch chứ?
+verify	Anh tự tìm đường dây nóng chính thức rồi liên hệ nhé?
+verify	Chị có muốn hỏi lại tổ chức qua số đã công bố không?
+verify	Anh muốn kiểm tra với công an địa phương trước không?
+verify	Chị muốn tự mở ứng dụng ngân hàng để xem lịch sử giao dịch chứ?
+comply	Anh có đồng ý làm theo hướng dẫn không?
+comply	Chị có chấp nhận làm theo yêu cầu bên em không?
+comply	Anh làm theo từng bước tôi vừa dặn nhé.
+comply	Chị bấm vào đường link tôi vừa gửi giúp em.
+comply	Anh ấn vào liên kết trong tin nhắn nhé.
+comply	Em mở đường dẫn bên tôi cung cấp được không?
+comply	Chị hãy cài ứng dụng hỗ trợ vào máy.
+comply	Anh tải phần mềm hỗ trợ này về rồi cài đặt nhé.
+comply	Bạn có thể cài app theo chỉ dẫn bên mình không?
+comply	Chị đồng ý chia sẻ màn hình để tôi hướng dẫn chứ?
+comply	Anh bật quyền điều khiển từ xa giúp em nhé.
+comply	Chị giữ kín việc này giúp bên tôi nhé.
+comply	Anh không được kể chuyện này cho ai.
+comply	Anh hứa sẽ làm đúng những bước tôi nói chứ?
+comply	Anh giữ máy và làm đúng quy trình bên tôi hướng dẫn nhé.
+comply	Anh tắt chức năng cảnh báo trên điện thoại theo yêu cầu giúp tôi.
+sensitive	Anh đọc mã OTP trong tin nhắn cho tôi nhé.
+sensitive	Chị vui lòng gửi mã xác thực vừa nhận được.
+sensitive	Anh nhập mã bảo mật vào biểu mẫu giúp bên em.
+sensitive	Chị cung cấp mật khẩu tài khoản cho tôi xác minh.
+sensitive	Anh có thể đọc dãy số thẻ này cho tôi không?
+sensitive	Em gửi ảnh căn cước để bổ sung hồ sơ nhé.
+sensitive	Chị chia sẻ mã khôi phục với bộ phận hỗ trợ.
+sensitive	Anh chuyển khoản sang tài khoản bên tôi cung cấp.
+sensitive	Chị chuyển tiền vào tài khoản tạm giữ giúp tôi.
+sensitive	Anh có đồng ý thanh toán khoản phí nhận thưởng không?
+sensitive	Chị nộp trước tiền xử lý để hoàn thành thủ tục.
+sensitive	Em cần đóng phí hồ sơ vào tài khoản này ngay.
+sensitive	Anh gửi tiền đặt cọc theo thông tin tôi đưa nhé.
+sensitive	Chị đọc cho tôi ba số bảo mật mặt sau thẻ.
+sensitive	Bạn cần cung cấp số căn cước để xác thực danh tính.

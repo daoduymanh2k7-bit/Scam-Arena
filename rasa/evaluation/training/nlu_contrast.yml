@@ -1,0 +1,84 @@
+version: "3.1"
+nlu:
+  - intent: unknown
+    examples: |
+      - để tôi xem đã
+      - để mình coi cái này chút
+      - được rồi để tôi tính thêm
+      - ừm em nghe tới đây thôi
+      - tui chưa rõ anh đang nói khúc nào
+      - hay là chờ tôi một lát
+      - hả
+      - tôi chưa nhận đc thông tin này bao giờ
+      - nghe nghe em nghe
+      - à em cái chỗ đó em nghe không ra
+      - tham gia gì đó em chưa nghe rõ
+      - toi de xem them da
+  - intent: verify
+    examples: |
+      - để tôi tự xem lịch sử trên app chính thức
+      - để mình tự gọi số in trên thẻ coi sao
+      - được rồi để tôi gọi tổng đài tôi tự tìm
+      - ừm em sẽ hỏi lại ở quầy giao dịch
+      - tui ra ngân hàng kiểm tra cho rõ
+      - chờ tôi gọi cho cơ quan qua số niêm yết
+      - chờ chị gọi lại bên phát hành thẻ để hỏi
+      - de tui goi so in tren the coi
+      - để em tự gọi tổng đài ngân hàng coi lại chơ
+  - intent: comply
+    examples: |
+      - được rồi tôi làm theo các bước đó
+      - ừm em nghe hướng dẫn và làm theo
+      - tui chịu làm như anh chỉ
+      - chị chỉ lại để em thao tác theo
+      - thôi được tui bật quyền điều khiển từ xa
+      - vâng tôi sẽ nhấn liên kết anh gửi
+      - da em lam theo tung buoc nha
+      - o ke tui cai app chi gui
+  - intent: doubt
+    examples: |
+      - tôi có làm gì đâu
+      - ủa hồ sơ này ở đâu ra vậy
+      - chị nói thế em thấy kỳ kỳ
+      - tui có đăng ký nhận thưởng hồi nào
+      - tại răng lại yêu cầu trả phí trước
+      - ủa sao lại bắt giữ kín
+      - em có làm chi mà bị giữ tài khoản
+      - ua sao doi ma xac thuc cua tui
+  - intent: refuse
+    examples: |
+      - được rồi nhưng tôi sẽ không gửi mã
+      - em nghe rồi nhưng em không chuyển phí
+      - tui không chịu làm như anh chỉ
+      - thôi em không nhấn liên kết chị gửi đâu
+      - mấy anh đừng bắt em cài phần mềm đó
+      - không đời mô tui đưa mật khẩu
+      - da em khong lam theo tung buoc do
+      - tui khong quen nen tui khong doc ma dau
+      - em không có gửi mã xác thật cho bên anh đâu
+  - intent: share_sensitive
+    examples: |
+      - được rồi tôi sẽ gửi mã xác thực cho anh
+      - ừm em vừa gửi mật khẩu cho bên chị
+      - để tui đọc dãy số bảo mật sau thẻ cho
+      - em đã đưa mã khôi phục cho anh rồi
+      - em vừa nhập mã xác nhận vào trang chị gửi
+      - da tui doc ma o te pe ngay day
+  - intent: transfer_money
+    examples: |
+      - em nghe rồi em chuyển phí cho anh ngay
+      - được rồi tôi vừa chuyển tiền đặt cọc
+      - tui đã gửi tiền vào tài khoản đó
+      - để em nộp khoản phí giữ giải luôn
+      - em bấm xác nhận chuyển khoản xong rồi
+      - da tui chuyen khoan qua roi
+      - dạ em đã chuyển khoảng đi rồi
+  - intent: hang_up
+    examples: |
+      - ừm em tắt máy đây nha
+      - thôi tui ngắt cuộc gọi tại đây
+      - được rồi tôi dừng cuộc gọi đây
+      - thôi em chặn số này luôn
+      - tui cúp máy trước nghen
+      - da em tat may ngay day
+      - em cúp mấy nha nói sau

@@ -191,13 +191,14 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
         cursor.execute(
             """
             SELECT cs.session_id, cs.scenario_id, cs.current_node_id, cs.ended_at,
-                   cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count,
+                   cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count, cs.interaction_mode,
                    s.scenario_name, s.title AS scenario_title, s.payload AS scenario_payload, s.max_turns,
                    n.node_key, n.stage, n.objective, n.tactic,
                    main_line.line_text AS node_text, main_line.line_id AS node_line_id,
                    reprompt_line.line_text AS reprompt_text, reprompt_line.line_id AS reprompt_line_id,
                    n.requested_action, n.max_turns AS node_max_turns,
-                   n.timeout_next_node_id, n.is_terminal
+                   n.timeout_next_node_id, n.is_terminal,
+                   COALESCE(previous_turn.bot_reply_text, opening_line.line_text, main_line.line_text, '') AS caller_line
             FROM call_sessions AS cs
             JOIN scenarios AS s ON s.scenario_id = cs.scenario_id
             JOIN dialogue_nodes AS n ON n.node_id = cs.current_node_id
@@ -205,6 +206,12 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
               AND main_line.source = 'fixed' AND main_line.is_reprompt = FALSE
             LEFT JOIN dialogue_lines AS reprompt_line ON reprompt_line.node_id = n.node_id
               AND reprompt_line.source = 'fixed' AND reprompt_line.is_reprompt = TRUE
+            LEFT JOIN dialogue_lines AS opening_line ON opening_line.line_id = cs.opening_line_id
+            LEFT JOIN LATERAL (
+                SELECT bot_reply_text FROM call_turns
+                WHERE session_id = cs.session_id
+                ORDER BY turn_no DESC LIMIT 1
+            ) AS previous_turn ON TRUE
             WHERE cs.session_id = %s AND cs.user_id = %s
             FOR UPDATE OF cs
             """,
@@ -224,18 +231,33 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             user_text,
             RequestedAction(session["requested_action"]),
             scenario_id=session["scenario_id"],
+            caller_line=session["caller_line"],
         )
         intent = result.intent.value
         intent_method = (
             "rasa" if result.matched_rule and result.matched_rule.startswith("rasa:")
             else "rule" if result.matched_rule else "fallback"
         )
-        if intent == "unknown":
-            # Reclassify unknowns before transition/scoring lookup. Only masked player text
-            # is sent; this bounded provider call runs while the session row is locked.
+        caller_line = _masked_text(session["caller_line"])
+        user_text_masked = _masked_text(user_text)
+        if result.intent is Intent.UNKNOWN and result.matched_rule is None:
+            # Reclassify unresolved replies with masked context before transition lookup.
             try:
                 scenario_payload = session.get("scenario_payload") or {}
+                cursor.execute(
+                    """SELECT user_text_masked, bot_reply_text FROM call_turns
+                       WHERE session_id=%s ORDER BY turn_no DESC LIMIT 3""",
+                    (session_id,),
+                )
+                recent_turns = [
+                    {
+                        "player_text_masked": turn["user_text_masked"],
+                        "caller_line": _masked_text(turn["bot_reply_text"] or ""),
+                    }
+                    for turn in reversed(cursor.fetchall())
+                ]
                 context = {
+                    "interaction_mode": session["interaction_mode"],
                     "scenario_title": session["scenario_title"],
                     "scenario_category": scenario_payload.get("category") if isinstance(scenario_payload, dict) else None,
                     "persona": scenario_payload.get("persona") if isinstance(scenario_payload, dict) else None,
@@ -244,7 +266,9 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                     "objective": session["objective"],
                     "tactics": session["tactic"],
                     "requested_action": session["requested_action"],
-                    "player_text_masked": _masked_text(user_text),
+                    "caller_line": caller_line,
+                    "recent_turns": recent_turns,
+                    "player_text_masked": user_text_masked,
                 }
                 revised_intent = reclassify_unknown(context=context)
                 if revised_intent is not None:
@@ -347,9 +371,10 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             # The session row is locked here; keep LINE_LLM_TIMEOUT_SECONDS short (default 3s).
             line_result = resolve_bot_line(
                 scenario_id=session["scenario_id"], session_id=session_id,
-                target_node=target_node_id, intent=intent, user_text_masked=_masked_text(user_text),
+                target_node=target_node_id, intent=intent, user_text_masked=user_text_masked,
                 original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
-                context={"sample_line": bot_text, "intent": intent, "player_text": _masked_text(user_text)},
+                context={"sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
+                         "interaction_mode": session["interaction_mode"]},
             )
             bot_text = line_result.text
         else:
@@ -368,7 +393,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             RETURNING turn_id
             """,
             (
-                session_id, next_turn_no, session["current_node_id"], target_node_id, target is None, _masked_text(user_text),
+                session_id, next_turn_no, session["current_node_id"], target_node_id, target is None, user_text_masked,
                 intent, intent_method, score_delta,
                 feedback, critical, elapsed_seconds, bot_text, line_result.line_id,
                 line_result.source, line_result.latency_ms,
@@ -383,7 +408,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'unknown')""",
                 (
                     session_id, turn_id, session["scenario_id"], session["stage"],
-                    session["requested_action"], session["node_text"], _masked_text(user_text), intent,
+                    session["requested_action"], caller_line, user_text_masked, intent,
                 ),
             )
         cursor.execute(

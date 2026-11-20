@@ -1,0 +1,81 @@
+intent	style	text
+verify	conversation	Vậy tôi mở ứng dụng của ngân hàng ra đối chiếu trước, lát nói chuyện tiếp.
+verify	conversation	Tôi tự tìm trang của cơ quan đó rồi hỏi lại người trực ban.
+verify	conversation	Chị nói vậy thì để em chạy ra quầy ngân hàng kiểm tra cho chắc.
+verify	conversation	Đợi mình nhắn cho bên phát hành thẻ xác nhận giao dịch này nha.
+verify	conversation	Tôi chỉ muốn hỏi lại qua số hỗ trợ in sau lưng thẻ thôi.
+verify	conversation	Để bên tôi hỏi ban tổ chức qua trang họ công bố, có gì tính sau.
+verify	conversation	Em sẽ hỏi trực tiếp ở trụ sở xem có hồ sơ mang tên em thật không.
+verify	asr_like	Toi tu tra so truc ban roi lien he lai nha.
+verify	asr_like	Em goi cho ben phat hanh the xac nhan khoan tru tien da.
+verify	asr_like	De minh mo app chinh thuc doi chieu cai thong bao nay da.
+refuse	conversation	Tiền này tôi quyết định giữ lại, anh khỏi hướng dẫn nữa.
+refuse	conversation	Mã trên điện thoại của em thì em xin phép không đọc nha.
+refuse	conversation	Không có chuyện em gửi giấy tờ cá nhân qua chỗ chị đâu.
+refuse	conversation	Tôi không đồng ý cài cái ứng dụng vừa nhắc, bỏ mục đó đi.
+refuse	conversation	Phần phí này bên tôi không chấp nhận thanh toán.
+refuse	conversation	Thôi, khoản thông tin đó chị đừng yêu cầu em cung cấp.
+refuse	conversation	Anh có nói lại bao nhiêu lần thì tôi cũng không làm bước ấy.
+refuse	asr_like	Ma nay de rieng em khong doc dau chi oi.
+refuse	asr_like	Toi khong dong cai phi anh vua bao.
+refuse	asr_like	Anh dung doi em gui hinh can cuoc qua dien thoai.
+doubt	conversation	Sao chị nói đã trừ tiền mà thông báo trên máy tôi vẫn im ru vậy?
+doubt	conversation	Có gì kỳ nha, hôm đó em đâu có đăng ký nhận quà.
+doubt	conversation	Hồ sơ đã có tên tôi rồi thì sao anh còn hỏi tôi tên gì?
+doubt	conversation	Nãy anh nói hôm nay, giờ lại bảo giao dịch từ tuần trước à?
+doubt	conversation	Ủa, quy trình gì mà cứ dặn tôi giấu người nhà vậy?
+doubt	conversation	Anh nói giải miễn phí mà lại có một khoản phải đóng là sao?
+doubt	conversation	Chị kể vậy nhưng mấy chi tiết không khớp với nhau.
+doubt	asr_like	Sao keu cho tang ma gio lai bat dong tien vay.
+doubt	asr_like	Nghe la qua nha em co mo the o do dau.
+doubt	asr_like	Sao luc dau noi ten nay gio doc ten kia vay anh.
+comply	conversation	Vâng, bước vừa hướng dẫn thì em đồng ý làm theo.
+comply	conversation	Chị chỉ cách nào thì em thực hiện bước đó luôn.
+comply	conversation	Được, tôi sẽ phối hợp đúng theo từng bước anh vừa dặn.
+comply	conversation	Ừ, tôi chấp thuận cách xử lý mà chị đề nghị.
+comply	conversation	Em chọn làm theo phương án của anh, cứ hướng dẫn tiếp đi.
+comply	conversation	Tôi đồng ý thực hiện ngay như chị nói, không cần chờ nữa.
+comply	conversation	Vậy chốt phương án ấy nhé, tôi sẽ làm đúng hướng dẫn.
+comply	asr_like	Vang cach anh vua chi thi em lam theo luon.
+comply	asr_like	Dong y xu ly nhu chi vua bao nha.
+comply	asr_like	Em chap nhan lam dung cac buoc anh huong dan.
+share_sensitive	conversation	Em mở tin nhắn lên rồi, để em đọc từng số của mã xác thực cho chị ghi.
+share_sensitive	conversation	Anh đợi một chút, tôi gửi hình cả hai mặt căn cước cho anh đây.
+share_sensitive	conversation	Để mình chụp luôn phần mã bảo mật sau thẻ rồi gửi qua nhé.
+share_sensitive	conversation	Tôi sẽ đọc mật khẩu đăng nhập của tôi cho chị nhập giúp.
+share_sensitive	conversation	Tôi đồng ý gửi ảnh màn hình có toàn bộ mã đăng nhập.
+share_sensitive	conversation	Chị muốn nghe mã nào thì tôi sẽ đọc đúng mã vừa hiện trên máy.
+share_sensitive	conversation	Em gửi cho anh tấm hình rõ số thẻ và mã phía sau nha.
+share_sensitive	asr_like	De toi doc ma o te pe anh ghi giup tung so.
+share_sensitive	asr_like	Cho chut em chup hai mat can cuoc roi gui chi.
+share_sensitive	asr_like	Em doc mat khau dang nhap cua em cho anh luon.
+transfer_money	conversation	Tôi sẽ bấm chuyển khoản tiền giữ quà cho bên anh ngay bây giờ.
+transfer_money	conversation	Phí làm hồ sơ chị nói đó, em chuyển cho chị liền.
+transfer_money	conversation	Tôi mở ứng dụng rồi, giờ tôi xác nhận gửi tiền vào tài khoản anh vừa gửi.
+transfer_money	conversation	Để tôi chuyển luôn khoản đặt cọc, chị giữ suất cho tôi nhé.
+transfer_money	conversation	Tôi đồng ý đóng tiền trước và đang bấm xác nhận giao dịch.
+transfer_money	conversation	Anh giữ máy giùm, em gửi khoản tiền đó xong em báo.
+transfer_money	conversation	Tôi sẽ chuyển đúng số tiền vừa báo để nhận phần thưởng.
+transfer_money	asr_like	Em chuyen khoan phi lam ho so ngay gio luon.
+transfer_money	asr_like	Cho toi bam xac nhan gui tien vao tai khoan vua bao.
+transfer_money	asr_like	De em chuyen tien dat coc giu qua cho chi nha.
+hang_up	conversation	Tôi cúp máy ngay đây, anh khỏi chờ.
+hang_up	conversation	Mình dừng nói chuyện ở đây nhé, tôi ngắt cuộc gọi bây giờ.
+hang_up	conversation	Chị không cần gọi lại. Em sẽ chặn số này luôn.
+hang_up	conversation	Thôi chị ơi, tới đây là đủ, em tắt máy đây.
+hang_up	conversation	Tôi ngắt liên lạc với bên này từ giờ, chào anh.
+hang_up	conversation	Em kết thúc cuộc gọi này tại đây, anh đừng gọi nữa.
+hang_up	conversation	Chào chị, tôi sẽ cúp và chặn số vừa gọi.
+hang_up	asr_like	Thoi chi nha em tat may tu day.
+hang_up	asr_like	Toi ngat cuoc goi nay bay gio khong cho nua.
+hang_up	asr_like	Toi chan so vua goi dung lien lac lai.
+unknown	conversation	Ờ, để tôi coi một chút đã rồi tính.
+unknown	conversation	Ừ thì, chuyện đó để từ từ xem sao nghen.
+unknown	conversation	Anh chờ em cầm cái điện thoại sát tai hơn đã.
+unknown	conversation	Bên em đang ngoài đường, chị nhắc lại câu cuối với.
+unknown	conversation	À vậy hả, tôi đang nghĩ một chút.
+unknown	conversation	Được rồi, tôi nghe tới đó thôi, chị nói tiếp đi.
+unknown	conversation	Anh ngưng một nhịp, chỗ tôi vừa có tiếng ồn.
+unknown	asr_like	De em xem cai da roi tinh sau nha.
+unknown	asr_like	Chi noi lai doan cuoi em nghe bi mat khuc.
+unknown	asr_like	A uh thi chuyen do de coi sao.

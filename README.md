@@ -68,7 +68,16 @@ Nếu lệnh báo không kết nối được Docker Engine, hãy mở Docker De
 docker compose run --rm scam-arena python -m piper.download_voices vi_VN-vais1000-medium --download-dir /app/voices
 ```
 
-File giọng đọc được lưu trong thư mục `voices/` trên máy. Nếu chỉ muốn dùng bàn phím và không cần đọc lời thoại thành tiếng, có thể bỏ qua bước này.
+Để có ba giọng Ngọc Lan, Minh Anh và Quang Huy trong chế độ Cuộc gọi, tải thêm hai tệp của [model Piper tiếng Việt từ Cake](https://huggingface.co/CakeByVPBank/piper-pgl-v4-vi_VN-version39_epoch39):
+
+```powershell
+$callerModel = "vi_VN-csa-voice-piper-v3-medium.onnx"
+$callerModelUrl = "https://huggingface.co/CakeByVPBank/piper-pgl-v4-vi_VN-version39_epoch39/resolve/8ea50134bea762f6a1faac671e1a33c41871289c"
+curl.exe -fL "$callerModelUrl/$callerModel" -o "voices/$callerModel"
+curl.exe -fL "$callerModelUrl/$callerModel.json" -o "voices/$callerModel.json"
+```
+
+Chế độ Cuộc gọi chọn ngẫu nhiên và giữ một giọng từ lời chào đến hết cuộc gọi. Khi chưa cài model bổ sung, Cuộc gọi dùng Vais1000. Chế độ Nhắn tin dùng Vais1000.
 
 ### 4. Khởi động ứng dụng
 
@@ -131,6 +140,12 @@ Compose tự đọc `.env` ở thư mục gốc. Các giá trị mặc định d
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Model Gemini. |
 | `GROQ_API_KEY` | rỗng | Key Groq; provider dự phòng sau Gemini. |
 | `GROQ_MODEL` | `openai/gpt-oss-20b` | Model Groq. |
+| `XAPIKEY_BASE_URL` | `https://api.x-apikey.com/v1` | Gateway X-APIKEY. |
+| `XAPIKEY_CALL_API_KEY` | rỗng | Key dự phòng trả phí cho cuộc gọi. |
+| `XAPIKEY_CALL_MODEL` | `minimax-m3.1-flash` | Model X-APIKEY cho cuộc gọi. |
+| `XAPIKEY_MESSAGE_API_KEY` | rỗng | Key dự phòng trả phí cho nhắn tin. |
+| `XAPIKEY_MESSAGE_MODEL` | `gpt-6-luna` | Model X-APIKEY cho nhắn tin. |
+| `XAPIKEY_TIMEOUT_SECONDS` | `15` | Timeout cho mỗi yêu cầu X-APIKEY. |
 | `OPENROUTER_API_KEY` | rỗng | Key OpenRouter; provider dự phòng sau Groq. |
 | `OPENROUTER_MODEL` | `openrouter/free` | Model OpenRouter. |
 | `LINE_LLM_TIMEOUT_SECONDS` | `3` | Timeout cho mỗi yêu cầu LLM. |
@@ -181,7 +196,9 @@ Chọn chế độ **Cuộc gọi** hoặc **Nhắn tin** trên giao diện. Hai
 
 LLM chỉ viết câu phản hồi cho node đã được hệ thống chọn. Nó không tự chọn nhánh, không tự tính điểm và không kết thúc phiên. Lời mở đầu dùng các biến thể cố định trong `data/opening_line_variants.json`; node kết thúc cũng dùng lời cố định.
 
-Khi `LINE_LLM_ENABLED=true`, backend thử lần lượt Gemini → Groq → OpenRouter theo các key được cấu hình. Câu hợp lệ được lưu cùng cache PostgreSQL, ngữ cảnh intent và node; các lượt sau tái sử dụng cache. `LINE_POOL_SIZE` đặt ngưỡng số biến thể trong cùng nhóm trước khi ngừng yêu cầu câu mới. Tương tác thích/thử lại làm tăng/giảm `preference_score` để ảnh hưởng thứ tự chọn câu trong kho.
+Khi `LINE_LLM_ENABLED=true`, backend thử lần lượt Gemini → Groq → OpenRouter → X-APIKEY theo các key được cấu hình. X-APIKEY chọn key và model tương ứng chế độ cuộc gọi hoặc nhắn tin, dùng cho sinh lời thoại, tạo lại câu và phân loại lại ý định chưa rõ. Câu hợp lệ được lưu cùng cache PostgreSQL, ngữ cảnh intent và node; các lượt sau tái sử dụng cache. `LINE_POOL_SIZE` đặt ngưỡng số biến thể trong cùng nhóm trước khi ngừng yêu cầu câu mới. Tương tác thích/thử lại làm tăng/giảm `preference_score` để ảnh hưởng thứ tự chọn câu trong kho.
+
+Mỗi nhà cung cấp có timeout riêng. Khi các nguồn trước gặp lỗi, tổng thời gian chờ có thể cộng dồn tới X-APIKEY. Yêu cầu sinh hoặc phân loại trong lượt chơi chạy khi khóa hàng của phiên đang được giữ. Pre-warm mặc định dùng cấu hình X-APIKEY nhắn tin nếu cần tới nguồn trả phí. Hai chế độ cùng dùng kho câu thoại.
 
 Khi bộ nhận diện trả `unknown`, backend có thể hỏi các provider theo cùng thứ tự. Chỉ những nhãn an toàn có độ tin cậy đủ cao mới được dùng thay nhãn ban đầu; nhãn mới được đưa vào bước chọn transition và tính điểm. Phân loại lại không thể gán nhãn `share_sensitive` hoặc `transfer_money`; các hành vi đó phải được xác nhận bằng luật an toàn. Nếu LLM tắt, hết quota, timeout hoặc lỗi, hệ thống tiếp tục bằng kết quả luật hiện có.
 
@@ -201,7 +218,7 @@ Thay `bank` bằng `lottery` hoặc `police`. Có thể giới hạn số câu t
 
 Hệ thống hiện hỗ trợ 8 nhãn: `verify`, `refuse`, `doubt`, `comply`, `share_sensitive`, `transfer_money`, `hang_up`, `unknown`.
 
-Luật an toàn tất định kiểm tra hành vi nguy hiểm, sau đó Rasa phân loại ngôn ngữ tự nhiên; luật phrase trong PostgreSQL hỗ trợ các trường hợp dự phòng. Nếu kết quả vẫn `unknown` và LLM được bật, bộ phân loại LLM chỉ có thể đổi sang một trong các nhãn an toàn. Cùng một nhãn cuối cùng được dùng cho cả transition và điểm, tránh việc phân loại và chấm điểm tự mâu thuẫn.
+Luật an toàn kiểm tra hành vi nguy hiểm. Với câu đồng ý hoặc phủ định ngắn như “Được ạ”, bộ phân loại ngữ cảnh trong Rasa nhận câu trước của người gọi và chiều đồng ý/phủ định của lời đáp. Nó học từ `rasa/caller_acts.tsv`. Backend giữ luật dự phòng và chặn suy diễn hành vi rủi ro từ lời xác nhận ngắn. Rasa DIET phân loại câu có thể đọc độc lập và luật phrase trong PostgreSQL hỗ trợ dự phòng. Nếu câu vẫn chưa rõ và LLM được bật, LLM có thể xét câu vừa nói, giai đoạn và lịch sử gần đây để chọn một nhãn được phép. Nhánh và điểm cùng dùng nhãn cuối cùng.
 
 Đồ thị nhánh và điểm được cấu hình trong các file scenario JSON lúc seed vào PostgreSQL. Dòng trong `dialogue_transitions` ánh xạ `(node hiện tại, intent)` tới node tiếp theo cùng điểm thay đổi và phản hồi. LLM viết lời thoại sau khi code chọn node đích; thay đổi prompt không làm thay đổi đồ thị.
 

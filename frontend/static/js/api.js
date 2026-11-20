@@ -10,6 +10,7 @@ const Api = (() => {
 
   return {
     listScenarios: () => fetch("/api/arena/scenarios").then(asJson),
+    listCallerVoices: () => fetch("/api/voice/caller-voices").then(asJson),
     randomScenario: () => fetch("/api/arena/scenarios/random").then(asJson),
     startCall(scenarioKey, interactionMode = "message") {
       return fetch("/api/arena/calls", {
@@ -46,11 +47,12 @@ const Api = (() => {
     },
     async transcribeAudio(blob) {
       const form = new FormData();
-      form.append("audio", blob, "recording.webm");
+      form.append("audio", blob, blob.type === "audio/wav" ? "recording.wav" : "recording.webm");
       return fetch("/api/voice/transcribe", { method: "POST", body: form }).then(asJson);
     },
-    async speakText(text) {
-      const response = await fetch("/api/voice/speak", {
+    async speakText(text, voiceId = null) {
+      const query = voiceId ? `?voice=${encodeURIComponent(voiceId)}` : "";
+      const response = await fetch(`/api/voice/speak${query}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });

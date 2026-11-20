@@ -1,0 +1,25 @@
+caller	polarity	intent
+Chị nghe bên này có rõ tiếng chứ?	yes	unknown
+Chị nghe bên này có rõ tiếng chứ?	no	unknown
+Bên anh thử tải bản phần mềm hỗ trợ xuống máy nhé.	yes	comply
+Bên anh thử tải bản phần mềm hỗ trợ xuống máy nhé.	no	refuse
+Em muốn tự gọi số in sau thẻ để hỏi lại phải không?	yes	verify
+Em muốn tự gọi số in sau thẻ để hỏi lại phải không?	no	unknown
+Tôi cần anh chuyển phí sang tài khoản tôi nhắn.	yes	unknown
+Tôi cần anh chuyển phí sang tài khoản tôi nhắn.	no	refuse
+Chị đọc giúp bên em mã bảo mật trên điện thoại nhé.	yes	unknown
+Chị đọc giúp bên em mã bảo mật trên điện thoại nhé.	no	refuse
+Chị có muốn tôi giải thích chi tiết phần còn lại không?	yes	unknown
+Chị có muốn tôi giải thích chi tiết phần còn lại không?	no	unknown
+Anh mở giúp em liên kết vừa hiện trong tin nhắn.	yes	comply
+Anh mở giúp em liên kết vừa hiện trong tin nhắn.	no	refuse
+Chị thử hỏi lại qua đường dây công khai của ngân hàng được không?	yes	verify
+Chị thử hỏi lại qua đường dây công khai của ngân hàng được không?	no	unknown
+Anh bật chia sẻ màn hình lên để tôi xem nhé.	yes	comply
+Anh bật chia sẻ màn hình lên để tôi xem nhé.	no	refuse
+Anh cần đọc mã OTP cho tôi. Giờ anh có nghe tôi không?	yes	unknown
+Anh cần đọc mã OTP cho tôi. Giờ anh có nghe tôi không?	no	unknown
+Chi co the tu kiem tra qua trang web chinh thuc khong?	yes	verify
+Chi co the tu kiem tra qua trang web chinh thuc khong?	no	unknown
+Chi giu kin chuyen nay ho toi nhe.	yes	comply
+Chi giu kin chuyen nay ho toi nhe.	no	refuse

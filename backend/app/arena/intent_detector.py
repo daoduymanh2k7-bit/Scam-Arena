@@ -84,6 +84,40 @@ _DOUBT_PATTERNS = (
 )
 # Very short confirmations have no stable intent without knowing what was asked.
 _AFFIRMATIVE_ONLY = re.compile(r"^(?:vâng|vang|dạ|da|được|duoc|ok|okay|ừ|u|có|co|rồi|roi|đồng ý|dong y|chấp nhận|chap nhan|tôi làm|toi lam|em làm|em lam|làm ngay|lam ngay)$")
+_CONTEXTUAL_YES = re.compile(
+    r"(?:(?:da|vang) )?(?:duoc(?: roi)?|ok(?:ay)?|u|co|roi|dong y|chap nhan|"
+    r"(?:toi|em|minh) lam|lam ngay)(?: a| nhe)?|(?:da|vang)(?: a)?"
+)
+_CONTEXTUAL_NO = re.compile(r"(?:da )?(?:khong|chua)(?: a| dau| nhe)?")
+_WAIT_AND_SEE = re.compile(
+    r"(?:(?:da|vang|u|ok|duoc(?: roi)?) )?(?:de )?(?:(?:toi|em|minh) )?"
+    r"(?:xem|kiem tra|suy nghi)(?: lai| them)?(?: da| sau)?(?: a| nhe)?"
+)
+_NEUTRAL_PROMPT = re.compile(
+    r"\b(?:nghe (?:may|ro)|con nghe|tien nghe|co nghe|nhan duoc|da nhan|"
+    r"co ranh|dang ban|tien noi chuyen|tiep tuc nghe|muon nghe)\b"
+)
+_OFFICIAL_CHANNEL = (
+    r"(?:tong dai|hotline|so tren the|(?:kenh|so|ung dung|trang web) chinh thuc|chi nhanh|tru so)"
+)
+_VERIFY_PROMPT = re.compile(
+    rf"\b(?:tu|muon|co the)\b.{{0,35}}?\b"
+    rf"(?:goi|tra cuu|xac minh|kiem tra|lien he|den)\b.{{0,45}}\b{_OFFICIAL_CHANNEL}\b"
+)
+_REQUEST_PREFIX = r"(?:vui long|xin|hay|can|dong y|co the|giup toi|anh chi|anh|chi|em|ban)"
+_RISKY_PROMPT = re.compile(
+    rf"\b{_REQUEST_PREFIX}\s+(?:vui long |hay |can |co the |co dong y )?"
+    r"(?:doc|gui|nhap|cung cap|chia se|dua)\b.{0,35}\b(?:otp|ma xac thuc|ma bao mat|mat khau|so the|cccd)\b"
+    rf"|\b{_REQUEST_PREFIX}\s+(?:vui long |hay |can |co the |co dong y )?"
+    r"(?:chuyen (?:tien|khoan|phi)|nop (?:tien|phi)|dong phi|thanh toan)\b"
+)
+_COMPLY_PROMPT = re.compile(
+    r"\b(?:dong y lam theo|(?:dung|khong duoc) (?:ngat may|ke voi ai))\b"
+    rf"|\b{_REQUEST_PREFIX}\s+(?:vui long |hay |can |co the |co dong y )?"
+    r"(?:lam theo (?:huong dan|yeu cau)|"
+    r"(?:bam|nhan|mo) (?:vao )?(?:(?:duong |lien )?link|duong dan|lien ket)|"
+    r"cai (?:dat )?(?:ung dung|app)|chia se man hinh|giu bi mat)\b"
+)
 _NEGATION_MARKERS = ("không", "khong", "chẳng", "chang", "chưa", "chua", "đừng", "dung", "từ chối", "tu choi")
 
 
@@ -128,17 +162,76 @@ def _result(intent: Intent, rule: str, match: re.Match[str] | None, text: str) -
     return IntentResult(intent=intent, matched_rule=rule, evidence=evidence)
 
 
+def _contextual_reply(text: str, caller_line: str, action: RequestedAction) -> IntentResult | None:
+    """Resolve short replies against the latest prompt before standalone NLU."""
+    reply = normalize_phrase(text)
+    if _WAIT_AND_SEE.fullmatch(reply):
+        return IntentResult(Intent.UNKNOWN, evidence=text)
+    agrees = _CONTEXTUAL_YES.fullmatch(reply)
+    declines = _CONTEXTUAL_NO.fullmatch(reply)
+    if not agrees and not declines:
+        return None
+
+    # A later question can change what a short yes/no refers to.
+    clauses = [normalize_phrase(part) for part in re.split(r"[.!?;\n]+", caller_line)]
+    prompt = next((part for part in reversed(clauses) if part), "")
+    if _NEUTRAL_PROMPT.search(prompt):
+        return _result(Intent.UNKNOWN, "contextual_acknowledgement", None, text)
+    verify_match = _VERIFY_PROMPT.search(prompt)
+    if agrees and verify_match and not _is_negated(prompt, verify_match):
+        return _result(Intent.VERIFY, "contextual_verify", None, text)
+    risky_request = _RISKY_PROMPT.search(prompt)
+    compliance_request = _COMPLY_PROMPT.search(prompt)
+    if risky_request or compliance_request:
+        if declines and not reply.startswith(("chua", "da chua")):
+            return _result(Intent.REFUSE, "contextual_refusal", None, text)
+        # An acknowledgement alone cannot establish a high-impact action.
+        # In financial/sensitive stages even comply can route to an unsafe ending.
+        if risky_request or action in {RequestedAction.SHARE_SENSITIVE, RequestedAction.TRANSFER_MONEY}:
+            return _result(Intent.UNKNOWN, "contextual_unconfirmed_action", None, text)
+        if agrees:
+            return _result(Intent.COMPLY, "contextual_affirmation", None, text)
+    return IntentResult(Intent.UNKNOWN, evidence=text)
+
+
+def _classify_brief_reply(text: str, caller_line: str, action: RequestedAction) -> IntentResult | None:
+    fallback = _contextual_reply(text, caller_line, action)
+    if fallback is None or (
+        fallback.intent is Intent.UNKNOWN and fallback.matched_rule is not None
+    ):
+        return fallback
+
+    reply = normalize_phrase(text)
+    if _CONTEXTUAL_YES.fullmatch(reply):
+        polarity = "yes"
+        allowed = {Intent.VERIFY}
+        if action not in {RequestedAction.SHARE_SENSITIVE, RequestedAction.TRANSFER_MONEY}:
+            allowed.add(Intent.COMPLY)
+    elif _CONTEXTUAL_NO.fullmatch(reply) and not reply.startswith(("chua", "da chua")):
+        polarity = "no"
+        allowed = {Intent.REFUSE}
+    else:
+        return fallback
+
+    from app.arena.rasa_client import classify_context_with_rasa
+
+    intent, confidence = classify_context_with_rasa(caller_line, polarity)
+    if intent in allowed and fallback.intent in {Intent.UNKNOWN, intent}:
+        return _result(intent, f"rasa:context:{confidence:.2f}", None, text)
+    return fallback
+
+
 def detect_intent(
     text: str,
     requested_action: RequestedAction | str = RequestedAction.NONE,
     *,
     scenario_id: int | None = None,
+    caller_line: str | None = None,
 ) -> IntentResult:
     """Return one primary intent for a Vietnamese response.
 
-    Rasa classifies ordinary utterances; explicit safety patterns and
-    stage-aware short affirmations remain deterministic. ``requested_action``
-    supplies context for answers such as "vâng".
+    Rasa classifies ordinary utterances. When supplied, the actual caller line
+    grounds short replies before they reach standalone NLU.
     """
     normalized = _normalize(text)
     action = _coerce_requested_action(requested_action)
@@ -147,7 +240,10 @@ def detect_intent(
 
     # Short standalone refusals are common spoken answers and have a clear
     # meaning in a simulated call, even when the user omits the requested action.
-    if normalized in {"không", "khong", "không ạ", "khong a", "không đâu", "khong dau", "không nhé", "khong nhe", "không đồng ý", "khong dong y"}:
+    if normalized in {"không đồng ý", "khong dong y"} or (
+        caller_line is None
+        and normalized in {"không", "khong", "không ạ", "khong a", "không đâu", "khong dau", "không nhé", "khong nhe"}
+    ):
         return _result(Intent.REFUSE, "standalone_refusal", None, normalized)
 
     # Harmful actions take precedence, but only when the matching action is
@@ -164,7 +260,11 @@ def detect_intent(
     if hang_up_match:
         return _result(Intent.HANG_UP, "end_or_block_call", hang_up_match, normalized)
 
-    if _AFFIRMATIVE_ONLY.fullmatch(normalized):
+    if caller_line is not None:
+        contextual_result = _classify_brief_reply(normalized, caller_line, action)
+        if contextual_result is not None:
+            return contextual_result
+    elif _AFFIRMATIVE_ONLY.fullmatch(normalized):
         if action == RequestedAction.SHARE_SENSITIVE:
             return _result(Intent.SHARE_SENSITIVE, "contextual_affirmation_sensitive", None, normalized)
         if action == RequestedAction.TRANSFER_MONEY:

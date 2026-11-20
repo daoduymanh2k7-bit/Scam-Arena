@@ -9,3 +9,4 @@ __pycache__
 voices
 tests
 README.md
+rasa/evaluation/.local/
