@@ -153,7 +153,7 @@
   function listeningStatus() {
     if (micError) return micError;
     if (micMuted) return "Micro đang tắt.";
-    return microphone?.node ? "Đang nghe bạn…" : "Đang mở micro…";
+    return microphone?.ready ? "Đang nghe bạn…" : "Đang mở micro…";
   }
 
   function waitForReply(status) {
@@ -163,18 +163,20 @@
   }
 
   async function answerCall() {
-    setCallState("active", "Người gọi đang nói…", true);
+    setCallState("active", "Đang chuẩn bị micro…", true);
     const run = callRun;
     currentVoice = pickCallerVoice();
     const query = currentVoice ? `?voice=${encodeURIComponent(currentVoice)}` : "";
-    void openMicrophone(run);
+    await openMicrophone(run);
+    if (run !== callRun) return;
+    callStatus.textContent = "Người gọi đang nói…";
     addSubtitle("caller", "Alo?", "Nguồn: Lời chào có sẵn");
     const played = await playAudio(`/api/voice/greeting${query}`);
     if (run !== callRun) return;
     if (!played) addSubtitle("notice", "Không phát được âm thanh. Lời người gọi vẫn có trong phụ đề.");
     waitForReply();
     greetingTimer = setTimeout(async () => {
-      if (run !== callRun || turnBusy || micMuted || !microphone?.node) return;
+      if (run !== callRun || turnBusy || micMuted || !microphone?.ready) return;
       setTurnBusy(true);
       callStatus.textContent = "Người gọi đang nói…";
       const line = "Alo, anh chị còn nghe máy không ạ?";
@@ -266,21 +268,14 @@
   }
 
   function syncMicrophone() {
-    if (!microphone?.node) return;
-    const enabled = !turnBusy && !micMuted;
-    if (microphone.enabled === enabled) return;
-    microphone.enabled = enabled;
-    microphone.node.port.postMessage({ enabled, cycle: ++microphone.cycle });
+    if (!microphone?.ready) return;
+    void microphone.setEnabled(!turnBusy && !micMuted);
   }
 
   function releaseMicrophone() {
     const mic = microphone;
     microphone = null;
-    if (!mic) return;
-    mic.stream?.getTracks().forEach((track) => track.stop());
-    mic.source?.disconnect();
-    mic.node?.disconnect();
-    void mic.context.close().catch(() => {});
+    void mic?.destroy().catch(() => {});
   }
 
   function updateMicButton() {
@@ -323,7 +318,7 @@
       if (run !== callRun) return;
       const text = result.text.trim();
       if (!text) throw new Error("Chưa nghe rõ câu vừa rồi.");
-      const recognition = [result.engine || "Whisper", result.model,
+      const recognition = [data.capture_method, result.engine || "Whisper", result.model,
         typeof result.compute_type === "string" ? result.compute_type.toUpperCase() : null,
         Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null].filter(Boolean).join(" · ");
       await handleReply(text, elapsed, run, recognition);
@@ -340,44 +335,35 @@
     updateMicButton();
     if (!turnBusy) callStatus.textContent = listeningStatus();
     try {
-      if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext || !window.AudioWorkletNode) {
+      if (!navigator.mediaDevices?.getUserMedia || !(window.AudioContext || window.webkitAudioContext) || !window.CallMicrophone) {
         throw new Error("unsupported");
       }
-      const context = new AudioContext();
-      const mic = { context, enabled: false, cycle: 0, elapsed: 0 };
-      microphone = mic;
-      await context.resume();
-      if (mic !== microphone) return;
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
-      if (mic !== microphone) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-      mic.stream = stream;
-      stream.getAudioTracks().forEach((track) => { track.enabled = !micMuted; });
-      await context.audioWorklet.addModule("/js/call-mic-worklet.js?v=1");
-      if (mic !== microphone) return;
-      mic.source = context.createMediaStreamSource(stream);
-      mic.node = new AudioWorkletNode(context, "scam-arena-call-mic", { channelCount: 1, channelCountMode: "explicit" });
-      mic.node.port.onmessage = ({ data }) => {
-        if (mic !== microphone || turnBusy || micMuted || data.cycle !== mic.cycle) return;
-        if (data.type === "speech-start") {
+      const current = () => mic === microphone && run === callRun;
+      const mic = new CallMicrophone.Capture({
+        onSpeechStart: () => {
+          if (!current() || turnBusy || micMuted) return;
           clearTimeout(greetingTimer);
           mic.elapsed = responseDelay();
           callStatus.textContent = "Đang nghe bạn nói…";
-        } else if (data.type === "speech") {
-          void recognizeSpeech(data, mic.elapsed, run);
-        } else if (data.type === "noise") {
-          callStatus.textContent = listeningStatus();
-        }
-      };
-      mic.source.connect(mic.node);
-      // Keep processing the input without playing the player's microphone.
-      const silent = context.createGain();
-      silent.gain.value = 0;
-      mic.node.connect(silent).connect(context.destination);
+        },
+        onSpeech: (data) => {
+          if (current() && !turnBusy && !micMuted) void recognizeSpeech(data, mic.elapsed, run);
+        },
+        onMisfire: () => { if (current() && !turnBusy) callStatus.textContent = listeningStatus(); },
+        onFallback: () => {
+          if (current()) addSubtitle("notice", "Bộ bắt giọng Silero chưa mở được; đang dùng bộ bắt giọng dự phòng.");
+        },
+        onError: () => {
+          if (!current()) return;
+          releaseMicrophone();
+          micError = "Micro gặp lỗi xử lý. Bấm Thử lại micro để kết nối lại.";
+          updateMicButton();
+          if (!turnBusy) callStatus.textContent = micError;
+        },
+      });
+      microphone = mic;
+      await mic.initialize();
+      if (!current()) { void mic.destroy().catch(() => {}); return; }
       syncMicrophone();
       if (!turnBusy && !micMuted) waitForReply();
     } catch (error) {
@@ -399,7 +385,6 @@
       return;
     }
     micMuted = !micMuted;
-    microphone?.stream?.getAudioTracks().forEach((track) => { track.enabled = !micMuted; });
     updateMicButton();
     syncMicrophone();
     if (!turnBusy) callStatus.textContent = listeningStatus();
@@ -542,7 +527,10 @@
     messageScreen.hidden = isCall;
     callScreen.hidden = !isCall;
     if (!isCall) resetCall();
-    if (enteringCall) loadCallScenarios();
+    if (enteringCall) {
+      loadCallScenarios();
+      void CallMicrophone.preload().catch(() => {});
+    }
     modeButtons.forEach((button) => {
       const active = button.dataset.mode === mode;
       button.classList.toggle("is-active", active);

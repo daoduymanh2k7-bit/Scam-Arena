@@ -1,3 +1,7 @@
+FROM python:3.12-slim AS vad-assets
+COPY deployment/fetch_vad_assets.py /fetch_vad_assets.py
+RUN python /fetch_vad_assets.py /assets
+
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -21,6 +25,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY --chown=app:app backend /app/backend
 COPY --chown=app:app rasa/evaluation/dataset_workflow.py /app/rasa/evaluation/dataset_workflow.py
 COPY --chown=app:app frontend /app/frontend
+COPY --from=vad-assets --chown=app:app /assets /app/frontend/static/vendor/vad
 COPY --chown=app:app data /app/data
 RUN mkdir -p /app/voices /models/huggingface && chown -R app:app /app /models
 
