@@ -28,7 +28,7 @@ test -f "$release/compose.yaml"
 test -f "$release/Dockerfile"
 
 # Keep the running installation untouched if the new images cannot build.
-docker compose -p scam-arena --env-file "$app/.env" -f "$release/compose.yaml" build scam-arena rasa
+docker compose -p scam-arena --env-file "$app/.env" -f "$release/compose.yaml" build scam-arena rasa whisper-cpp
 
 cd "$app"
 backup="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-$revision.dump"

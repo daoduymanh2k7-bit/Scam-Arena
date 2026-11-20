@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import os
+import time
+
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
+from starlette.concurrency import run_in_threadpool
 
 from app.schemas import SpeakRequest
 from app.auth import get_current_user
@@ -12,7 +16,7 @@ MAX_AUDIO_BYTES = 15 * 1024 * 1024
 
 
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_current_user)) -> dict[str, str]:
+async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_current_user)) -> dict[str, str | int]:
     content = await audio.read(MAX_AUDIO_BYTES + 1)
     await audio.close()
     if not content:
@@ -20,12 +24,25 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
     if len(content) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=413, detail="Tệp âm thanh vượt giới hạn 15 MB.")
 
-    from app.voice.transcription import speech_to_text
+    from app.voice.transcription import SpeechBusy, speech_to_text
+    from app.voice.whisper_cpp import InvalidAudio
 
     try:
-        return {"text": speech_to_text(content)}
+        started = time.monotonic()
+        text = await run_in_threadpool(speech_to_text, content)
+        cpp = os.getenv("STT_PROVIDER", "whisper_cpp") == "whisper_cpp"
+        return {
+            "text": text,
+            "engine": "whisper.cpp" if cpp else "Faster-Whisper",
+            "model": os.getenv("WHISPER_CPP_MODEL", "base-q8_0") if cpp else os.getenv("WHISPER_MODEL", "base"),
+            "elapsed_ms": round((time.monotonic() - started) * 1000),
+        }
+    except SpeechBusy as exc:
+        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": "2"}) from exc
+    except InvalidAudio as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=503, detail="Nhận diện giọng nói thất bại. Kiểm tra model Faster-Whisper.") from exc
+        raise HTTPException(status_code=503, detail="Nhận diện giọng nói chưa sẵn sàng hoặc quá thời gian xử lý. Vui lòng thử lại.") from exc
 
 
 @router.post("/speak")

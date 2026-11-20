@@ -151,7 +151,10 @@ Compose tự đọc `.env` ở thư mục gốc. Các giá trị mặc định d
 | `LINE_LLM_TIMEOUT_SECONDS` | `3` | Timeout cho mỗi yêu cầu LLM. |
 | `LINE_POOL_SIZE` | `5` | Số câu tối thiểu trong kho cho mỗi nhóm cache trước khi ngừng gọi LLM. |
 | `LINE_PROMPT_VERSION` | `v2` | Phiên bản prompt, đồng thời tách các nhóm cache theo prompt. |
-| `WHISPER_MODEL` | `base` | Model Whisper chạy local (`base`, `small`, ... tùy tài nguyên máy). |
+| `STT_PROVIDER` | `whisper_cpp` | Engine nhận diện: whisper.cpp lượng tử hóa; `faster_whisper` để quay về engine cũ. |
+| `WHISPER_CPP_MODEL` | `base-q8_0` | Model đa ngôn ngữ lượng tử hóa: `base-q8_0` hoặc `base-q5_1`. Đổi biến này cần build lại dịch vụ `whisper-cpp`. |
+| `WHISPER_CPP_TIMEOUT_SECONDS` | `45` | Giới hạn chờ nhận diện phía ứng dụng; không phải mục tiêu độ trễ. |
+| `WHISPER_MODEL` | `base` | Model của engine Faster-Whisper dự phòng, chỉ dùng khi `STT_PROVIDER=faster_whisper`. |
 | `RASA_NLU_TIMEOUT_SECONDS` | `2` | Timeout gọi dịch vụ Rasa nội bộ. |
 | `PIPER_SENTENCE_PAUSE_MS` | `350` | Khoảng nghỉ giữa câu khi Piper đọc. |
 | `AUTH_COOKIE_SECURE` | `false` | Đặt `true` khi phục vụ qua HTTPS. |
@@ -224,7 +227,7 @@ Luật an toàn kiểm tra hành vi nguy hiểm. Với câu đồng ý hoặc ph
 
 ## Dữ liệu và sao lưu
 
-PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` giữ tài khoản, phiên, transcript, luật, câu thoại và điểm ưu tiên qua các lần build/restart. `whisper-cache` giữ model Whisper; thư mục `voices/` giữ model Piper.
+PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` giữ tài khoản, phiên, transcript, luật, câu thoại và điểm ưu tiên qua các lần build/restart. `whisper-cache` giữ model Faster-Whisper dự phòng; model whisper.cpp nằm trong image riêng, có kiểm tra SHA-256 khi build; thư mục `voices/` giữ model Piper.
 
 Các bảng chính:
 
@@ -327,7 +330,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 - Chế độ cuộc gọi là giao diện mô phỏng, chưa khởi tạo cuộc gọi điện thoại thực.
 - LLM là tùy chọn; API key có thể hết quota hoặc provider lỗi. Khi lỗi, hệ thống dùng lời thoại cố định hoặc giữ nhãn luật để phiên tiếp tục.
 - Provider free có thể giới hạn quota, tốc độ, model khả dụng và định dạng JSON; fallback không đảm bảo luôn sinh được câu.
-- Whisper chạy CPU mặc định với model `base`, cần tải model lần đầu và có thể làm chậm lần ghi âm đầu tiên.
+- whisper.cpp chạy CPU với model đa ngôn ngữ `base-q8_0`, được tải khi build và nạp sẵn khi container khởi động. Lượng tử hóa giảm kích thước model nhưng chưa có benchmark độ chính xác/độ trễ trên giọng người dùng thật. Engine Faster-Whisper dự phòng vẫn tải model riêng lần đầu.
 - Piper cần file voice trong `voices/`; nếu chưa tải voice, nhập bàn phím vẫn dùng được nhưng TTS không hoạt động.
 - Rasa chạy trong container riêng; build đầu tải image lớn và train model. Các câu huấn luyện chưa phải kết quả đánh giá độ chính xác production.
 - Tài khoản chưa có xác minh email hoặc tự khôi phục mật khẩu. Quên mật khẩu cần quản trị viên xử lý.
@@ -336,6 +339,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 
 ## Tài liệu bổ sung
 
+- [Nhận diện tiếng Việt bằng whisper.cpp lượng tử hóa](docs/QUANTIZED_SPEECH.md)
 - [Tự động triển khai VPS bằng GitHub Actions](docs/GITHUB_ACTIONS_DEPLOY.md)
 - [Schema PostgreSQL](docs/POSTGRESQL.md)
 - [Schema kịch bản](docs/SCENARIO_SCHEMA.md)

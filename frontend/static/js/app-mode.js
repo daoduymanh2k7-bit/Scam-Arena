@@ -194,11 +194,11 @@
     }
   }
 
-  async function handleReply(text, elapsed, run) {
+  async function handleReply(text, elapsed, run, recognition = "Whisper") {
     clearTimeout(greetingTimer);
     const subtitle = addSubtitle("speech", text);
     const isIntro = introPhase !== "scenario";
-    if (isIntro) addSubtitleInfo(subtitle, "Nhận dạng giọng: Whisper · Lượt chào, chưa gán nhãn ý định");
+    if (isIntro) addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Lượt chào, chưa gán nhãn ý định`);
     setTurnBusy(true);
     callStatus.textContent = "Đang xử lý câu trả lời…";
     try {
@@ -229,7 +229,7 @@
         if (run !== callRun) return;
         const intent = intentNames[response.intent] ?? "Chưa xác định";
         const method = intentMethods[response.intent_method] ?? "Không rõ";
-        addSubtitleInfo(subtitle, `Nhận dạng giọng: Whisper · Ý định: ${intent} · Cách gán nhãn: ${method}`);
+        addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Ý định: ${intent} · Cách gán nhãn: ${method}`);
         if (response.ended) {
           sessionId = null;
           window.ArenaHistory?.refreshAll();
@@ -254,7 +254,7 @@
     } catch (error) {
       if (run === callRun) {
         if (!isIntro && !subtitle.querySelector("details")) {
-          addSubtitleInfo(subtitle, "Nhận dạng giọng: Whisper · Chưa có kết quả gán nhãn ý định");
+          addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Chưa có kết quả gán nhãn ý định`);
         }
         waitForReply(`Chưa xử lý được câu trả lời: ${error.message}`);
       }
@@ -323,7 +323,9 @@
       if (run !== callRun) return;
       const text = result.text.trim();
       if (!text) throw new Error("Chưa nghe rõ câu vừa rồi.");
-      await handleReply(text, elapsed, run);
+      const recognition = [result.engine || "Whisper", result.model,
+        Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null].filter(Boolean).join(" · ");
+      await handleReply(text, elapsed, run, recognition);
     } catch (error) {
       if (run !== callRun) return;
       addSubtitle("notice", error.message);

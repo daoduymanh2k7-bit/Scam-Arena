@@ -25,11 +25,17 @@ services:
         condition: service_healthy
       rasa:
         condition: service_healthy
+      whisper-cpp:
+        condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scam_arena}:${POSTGRES_PASSWORD:-scam_arena_local_dev}@db:5432/${POSTGRES_DB:-scam_arena}
       WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      STT_PROVIDER: ${STT_PROVIDER:-whisper_cpp}
+      WHISPER_CPP_URL: http://whisper-cpp:8080
+      WHISPER_CPP_MODEL: ${WHISPER_CPP_MODEL:-base-q8_0}
+      WHISPER_CPP_TIMEOUT_SECONDS: ${WHISPER_CPP_TIMEOUT_SECONDS:-45}
       HF_HOME: /models/huggingface
       PIPER_VOICE_PATH: /app/voices/vi_VN-vais1000-medium.onnx
       PIPER_SENTENCE_PAUSE_MS: ${PIPER_SENTENCE_PAUSE_MS:-350}
@@ -65,6 +71,23 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  whisper-cpp:
+    build:
+      context: .
+      dockerfile: deployment/whisper-cpp/Dockerfile
+      args:
+        WHISPER_CPP_MODEL: ${WHISPER_CPP_MODEL:-base-q8_0}
+    command: ["--model", "/models/model.bin", "--host", "0.0.0.0", "--port", "8080", "--language", "vi", "--threads", "2", "--processors", "1", "--beam-size", "3", "--best-of", "1", "--no-fallback", "--no-gpu"]
+    expose:
+      - "8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "3", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   rasa:
     build:
