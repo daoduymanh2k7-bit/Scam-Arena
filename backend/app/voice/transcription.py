@@ -43,6 +43,23 @@ def partial_interval_ms() -> int:
     return _scheduler.interval_ms()
 
 
+def transcribe_sample(audio_bytes: bytes, *, user_id: str) -> str:
+    """Optional sample preview, never added to the call queues."""
+    with _scheduler.sample_slot(user_id):
+        if not _inference_lock.acquire(blocking=False):
+            raise SpeechBusy()
+        try:
+            provider = os.getenv("STT_PROVIDER", "faster_whisper")
+            if provider == "whisper_cpp":
+                from app.voice.whisper_cpp import transcribe
+                return transcribe(audio_bytes)
+            if provider != "faster_whisper":
+                raise RuntimeError("Unsupported STT provider")
+            return _faster_whisper(audio_bytes)
+        finally:
+            _inference_lock.release()
+
+
 def _transcribe(audio_bytes: bytes, *, preview: bool, user_id: str) -> str:
     with _scheduler.slot(user_id, preview):
         # The separate lock also protects startup model warmup.

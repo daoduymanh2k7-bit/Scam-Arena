@@ -8,7 +8,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api import arena_routes, auth_routes, rasa_review_routes, voice_routes
+from app.api import arena_routes, auth_routes, rasa_review_routes, voice_routes, voice_samples_routes
 from app.database import close_database, initialize_database
 from app.scenario_visualizer import generate_scenario_map
 
@@ -46,6 +46,7 @@ app.include_router(arena_routes.router)
 app.include_router(auth_routes.router)
 app.include_router(rasa_review_routes.router)
 app.include_router(voice_routes.router)
+app.include_router(voice_samples_routes.router)
 
 
 @app.get("/health")

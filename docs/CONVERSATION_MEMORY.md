@@ -1,5 +1,18 @@
 # LLM conversation memory
 
+The trusted prompts live in `backend/app/arena/prompts.py`. All four dialogue
+providers receive the same prompt, including fallback providers. Dialogue prompt
+version defaults to `v3` to separate older cached replies; an explicit
+`LINE_PROMPT_VERSION` environment override still takes precedence.
+
+The prompts distinguish unverified caller claims from facts and a player's
+confirmed actions from intentions, quotations and hypothetical examples. New
+explicit statements take precedence over a conflicting older summary. Unclear
+speech should elicit a short clarification rather than assumed agreement.
+Intent classification retains `unknown` for ambiguous acknowledgements and
+does not assign the two sensitive-action labels reserved for deterministic rules.
+These are instructions to a fallible model, not semantic guarantees.
+
 Each session can have an incremental LLM-written summary, capped by
 `CONVERSATION_SUMMARY_MAX_WORDS` (default **150**, supported range 20–500).
 Words are whitespace-separated units: Vietnamese syllables separated by spaces

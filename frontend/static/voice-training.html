@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giọng của tôi · Scam Arena</title>
+  <link rel="stylesheet" href="/css/voice-training.css?v=1">
+</head>
+<body>
+<main class="voice-page">
+  <header class="topbar"><a class="brand" href="/">← Scam Arena</a><span id="voice-account"></span></header>
+  <section class="voice-heading"><p class="eyebrow">GIỌNG NÓI CÁ NHÂN</p><h1>Huấn luyện giọng của tôi</h1>
+    <p>Thu giọng thật của bạn và xác nhận bản chép để chuẩn bị dữ liệu nhận diện cá nhân.</p>
+    <p class="voice-notice">Hiện dùng model chung. Chưa huấn luyện hay áp dụng model cá nhân. Mẫu chỉ được lưu khi bạn chọn “Lưu mẫu”.</p>
+  </section>
+  <p id="voice-message" role="status" aria-live="polite"></p>
+  <div id="voice-content" hidden>
+    <section class="voice-stats" aria-label="Tiến độ"><div><strong id="voice-total">0</strong><span>Mẫu đã lưu</span></div><div><strong id="voice-confirmed">0</strong><span>Mẫu đã xác nhận</span></div><div><strong id="voice-duration">0 phút</strong><span>Âm thanh đã xác nhận</span></div><div><strong>Chưa thực hiện</strong><span>Huấn luyện model</span></div></section>
+    <div class="voice-layout">
+      <section class="voice-panel" aria-labelledby="record-title">
+        <p class="eyebrow">BƯỚC 1 · THU GIỌNG</p><h2 id="record-title">Một đoạn ngắn, đúng giọng bạn</h2>
+        <label for="voice-kind">Cách thu</label><select id="voice-kind"><option value="read">Đọc câu mẫu</option><option value="natural">Nói tự nhiên</option></select>
+        <div class="voice-prompt"><p id="voice-prompt"></p><button class="button button-quiet" id="voice-next" type="button">Đổi gợi ý</button></div>
+        <p>Nói 1–15 giây, giữ cách phát âm thường ngày. Nghe lại để kiểm tra tiếng nhỏ, rè hoặc mất đầu câu.</p>
+        <div class="voice-buttons"><button class="button" id="voice-record" type="button">Bắt đầu thu</button><button class="button button-quiet" id="voice-stop" type="button" disabled>Dừng thu</button><output id="voice-clock">00:00</output></div>
+        <audio id="voice-preview" controls preload="none" hidden></audio>
+        <label class="voice-consent"><input id="voice-consent" type="checkbox"> Tôi đồng ý lưu đoạn giọng này làm dữ liệu cá nhân cho việc cải thiện nhận diện sau này. Tôi có thể xóa mẫu.</label>
+        <div class="voice-buttons"><button class="button" id="voice-upload" type="button" disabled>Lưu mẫu</button><button class="button button-quiet" id="voice-discard" type="button" disabled>Bỏ bản thu</button></div>
+        <p class="voice-note">Không cần đọc số điện thoại, số tài khoản hay mã OTP thật. Thu mẫu không tự mở micro của cuộc gọi.</p>
+      </section>
+      <section class="voice-panel" aria-labelledby="library-title">
+        <p class="eyebrow">BƯỚC 2 · NGHE VÀ XÁC NHẬN</p><h2 id="library-title">Thư viện giọng của bạn</h2>
+        <div class="voice-buttons"><label for="voice-filter">Trạng thái</label><select id="voice-filter"><option value="all">Tất cả</option><option value="pending">Chờ xác nhận</option><option value="confirmed">Đã xác nhận</option><option value="rejected">Cần thu lại</option></select><button class="button button-quiet" id="voice-refresh" type="button">Tải lại</button></div>
+        <p class="voice-note">Nghe lại và chép đúng điều đã nói, không sửa thành câu hay hơn. Nhận diện thử chỉ chạy khi bộ nhận diện đang rảnh; bạn có thể tự chép mà không cần chờ máy.</p>
+        <div id="voice-library"></div>
+        <button id="voice-more" class="button button-quiet" type="button" hidden>Xem thêm mẫu</button>
+      </section>
+    </div>
+  </div>
+</main>
+<script src="/js/voice-training.js?v=1"></script>
+</body></html>
