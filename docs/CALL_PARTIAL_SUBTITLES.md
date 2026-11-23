@@ -117,3 +117,10 @@ named accounts created by that invocation are removed in finally; their auth
 sessions cascade-delete. No real account is selected for the test. The setup
 uses the deployed Piper voice to create one synthetic clip; the exact WAV bytes
 are copied across deployments and reports include a SHA-256 to verify pairing.
+
+
+Actual VPS results and limitations are recorded in
+[evaluation/speech-load-vps-2026-11-23/README.md](evaluation/speech-load-vps-2026-11-23/README.md).
+The selected tuning produced one visible draft for each of four concurrent
+accounts per 7.66-second utterance, with 8/8 final requests successful. It does
+not provide one-second visible subtitles for all four accounts on this CPU.
