@@ -72,6 +72,14 @@ def initialize_database() -> None:
         )
         _migrate_intent_phrase_rules(cursor)
         _create_dialogue_tables(cursor)
+        cursor.execute("""CREATE TABLE IF NOT EXISTS conversation_memories (
+            session_id UUID PRIMARY KEY REFERENCES call_sessions(session_id) ON DELETE CASCADE,
+            summary_text TEXT NOT NULL CHECK (char_length(summary_text)<=40000),
+            covered_turn INTEGER NOT NULL CHECK (covered_turn>=0),
+            max_words SMALLINT NOT NULL CHECK (max_words BETWEEN 20 AND 500),
+            word_count SMALLINT NOT NULL CHECK (word_count BETWEEN 1 AND max_words),
+            provider TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )""")
         _seed_scenarios(cursor)
         _migrate_dialogue_line_catalog(cursor)
         _seed_dialogue_graph(cursor)

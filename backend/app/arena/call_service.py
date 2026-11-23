@@ -6,6 +6,7 @@ from uuid import UUID
 
 from app.arena.intent_detector import Intent, RequestedAction, detect_intent
 from app.arena.intent_reclassifier import reclassify_unknown
+from app.arena.conversation_memory import memory_context, invalidate_memory
 from app.arena.scorer import improvement_tip
 from app.database import get_connection_pool
 from app.schemas import (
@@ -245,7 +246,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             try:
                 scenario_payload = session.get("scenario_payload") or {}
                 cursor.execute(
-                    """SELECT user_text_masked, bot_reply_text FROM call_turns
+                    """SELECT turn_no, user_text_masked, bot_reply_text FROM call_turns
                        WHERE session_id=%s ORDER BY turn_no DESC LIMIT 3""",
                     (session_id,),
                 )
@@ -270,6 +271,8 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                     "recent_turns": recent_turns,
                     "player_text_masked": user_text_masked,
                 }
+                context.update(memory_context(cursor,session_id,before_turn=session["turn_no"]+1,
+                    recent_start=max(1,session["turn_no"]-2)))
                 revised_intent = reclassify_unknown(context=context)
                 if revised_intent is not None:
                     intent = revised_intent.value
@@ -490,6 +493,7 @@ def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None
         cursor.execute("""UPDATE call_turns SET bot_reply_text=%s,line_id=%s,line_source=%s,line_latency_ms=%s
                        WHERE session_id=%s AND turn_no=%s""",
                        (result.text,result.line_id,result.source,result.latency_ms,session_id,turn_no))
+        invalidate_memory(cursor, session_id)
     return RegeneratedLineResponse(bot_text=result.text,line_source=result.source,
         line_latency_ms=result.latency_ms,line_id=result.line_id,turn_no=turn_no)
 

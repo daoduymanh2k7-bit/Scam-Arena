@@ -16,7 +16,7 @@ def settings(mode="message"):
     return key, model
 
 
-def request_json(instructions, context, *, max_tokens=400):
+def request_json(instructions, context, *, max_tokens=400, timeout=None):
     mode = context.get("interaction_mode", "message")
     key, model = settings(mode)
     if not key:
@@ -24,7 +24,7 @@ def request_json(instructions, context, *, max_tokens=400):
     base_url = os.getenv("XAPIKEY_BASE_URL", "https://api.x-apikey.com/v1").strip().rstrip("/")
     if not base_url.startswith("https://"):
         raise ValueError("X-APIKEY requires an HTTPS endpoint")
-    timeout = max(0.1, float(os.getenv("XAPIKEY_TIMEOUT_SECONDS", "15")))
+    timeout = max(0.1, float(os.getenv("XAPIKEY_TIMEOUT_SECONDS", "15"))) if timeout is None else max(.1, timeout)
     payload = {
         "model": model,
         "messages": [

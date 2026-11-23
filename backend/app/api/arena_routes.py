@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.arena import call_service
+from app.arena.conversation_memory import schedule_summary, read_memory, interval as summary_interval
 from app.schemas import (
     CallSummaryResponse,
     CallTurnRequest,
@@ -52,7 +53,10 @@ def start_call(request: StartCallRequest, user: dict = Depends(get_current_user)
 @router.post("/calls/{session_id}/turn", response_model=CallTurnResponse)
 def submit_turn(session_id: UUID, request: CallTurnRequest, user: dict = Depends(get_current_user)) -> CallTurnResponse:
     try:
-        return call_service.submit_turn(session_id, request.user_text, request.elapsed_seconds, user["user_id"])
+        result = call_service.submit_turn(session_id, request.user_text, request.elapsed_seconds, user["user_id"])
+        if result.ended or result.turn_no % summary_interval() == 0:
+            schedule_summary(session_id, user["user_id"], force=result.ended)
+        return result
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Không tìm thấy phiên gọi.") from exc
     except ValueError as exc:
@@ -63,7 +67,9 @@ def submit_turn(session_id: UUID, request: CallTurnRequest, user: dict = Depends
 def regenerate_turn_line(session_id: UUID, turn_no: int, line_id: int | None = None,
                          user: dict = Depends(get_current_user)) -> RegeneratedLineResponse:
     try:
-        return call_service.regenerate_turn_line(session_id,turn_no,line_id,user["user_id"])
+        result = call_service.regenerate_turn_line(session_id,turn_no,line_id,user["user_id"])
+        schedule_summary(session_id, user["user_id"], force=True)
+        return result
     except KeyError as exc:
         raise HTTPException(status_code=404,detail="Không tìm thấy lượt hoặc câu thoại.") from exc
     except LookupError as exc:
@@ -91,6 +97,7 @@ def finish_call(session_id: UUID, background_tasks: BackgroundTasks,
                 user: dict = Depends(get_current_user)) -> None:
     try:
         call_service.finish_call(session_id,user["user_id"])
+        schedule_summary(session_id, user["user_id"], force=True)
         background_tasks.add_task(analyze_session_candidates, session_id)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Không tìm thấy phiên gọi.") from exc
@@ -100,6 +107,14 @@ def finish_call(session_id: UUID, background_tasks: BackgroundTasks,
 def call_summary(session_id: UUID, user: dict = Depends(get_current_user)) -> CallSummaryResponse:
     try:
         return call_service.get_call_summary(session_id,user["user_id"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Không tìm thấy phiên gọi.") from exc
+
+
+@router.get("/calls/{session_id}/memory")
+def conversation_memory(session_id: UUID, user: dict = Depends(get_current_user)):
+    try:
+        return read_memory(session_id, user["user_id"])
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Không tìm thấy phiên gọi.") from exc
 

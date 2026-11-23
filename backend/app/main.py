@@ -33,6 +33,8 @@ async def lifespan(_: FastAPI):
     try:
         yield
     finally:
+        from app.arena.conversation_memory import stop_worker
+        await asyncio.to_thread(stop_worker)
         warmup.cancel()
         with suppress(asyncio.CancelledError):
             await warmup

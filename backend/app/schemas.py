@@ -126,7 +126,7 @@ class RegeneratedLineResponse(BaseModel):
     bot_text: str
     line_source: Literal["llm", "cache_pool"]
     line_latency_ms: int
-    line_id: int
+    line_id: int | None
     turn_no: int
 
 
