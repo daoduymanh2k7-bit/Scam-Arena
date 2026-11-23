@@ -34,15 +34,15 @@ async def transcribe_partial(response: Response, audio: UploadFile = File(...),
                 raise ValueError("Truncated preview")
     except (wave.Error, EOFError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="Đoạn tạm cần WAV mono 16 kHz, dài 0,5–15 giây.") from exc
-    from app.voice.transcription import speech_to_text_partial, SpeechBusy
+    from app.voice.transcription import speech_to_text_partial, SpeechBusy, partial_interval_ms
     try:
         started = time.monotonic()
-        text = await run_in_threadpool(speech_to_text_partial, content)
+        text = await run_in_threadpool(speech_to_text_partial, content, user_id=str(user["user_id"]))
         response.headers["Cache-Control"] = "no-store"
-        return {"text": text, "is_final": False, "engine": "Faster-Whisper", "beam_size": 1,
+        return {"text": text, "is_final": False, "next_partial_ms": partial_interval_ms(), "engine": "Faster-Whisper", "beam_size": 1,
                 "elapsed_ms": round((time.monotonic() - started) * 1000)}
     except SpeechBusy as exc:
-        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": "2"}) from exc
+        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": str(exc.retry_after)}) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail="Nhận diện tạm chưa được bật cho cấu hình này.") from exc
     except Exception as exc:
@@ -63,7 +63,7 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
 
     try:
         started = time.monotonic()
-        text = await run_in_threadpool(speech_to_text, content)
+        text = await run_in_threadpool(speech_to_text, content, user_id=str(user["user_id"]))
         cpp = os.getenv("STT_PROVIDER", "faster_whisper") == "whisper_cpp"
         return {
             "text": text,
@@ -74,7 +74,7 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
             "beam_size": 0 if cpp else decoder_beam_size(),
         }
     except SpeechBusy as exc:
-        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": "2"}) from exc
+        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": str(exc.retry_after)}) from exc
     except InvalidAudio as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

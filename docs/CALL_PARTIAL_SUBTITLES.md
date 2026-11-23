@@ -16,21 +16,28 @@ a second resident model/server on the 2-core / 4 GB VPS.
 
 - Silero supplies 16 kHz float frames, with up to 300 ms of pre-roll. The first
   snapshot needs approximately 1.2 seconds of accumulated audio including
-  pre-roll; later snapshots need 2.1 seconds of new audio. Short replies may finish
-  before any preview appears. Network and inference add to these timings.
+  pre-roll; later snapshots need about 1.05 seconds of new audio. Short replies
+  may finish before any preview appears. Network and inference add to the wait.
 - At most one preview request per browser controller is in flight, with no
-  queued snapshots. At most 468 V5 frames are retained (<15 seconds). The
-  existing 14-second utterance cap is unchanged.
-- `POST /api/voice/transcribe/partial` requires the existing login. It accepts
-  only mono 16 kHz PCM16 WAV, 0.5–15 seconds and at most 512 KiB. It returns
-  `is_final: false` and uses beam 1, best-of 1, temperature 0, no previous-text
-  conditioning. It never writes audio/text to database or training datasets.
-- The preview and final paths share one inference lock. Globally, preview
-  starts are limited to one per 2 seconds per worker. Busy previews return 429
-  and are silently skipped. One final request may wait up to five seconds for
-  an already running preview; further final requests keep the existing busy
-  response. No new preview can overtake a waiting final. No general queue is
-  introduced. Run the existing single Uvicorn worker for this small VPS.
+  browser backlog. The client follows the server's next_partial_ms recommendation
+  (1–5 seconds measured from request start), not another full delay after receiving
+  the response. HTTP 429 Retry-After is respected. At most 468 V5 frames are retained
+  (<15 seconds). The existing 14-second utterance cap is unchanged.
+- POST /api/voice/transcribe/partial requires the existing login. It accepts only
+  mono 16 kHz PCM16 WAV, 0.5–15 seconds and at most 512 KiB; it returns is_final=false
+  and uses beam 1, best-of 1, temperature 0, no previous-text conditioning.
+  It never writes audio/text to the database or training datasets.
+- One decoder is shared by all accounts. Authenticated user IDs, not browser-supplied
+  IDs, partition the scheduler. Each account has at most one waiting draft and one
+  final. At most four of each kind wait. Drafts run FIFO with a repeat-user rotation;
+  final transcripts take precedence, and a final cancels its own queued draft.
+  Four near-simultaneous finals wait their turn rather than being rejected just
+  because another final is running. Drafts wait at most 4 seconds, finals at most
+  12 seconds. Duplicates/full queues/expired tickets return 429.
+- Server pacing uses an EWMA of actual preview service time times current demand,
+  clamped to 1–5 seconds. It is a load hint, not a guarantee of 1-second subtitles.
+  There is no longer a fixed global 2-second gate. Run the existing single Uvicorn
+  worker on this VPS; these in-process queues are not a distributed scheduler.
 - Abort on mute, finalization and hangup stops browser work and discards late
   results using generation counters. Browser abort cannot interrupt a decoder
   already running in a Python thread. It will finish and release the lock;
@@ -90,3 +97,22 @@ References: [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper),
 [vad-web](https://github.com/ricky0123/vad). The
 [WhisperStreaming approach](https://github.com/ufal/whisper_streaming) was reviewed
 for context; its server and local-agreement code are not dependencies here.
+
+
+## Optional VPS measurement
+
+The deployment workflow accepts speech_load_test=true on a manual run. A push
+commit message containing [speech-load-test] also opts in for that run only.
+It runs the same synthetic WAV before and after deploying, through the resident
+HTTP service with four disposable authenticated accounts. The test has 1- and
+4-account phases, two utterances per account, and records draft distribution,
+final success rates, elapsed times and app cgroup CPU/memory. It does not exercise
+Rasa, LLM generation, Piper responses during the measured phase or internet audio
+transport. Normal players can affect the measurements, and vice versa.
+
+Reports are retained as a GitHub Actions artifact for 14 days. No cookie, password,
+real audio, transcript or player identity is included. Only the exact randomly
+named accounts created by that invocation are removed in finally; their auth
+sessions cascade-delete. No real account is selected for the test. The setup
+uses the deployed Piper voice to create one synthetic clip; the exact WAV bytes
+are copied across deployments and reports include a SHA-256 to verify pairing.

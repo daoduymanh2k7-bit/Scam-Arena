@@ -5,6 +5,7 @@ const Api = (() => {
       try { detail = (await response.json()).detail || detail; } catch (_) { /* empty response */ }
       const error = new Error(detail);
       error.status = response.status;
+      error.retryAfterMs = Number(response.headers.get("Retry-After")) * 1000;
       throw error;
     }
     return response.json();

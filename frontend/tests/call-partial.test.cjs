@@ -26,9 +26,20 @@ test('old call response cannot overwrite new call or clear its in-flight state',
 });
 
 test('busy previews are skipped, failed service switches to final-only capture', async () => {
-  let status = 429, notices = 0;
-  const preview = new PartialSpeech(async () => { throw Object.assign(Error(), { status }); }, () => {}, () => notices++);
+  let status = 429, notices = 0, now = 0;
+  const preview = new PartialSpeech(async () => { throw Object.assign(Error(), { status }); }, () => {}, () => notices++, () => now);
   preview.start(); await preview.offer('audio'); assert.equal(preview.available, true);
-  status = 503; await preview.offer('audio'); assert.equal(preview.available, false);
+  now = 1100; status = 503; await preview.offer('audio'); assert.equal(preview.available, false);
   preview.start(); assert.equal(preview.active, false); assert.equal(notices, 1);
+});
+
+test('server pacing adapts without adding a second full delay after response', async () => {
+  let now = 0, calls = 0;
+  const preview = new PartialSpeech(async () => { calls++; now += 800; return { text: 'tạm', next_partial_ms: 1000 }; }, () => {}, () => {}, () => now);
+  preview.start(); await preview.offer('audio');
+  assert.equal(preview.canOffer(), false);
+  now = 1000; assert.equal(preview.canOffer(), true);
+  await preview.offer('audio'); assert.equal(calls, 2);
+  preview.nextAt = now + 3000; assert.equal(preview.canOffer(), false);
+  preview.stop(); assert.equal(preview.canOffer(), false);
 });

@@ -11,48 +11,18 @@ from test_transcription import client, wav_bytes
 @pytest.fixture(autouse=True)
 def isolated_decoder(monkeypatch):
     monkeypatch.setattr(transcription, "_inference_lock", threading.Lock())
-    monkeypatch.setattr(transcription, "_preview_active", False)
-    monkeypatch.setattr(transcription, "_final_waiting", False)
-    monkeypatch.setattr(transcription, "_last_preview_at", float("-inf"))
+    from app.voice.scheduling import SpeechScheduler
+    monkeypatch.setattr(transcription, "_scheduler", SpeechScheduler())
     monkeypatch.setenv("STT_PROVIDER", "faster_whisper")
     monkeypatch.setenv("STT_PARTIAL_ENABLED", "true")
 
 
-def test_final_waits_for_preview_and_new_preview_cannot_overtake():
-    started, release = threading.Event(), threading.Event()
-    calls, errors = [], []
-    def decode(data, **options):
-        if options.get("preview"):
-            started.set(); assert release.wait(2)
-        calls.append("draft" if options.get("preview") else "final")
-        return "text"
-    def run(function):
-        try: function(b"audio")
-        except Exception as error: errors.append(error)
-    with patch.object(transcription, "_faster_whisper", side_effect=decode):
-        preview = threading.Thread(target=run, args=(transcription.speech_to_text_partial,))
-        final = threading.Thread(target=run, args=(transcription.speech_to_text,))
-        preview.start(); assert started.wait(1); final.start()
-        deadline = time.monotonic() + 1
-        while not transcription._final_waiting and time.monotonic() < deadline:
-            threading.Event().wait(0.005)
-        try:
-            assert transcription._final_waiting
-            with pytest.raises(transcription.SpeechBusy): transcription.speech_to_text_partial(b"new draft")
-            with pytest.raises(transcription.SpeechBusy): transcription.speech_to_text(b"second final")
-        finally:
-            release.set(); preview.join(2); final.join(2)
-    assert not preview.is_alive() and not final.is_alive()
-    assert not errors and calls == ["draft", "final"]
-
-
-def test_preview_rate_limit_and_decoder_failure_do_not_block_final():
+def test_decoder_failure_releases_scheduler():
     with patch.object(transcription, "_faster_whisper", side_effect=RuntimeError("failure")):
-        with pytest.raises(RuntimeError): transcription.speech_to_text_partial(b"audio")
-    with pytest.raises(transcription.SpeechBusy): transcription.speech_to_text_partial(b"audio")
+        with pytest.raises(RuntimeError): transcription.speech_to_text_partial(b"audio", user_id="p1")
     with patch.object(transcription, "_faster_whisper", return_value="final"):
-        assert transcription.speech_to_text(b"audio") == "final"
-    assert not transcription._preview_active and not transcription._final_waiting
+        assert transcription.speech_to_text(b"audio", user_id="p2") == "final"
+    assert transcription._scheduler.active is None
 
 
 def test_preview_decoder_uses_bounded_greedy_options():
@@ -66,11 +36,13 @@ def test_preview_decoder_uses_bounded_greedy_options():
 
 
 def test_partial_endpoint_is_authenticated_and_never_final():
-    with client() as api, patch.object(transcription, "speech_to_text_partial", return_value="Tôi không"):
+    with client() as api, patch.object(transcription, "speech_to_text_partial", return_value="Tôi không") as decode:
         response = api.post("/api/voice/transcribe/partial", files={"audio": ("draft.wav", wav_bytes(seconds=1))})
     assert response.status_code == 200
     assert response.json()["text"] == "Tôi không"
     assert response.json()["is_final"] is False
+    assert 1000 <= response.json()["next_partial_ms"] <= 5000
+    assert decode.call_args.kwargs["user_id"] == "test-client"
     assert response.headers["cache-control"] == "no-store"
     from fastapi import FastAPI
     from fastapi.testclient import TestClient

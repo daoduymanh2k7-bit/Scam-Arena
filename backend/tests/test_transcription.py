@@ -145,7 +145,7 @@ def test_warmup_only_loads_selected_engine_and_respects_inference(monkeypatch):
 def client():
     app = FastAPI()
     app.include_router(voice_routes.router)
-    app.dependency_overrides[get_current_user] = lambda: {"role": "user"}
+    app.dependency_overrides[get_current_user] = lambda: {"role": "user", "user_id": "test-client"}
     return TestClient(app)
 
 
@@ -167,7 +167,7 @@ def test_api_runs_decoder_off_event_loop(monkeypatch):
     monkeypatch.setenv("STT_PROVIDER", "whisper_cpp")
     monkeypatch.setenv("WHISPER_CPP_MODEL", "base-q8_0")
 
-    def decode(_):
+    def decode(_, **options):
         assert threading.current_thread() is not threading.main_thread()
         with pytest.raises(RuntimeError):
             asyncio.get_running_loop()

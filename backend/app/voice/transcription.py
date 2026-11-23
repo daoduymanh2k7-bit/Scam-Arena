@@ -6,18 +6,12 @@ import threading
 import logging
 import time
 from pathlib import Path
+from app.voice.scheduling import SpeechBusy, SpeechScheduler
 
 _model = None
 _inference_lock = threading.Lock()
-_state_lock = threading.Lock()
-_preview_active = False
-_final_waiting = False
-_last_preview_at = float("-inf")
+_scheduler = SpeechScheduler()
 logger = logging.getLogger(__name__)
-
-
-class SpeechBusy(RuntimeError):
-    pass
 
 
 def _get_model():
@@ -34,60 +28,39 @@ def _get_model():
     return _model
 
 
-def speech_to_text(audio_bytes: bytes) -> str:
-    return _transcribe(audio_bytes, preview=False)
+def speech_to_text(audio_bytes: bytes, *, user_id: str = "legacy") -> str:
+    return _transcribe(audio_bytes, preview=False, user_id=user_id)
 
 
-def speech_to_text_partial(audio_bytes: bytes) -> str:
+def speech_to_text_partial(audio_bytes: bytes, *, user_id: str = "legacy") -> str:
     if (os.getenv("STT_PARTIAL_ENABLED", "true").strip().lower() not in {"true", "1"}
             or os.getenv("STT_PROVIDER", "faster_whisper") != "faster_whisper"):
         raise ValueError("Incremental transcription is unavailable")
-    return _transcribe(audio_bytes, preview=True)
+    return _transcribe(audio_bytes, preview=True, user_id=user_id)
 
 
-def _claim_decoder(preview: bool) -> None:
-    """One CPU decoder; at most one final may wait for an active preview."""
-    global _preview_active, _final_waiting, _last_preview_at
-    with _state_lock:
-        if preview and (_final_waiting or time.monotonic() - _last_preview_at < 2.0):
-            raise SpeechBusy("Nhận diện tạm đang bận.")
-        if _inference_lock.acquire(blocking=False):
-            _preview_active = preview
-            if preview:
-                _last_preview_at = time.monotonic()
-            return
-        if preview or not _preview_active or _final_waiting:
-            raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
-        _final_waiting = True
-    try:
-        if not _inference_lock.acquire(timeout=5):
-            raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
-        with _state_lock:
-            _preview_active = False
-    finally:
-        with _state_lock:
-            _final_waiting = False
+def partial_interval_ms() -> int:
+    return _scheduler.interval_ms()
 
 
-def _transcribe(audio_bytes: bytes, *, preview: bool) -> str:
-    global _preview_active
-    _claim_decoder(preview)
-    provider = os.getenv("STT_PROVIDER", "faster_whisper")
-    started = time.monotonic()
-    try:
-        if provider == "whisper_cpp":
-            from app.voice.whisper_cpp import transcribe
-
-            return transcribe(audio_bytes)
-        if provider == "faster_whisper":
-            return _faster_whisper(audio_bytes, preview=True) if preview else _faster_whisper(audio_bytes)
-        raise RuntimeError("STT_PROVIDER must be whisper_cpp or faster_whisper")
-    finally:
-        logger.info("speech_to_text provider=%s partial=%s elapsed_ms=%d", provider, preview,
-                    round((time.monotonic() - started) * 1000))
-        with _state_lock:
-            _preview_active = False
+def _transcribe(audio_bytes: bytes, *, preview: bool, user_id: str) -> str:
+    with _scheduler.slot(user_id, preview):
+        # The separate lock also protects startup model warmup.
+        if not _inference_lock.acquire(blocking=False):
+            raise SpeechBusy()
+        provider = os.getenv("STT_PROVIDER", "faster_whisper")
+        started = time.monotonic()
+        try:
+            if provider == "whisper_cpp":
+                from app.voice.whisper_cpp import transcribe
+                return transcribe(audio_bytes)
+            if provider == "faster_whisper":
+                return _faster_whisper(audio_bytes, preview=True) if preview else _faster_whisper(audio_bytes)
+            raise RuntimeError("STT_PROVIDER must be whisper_cpp or faster_whisper")
+        finally:
             _inference_lock.release()
+            logger.info("speech_to_text provider=%s partial=%s elapsed_ms=%d", provider, preview,
+                        round((time.monotonic() - started) * 1000))
 
 
 def decoder_beam_size() -> int:

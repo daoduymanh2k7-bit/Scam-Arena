@@ -129,7 +129,7 @@ test('draft audio includes pre-roll, grows at bounded intervals and stops on mut
   assert.equal(packets.length, 1);
   assert.equal(packets[0].rate, 16000);
   assert.ok(packets[0].samples.length >= 19200);
-  for (let i = 0; i < 70; i++) await send();
+  for (let i = 0; i < 35; i++) await send();
   assert.equal(packets.length, 2);
   assert.ok(packets[1].samples.length > packets[0].samples.length);
   await f.capture.setEnabled(false);

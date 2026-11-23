@@ -403,6 +403,7 @@
         onPartialAudio: (data) => {
           if (current() && !turnBusy && !micMuted) void preview.offer(data);
         },
+        wantsPartial: () => preview.canOffer(),
         onSpeech: (data) => {
           if (!current() || turnBusy || micMuted) return;
           preview.stop();

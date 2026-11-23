@@ -162,7 +162,8 @@
       const count = this.previewFrames.reduce((total, chunk) => total + chunk.length, 0);
       // Do not start a new decoder while waiting for trailing silence to end.
       if (!this.previewSpeaking || speechProbability < SETTINGS.positiveSpeechThreshold
-          || count - this.previewSent < (this.previewSent ? 33600 : 19200)) return;
+          || count - this.previewSent < (this.previewSent ? 16800 : 19200)
+          || (this.callbacks.wantsPartial && !this.callbacks.wantsPartial())) return;
       this.previewSent = count;
       const samples = new Float32Array(count);
       let offset = 0;

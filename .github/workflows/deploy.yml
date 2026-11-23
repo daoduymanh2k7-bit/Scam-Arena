@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      speech_load_test:
+        description: 'Run short synthetic 1/4-user ASR tests before and after deployment'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -53,6 +58,14 @@ jobs:
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
           printf 'Host production\n  HostName %s\n  User root\n  BatchMode yes\n  StrictHostKeyChecking yes\n  IdentitiesOnly yes\n  ConnectTimeout 20\n  ServerAliveInterval 30\n  ServerAliveCountMax 10\n' "$VPS_HOST" > ~/.ssh/config
+      - name: Measure current VPS speech service
+        if: inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]')
+        run: |
+          set -euo pipefail
+          mkdir -p speech-load-results
+          ssh production 'cat /opt/scam-arena/.deployed-revision' > speech-load-results/before-revision.txt
+          ssh production 'docker exec -i scam-arena python - --label before --cadence 2.1 --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
+          ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
       - name: Upload tracked source and deploy
         run: |
           set -euo pipefail
@@ -61,6 +74,21 @@ jobs:
           # Expand the runner-provided SHA locally, then pass it as a remote argument.
           # shellcheck disable=SC2029
           ssh production "bash -s -- '${GITHUB_SHA}'" < deployment/deploy-vps.sh
+      - name: Measure updated VPS speech service
+        if: inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]')
+        run: |
+          set -euo pipefail
+          ssh production 'docker cp /root/scam-arena-speech-load.wav scam-arena:/tmp/speech-load.wav'
+          ssh production 'docker exec -i scam-arena python - --label after --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/after.json
+          ssh production 'rm -f /root/scam-arena-speech-load.wav'
+          printf '%s\n' "$GITHUB_SHA" > speech-load-results/after-revision.txt
+      - name: Save speech load measurements
+        if: always() && (inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]'))
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: speech-load-results
+          path: speech-load-results/
+          retention-days: 14
       - name: Remove runner credentials
         if: always()
         run: rm -f ~/.ssh/id_ed25519 ~/.ssh/config ~/.ssh/known_hosts
