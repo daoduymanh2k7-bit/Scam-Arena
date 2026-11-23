@@ -32,9 +32,10 @@ a second resident model/server on the 2-core / 4 GB VPS.
   final. At most four of each kind wait. Drafts run FIFO with a repeat-user rotation;
   final transcripts take precedence, and a final cancels its own queued draft.
   Four near-simultaneous finals wait their turn rather than being rejected just
-  because another final is running. Drafts wait at most 4 seconds, finals at most
+  because another final is running. Drafts wait at most 6 seconds, finals at most
   12 seconds. Duplicates/full queues/expired tickets return 429.
-- Server pacing uses an EWMA of actual preview service time times current demand,
+- Server pacing uses an EWMA of actual preview service time times current demand
+  with 25% headroom for other work,
   clamped to 1–5 seconds. It is a load hint, not a guarantee of 1-second subtitles.
   There is no longer a fixed global 2-second gate. Run the existing single Uvicorn
   worker on this VPS; these in-process queues are not a distributed scheduler.

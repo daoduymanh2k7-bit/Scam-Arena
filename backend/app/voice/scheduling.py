@@ -21,7 +21,7 @@ class Ticket:
 
 
 class SpeechScheduler:
-    def __init__(self, *, max_users=4, preview_timeout=4.0, final_timeout=12.0):
+    def __init__(self, *, max_users=4, preview_timeout=6.0, final_timeout=12.0):
         self.condition = threading.Condition()
         self.drafts = OrderedDict()
         self.finals = OrderedDict()
@@ -39,7 +39,8 @@ class SpeechScheduler:
             if self.active:
                 users.add(self.active.user)
             demand = min(self.max_users, max(1, len(users) + 1))
-            return min(5000, max(1000, math.ceil(self.preview_cost * demand * 1000)))
+            # Reserve some CPU time for final transcripts, Piper and the web app.
+            return min(5000, max(1000, math.ceil(self.preview_cost * demand * 1250)))
 
     def _next(self):
         if self.finals:

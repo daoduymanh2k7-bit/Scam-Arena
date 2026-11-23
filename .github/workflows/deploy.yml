@@ -65,7 +65,7 @@ jobs:
           mkdir -p speech-load-results
           ssh production 'if test -s /opt/scam-arena/.deployed-revision; then cat /opt/scam-arena/.deployed-revision; else printf "unknown\n"; fi' > speech-load-results/before-revision.txt
           ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/before-image-id.txt
-          ssh production 'docker exec -i scam-arena python - --label before --cadence 2.1 --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
+          ssh production 'docker exec -i scam-arena python - --label before --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
           ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
       - name: Upload tracked source and deploy
         run: |

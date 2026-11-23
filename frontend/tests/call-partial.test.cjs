@@ -34,12 +34,13 @@ test('busy previews are skipped, failed service switches to final-only capture',
 });
 
 test('server pacing adapts without adding a second full delay after response', async () => {
-  let now = 0, calls = 0;
-  const preview = new PartialSpeech(async () => { calls++; now += 800; return { text: 'tạm', next_partial_ms: 1000 }; }, () => {}, () => {}, () => now);
+  let now = 0, calls = 0, interval = 1000;
+  const preview = new PartialSpeech(async () => { calls++; now += 800; return { text: 'tạm', next_partial_ms: interval }; }, () => {}, () => {}, () => now);
   preview.start(); await preview.offer('audio');
   assert.equal(preview.canOffer(), false);
   now = 1000; assert.equal(preview.canOffer(), true);
-  await preview.offer('audio'); assert.equal(calls, 2);
-  preview.nextAt = now + 3000; assert.equal(preview.canOffer(), false);
+  interval = 3000; await preview.offer('audio'); assert.equal(calls, 2);
+  now = 3999; assert.equal(preview.canOffer(), false);
+  now = 4000; assert.equal(preview.canOffer(), true);
   preview.stop(); assert.equal(preview.canOffer(), false);
 });
