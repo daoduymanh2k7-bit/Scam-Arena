@@ -36,6 +36,8 @@
   let introPhase = "greeting";
   let turnBusy = false;
   let microphone = null;
+  let partialSpeech = null;
+  let partialEntry = null;
   let micMuted = false;
   let micError = "";
   let lastLineFinishedAt = 0;
@@ -207,9 +209,14 @@
     }
   }
 
-  async function handleReply(text, elapsed, run, recognition = "Whisper", latency = null) {
+  async function handleReply(text, elapsed, run, recognition = "Whisper", latency = null, draft = null) {
     clearTimeout(greetingTimer);
-    const subtitle = addSubtitle("speech", text);
+    const subtitle = draft || addSubtitle("speech", text);
+    if (draft) {
+      draft.classList.remove("call-subtitle--partial");
+      draft.querySelector("strong").textContent = "Máy nghe bạn nói";
+      draft.querySelector("p").textContent = text;
+    }
     const isIntro = introPhase !== "scenario";
     if (isIntro) addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Lượt chào, chưa gán nhãn ý định`);
     setTurnBusy(true);
@@ -285,9 +292,19 @@
   function syncMicrophone() {
     if (!microphone?.ready) return;
     void microphone.setEnabled(!turnBusy && !micMuted);
+    if (turnBusy || micMuted) clearPartial();
+  }
+
+  function clearPartial() {
+    partialSpeech?.stop();
+    partialEntry?.remove();
+    partialEntry = null;
   }
 
   function releaseMicrophone() {
+    clearPartial();
+    partialSpeech = null;
+    subtitlesLog.querySelectorAll(".call-subtitle--partial").forEach(entry => entry.remove());
     const mic = microphone;
     microphone = null;
     void mic?.destroy().catch(() => {});
@@ -325,7 +342,7 @@
     return new Blob([buffer], { type: "audio/wav" });
   }
 
-  async function recognizeSpeech(data, elapsed, run) {
+  async function recognizeSpeech(data, elapsed, run, draft = null) {
     setTurnBusy(true);
     callStatus.textContent = "Đang nhận diện lời nói…";
     try {
@@ -340,9 +357,10 @@
         typeof result.compute_type === "string" ? result.compute_type.toUpperCase() : null,
         Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null,
         result.beam_size > 0 ? `beam ${result.beam_size}` : null].filter(Boolean).join(" · ");
-      await handleReply(text, elapsed, run, recognition, latency);
+      await handleReply(text, elapsed, run, recognition, latency, draft);
     } catch (error) {
       if (run !== callRun) return;
+      draft?.remove();
       addSubtitle("notice", error.message);
       waitForReply("Chưa nghe rõ. Bạn có thể nói lại.");
     }
@@ -358,17 +376,44 @@
         throw new Error("unsupported");
       }
       const current = () => mic === microphone && run === callRun;
+      const preview = new PartialSpeech(
+        (data, signal) => Api.transcribePartial(samplesToWav(data.samples, data.rate), signal),
+        (text) => {
+          if (!current() || turnBusy || micMuted || !partialEntry) return;
+          partialEntry.querySelector("p").textContent = text;
+          subtitlesLog.scrollTop = subtitlesLog.scrollHeight;
+        },
+        () => {
+          if (current()) addSubtitle("notice", "Chữ tạm chưa khả dụng. Hệ thống vẫn nhận diện cả câu khi bạn dừng nói.");
+        },
+      );
+      partialSpeech = preview;
       const mic = new CallMicrophone.Capture({
         onSpeechStart: () => {
           if (!current() || turnBusy || micMuted) return;
           clearTimeout(greetingTimer);
           mic.elapsed = responseDelay();
           callStatus.textContent = "Đang nghe bạn nói…";
+          clearPartial();
+          preview.start();
+          partialEntry = addSubtitle("speech", "Đang nghe…");
+          partialEntry.classList.add("call-subtitle--partial");
+          partialEntry.querySelector("strong").textContent = "Máy đang nghe · Chữ tạm";
+        },
+        onPartialAudio: (data) => {
+          if (current() && !turnBusy && !micMuted) void preview.offer(data);
         },
         onSpeech: (data) => {
-          if (current() && !turnBusy && !micMuted) void recognizeSpeech(data, mic.elapsed, run);
+          if (!current() || turnBusy || micMuted) return;
+          preview.stop();
+          const draft = partialEntry;
+          partialEntry = null;
+          if (draft) draft.querySelector("strong").textContent = "Đang chốt câu…";
+          void recognizeSpeech(data, mic.elapsed, run, draft);
         },
-        onMisfire: () => { if (current() && !turnBusy) callStatus.textContent = listeningStatus(); },
+        onMisfire: () => {
+          if (current() && !turnBusy) { clearPartial(); callStatus.textContent = listeningStatus(); }
+        },
         onFallback: () => {
           if (current()) addSubtitle("notice", "Bộ bắt giọng Silero chưa mở được; đang dùng bộ bắt giọng dự phòng.");
         },

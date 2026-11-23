@@ -3,7 +3,9 @@ const Api = (() => {
     if (!response.ok) {
       let detail = response.statusText;
       try { detail = (await response.json()).detail || detail; } catch (_) { /* empty response */ }
-      throw new Error(detail);
+      const error = new Error(detail);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -49,6 +51,11 @@ const Api = (() => {
       const form = new FormData();
       form.append("audio", blob, blob.type === "audio/wav" ? "recording.wav" : "recording.webm");
       return fetch("/api/voice/transcribe", { method: "POST", body: form }).then(asJson);
+    },
+    async transcribePartial(blob, signal) {
+      const form = new FormData();
+      form.append("audio", blob, "partial.wav");
+      return fetch("/api/voice/transcribe/partial", { method: "POST", body: form, signal }).then(asJson);
     },
     async speakText(text, voiceId = null, timing = null) {
       const query = voiceId ? `?voice=${encodeURIComponent(voiceId)}` : "";

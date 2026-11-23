@@ -355,6 +355,8 @@
 @keyframes phone-sms-arrive {
   from { opacity: 0; transform: translateY(-24px); }
 }
+
+.call-subtitle--partial { border-inline-start-style: dashed; opacity: .8; }
 @media (prefers-reduced-motion: reduce) {
   .phone-sms-banner { animation: none; }
 }

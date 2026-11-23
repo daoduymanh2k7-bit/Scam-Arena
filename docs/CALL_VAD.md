@@ -14,12 +14,14 @@ bundle. Assets are cached by the build; they are not committed as binary files.
 On entering call mode, preload warms the browser cache without requesting the
 microphone. Answering requests permission and initializes the detector before
 playing the opening greeting. Capture only runs during the player's turn.
-Mute, upload, caller speech and hangup close the capture gate immediately.
+Mute, final upload, caller speech and hangup close the capture gate immediately.
 An inference queue and turn counter discard late results. Hangup stops tracks
 immediately, then releases the ONNX session and AudioContext. A failed model
 initialization falls back to the previous volume detector with a visible
 notice. Runtime inference failure offers the existing retry microphone button.
 Subtitle information includes the detector alongside the transcription engine.
+While speech continues, incremental draft snapshots can be uploaded without
+closing the gate. See [CALL_PARTIAL_SUBTITLES.md](CALL_PARTIAL_SUBTITLES.md).
 
 Current settings: 16 kHz mono; positive/negative probability 0.50/0.35; 300 ms
 pre-roll; 400 ms trailing silence (previously 550 ms); minimum 96 ms speech to allow short replies;

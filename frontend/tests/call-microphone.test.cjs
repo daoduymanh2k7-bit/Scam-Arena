@@ -115,3 +115,25 @@ test('endpoint timing uses only speech frames from the current turn', async () =
   assert.equal(f.events[1].vad_wait_ms, null);
   await f.capture.destroy();
 });
+
+test('draft audio includes pre-roll, grows at bounded intervals and stops on mute', async () => {
+  const packets = [];
+  const f = fixture({ callbacks: { onPartialAudio: data => packets.push(data) } });
+  await f.capture.initialize(); await f.capture.setEnabled(true);
+  const frame = new Float32Array(512).fill(0.2);
+  const send = () => f.capture._queueFrame(async () => f.options().onFrameProcessed({ isSpeech: 0.9 }, frame));
+  for (let i = 0; i < 15; i++) await send();
+  assert.equal(packets.length, 0);
+  await f.capture._queueFrame(async () => f.options().onSpeechStart());
+  for (let i = 0; i < 30; i++) await send();
+  assert.equal(packets.length, 1);
+  assert.equal(packets[0].rate, 16000);
+  assert.ok(packets[0].samples.length >= 19200);
+  for (let i = 0; i < 70; i++) await send();
+  assert.equal(packets.length, 2);
+  assert.ok(packets[1].samples.length > packets[0].samples.length);
+  await f.capture.setEnabled(false);
+  for (let i = 0; i < 90; i++) await send();
+  assert.equal(packets.length, 2);
+  await f.capture.destroy();
+});

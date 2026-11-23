@@ -9,6 +9,10 @@ from pathlib import Path
 
 _model = None
 _inference_lock = threading.Lock()
+_state_lock = threading.Lock()
+_preview_active = False
+_final_waiting = False
+_last_preview_at = float("-inf")
 logger = logging.getLogger(__name__)
 
 
@@ -31,9 +35,43 @@ def _get_model():
 
 
 def speech_to_text(audio_bytes: bytes) -> str:
-    # Do not accumulate a long request queue or run multiple CPU decoders at once.
-    if not _inference_lock.acquire(blocking=False):
-        raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
+    return _transcribe(audio_bytes, preview=False)
+
+
+def speech_to_text_partial(audio_bytes: bytes) -> str:
+    if (os.getenv("STT_PARTIAL_ENABLED", "true").strip().lower() not in {"true", "1"}
+            or os.getenv("STT_PROVIDER", "faster_whisper") != "faster_whisper"):
+        raise ValueError("Incremental transcription is unavailable")
+    return _transcribe(audio_bytes, preview=True)
+
+
+def _claim_decoder(preview: bool) -> None:
+    """One CPU decoder; at most one final may wait for an active preview."""
+    global _preview_active, _final_waiting, _last_preview_at
+    with _state_lock:
+        if preview and (_final_waiting or time.monotonic() - _last_preview_at < 2.0):
+            raise SpeechBusy("Nhận diện tạm đang bận.")
+        if _inference_lock.acquire(blocking=False):
+            _preview_active = preview
+            if preview:
+                _last_preview_at = time.monotonic()
+            return
+        if preview or not _preview_active or _final_waiting:
+            raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
+        _final_waiting = True
+    try:
+        if not _inference_lock.acquire(timeout=5):
+            raise SpeechBusy("Nhận diện đang bận. Vui lòng nói lại sau vài giây.")
+        with _state_lock:
+            _preview_active = False
+    finally:
+        with _state_lock:
+            _final_waiting = False
+
+
+def _transcribe(audio_bytes: bytes, *, preview: bool) -> str:
+    global _preview_active
+    _claim_decoder(preview)
     provider = os.getenv("STT_PROVIDER", "faster_whisper")
     started = time.monotonic()
     try:
@@ -42,12 +80,14 @@ def speech_to_text(audio_bytes: bytes) -> str:
 
             return transcribe(audio_bytes)
         if provider == "faster_whisper":
-            return _faster_whisper(audio_bytes)
+            return _faster_whisper(audio_bytes, preview=True) if preview else _faster_whisper(audio_bytes)
         raise RuntimeError("STT_PROVIDER must be whisper_cpp or faster_whisper")
     finally:
-        logger.info("speech_to_text provider=%s elapsed_ms=%d", provider,
+        logger.info("speech_to_text provider=%s partial=%s elapsed_ms=%d", provider, preview,
                     round((time.monotonic() - started) * 1000))
-        _inference_lock.release()
+        with _state_lock:
+            _preview_active = False
+            _inference_lock.release()
 
 
 def decoder_beam_size() -> int:
@@ -57,7 +97,7 @@ def decoder_beam_size() -> int:
     return value
 
 
-def _faster_whisper(audio_bytes: bytes, *, beam_size: int | None = None) -> str:
+def _faster_whisper(audio_bytes: bytes, *, beam_size: int | None = None, preview: bool = False) -> str:
     from app.voice.whisper_cpp import normalize_audio
 
     audio_bytes = normalize_audio(audio_bytes)
@@ -65,9 +105,10 @@ def _faster_whisper(audio_bytes: bytes, *, beam_size: int | None = None) -> str:
     try:
         with os.fdopen(file_descriptor, "wb") as audio_file:
             audio_file.write(audio_bytes)
-        segments, _ = _get_model().transcribe(
-            path, language="vi", beam_size=decoder_beam_size() if beam_size is None else beam_size,
-        )
+        options = {"beam_size": decoder_beam_size() if beam_size is None else beam_size}
+        if preview:
+            options.update(beam_size=1, best_of=1, temperature=0.0, condition_on_previous_text=False)
+        segments, _ = _get_model().transcribe(path, language="vi", **options)
         return "".join(segment.text for segment in segments).strip()
     finally:
         Path(path).unlink(missing_ok=True)

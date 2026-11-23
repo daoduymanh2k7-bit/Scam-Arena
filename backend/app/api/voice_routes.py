@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import time
+import io
+import wave
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import Response
@@ -13,6 +15,38 @@ from app.database import get_connection_pool
 
 router = APIRouter(prefix="/api/voice", tags=["voice"])
 MAX_AUDIO_BYTES = 15 * 1024 * 1024
+
+
+@router.post("/transcribe/partial")
+async def transcribe_partial(response: Response, audio: UploadFile = File(...),
+                             user: dict = Depends(get_current_user)) -> dict:
+    """Bounded growing WAV snapshots; drafts never enter conversation state."""
+    content = await audio.read(512 * 1024 + 1)
+    await audio.close()
+    if len(content) > 512 * 1024:
+        raise HTTPException(status_code=413, detail="Đoạn nhận diện tạm quá lớn.")
+    try:
+        with wave.open(io.BytesIO(content), "rb") as wav:
+            frames = wav.getnframes()
+            if (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) != (16000, 1, 2) or not 8000 <= frames <= 240000:
+                raise ValueError("Invalid preview format")
+            if len(wav.readframes(frames)) != frames * 2:
+                raise ValueError("Truncated preview")
+    except (wave.Error, EOFError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Đoạn tạm cần WAV mono 16 kHz, dài 0,5–15 giây.") from exc
+    from app.voice.transcription import speech_to_text_partial, SpeechBusy
+    try:
+        started = time.monotonic()
+        text = await run_in_threadpool(speech_to_text_partial, content)
+        response.headers["Cache-Control"] = "no-store"
+        return {"text": text, "is_final": False, "engine": "Faster-Whisper", "beam_size": 1,
+                "elapsed_ms": round((time.monotonic() - started) * 1000)}
+    except SpeechBusy as exc:
+        raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": "2"}) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail="Nhận diện tạm chưa được bật cho cấu hình này.") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Nhận diện tạm chưa sẵn sàng.") from exc
 
 
 @router.post("/transcribe")

@@ -1,4 +1,4 @@
-/* Silero VAD runs locally. Only completed speech is uploaded by app-mode.js. */
+/* Silero VAD runs locally. Bounded drafts plus completed speech can be uploaded. */
 (function (root) {
   "use strict";
   const ASSETS = "/vendor/vad/v0.0.31-ort1.22.0/";
@@ -98,7 +98,8 @@
           resumeStream: async () => this.stream,
           ortConfig: (ort) => { ort.env.wasm.numThreads = 1; ort.env.wasm.proxy = false; ort.env.logLevel = "error"; },
           onSpeechStart: () => this._startSpeech(),
-          onFrameProcessed: (probabilities) => {
+          onFrameProcessed: (probabilities, frame) => {
+            this._previewFrame(frame, probabilities.isSpeech);
             if (this._valid() && probabilities.isSpeech >= SETTINGS.positiveSpeechThreshold) {
               this.lastVoiceAt = this.now();
             }
@@ -143,10 +144,30 @@
 
     _startSpeech() {
       if (!this._valid()) return;
+      this.previewSpeaking = true;
+      this.previewSent = 0;
       clearTimeout(this.maxTimer);
       const cycle = this.cycle;
       this.maxTimer = setTimeout(() => this._flushLongSpeech(cycle), 14000);
       this.callbacks.onSpeechStart?.();
+    }
+
+    _previewFrame(frame, speechProbability) {
+      if (!this._valid() || !frame || !this.callbacks.onPartialAudio) return;
+      this.previewFrames ||= [];
+      if (!this.previewSpeaking && this.previewFrames.length >= 10) this.previewFrames.shift();
+      // At most 15 seconds including pre-roll; final utterances are capped at 14s.
+      if (this.previewFrames.length >= 468) return;
+      this.previewFrames.push(new Float32Array(frame));
+      const count = this.previewFrames.reduce((total, chunk) => total + chunk.length, 0);
+      // Do not start a new decoder while waiting for trailing silence to end.
+      if (!this.previewSpeaking || speechProbability < SETTINGS.positiveSpeechThreshold
+          || count - this.previewSent < (this.previewSent ? 33600 : 19200)) return;
+      this.previewSent = count;
+      const samples = new Float32Array(count);
+      let offset = 0;
+      for (const chunk of this.previewFrames) { samples.set(chunk, offset); offset += chunk.length; }
+      this.callbacks.onPartialAudio({ samples, rate: 16000 });
     }
 
     _speech(samples, rate) {
@@ -161,6 +182,8 @@
     _misfire() {
       if (!this._valid()) return;
       clearTimeout(this.maxTimer);
+      this.previewFrames = [];
+      this.previewSpeaking = false;
       this.callbacks.onMisfire?.();
     }
 
@@ -187,6 +210,8 @@
       const cycle = ++this.cycle;
       this.activeCycle = -1;
       this.lastVoiceAt = null;
+      this.previewFrames = [];
+      this.previewSpeaking = false;
       this._setTracks(enabled);
       clearTimeout(this.maxTimer);
       this.transitions = this.transitions.then(async () => {
