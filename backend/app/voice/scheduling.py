@@ -50,24 +50,6 @@ class SpeechScheduler:
         return next(iter(self.drafts.values()), None)
 
     @contextmanager
-    def sample_slot(self, user):
-        """No queue for optional dataset previews; calls already waiting always win.
-
-        Running inference cannot be preempted; a call arriving afterwards may
-        still wait for this bounded clip to complete.
-        """
-        with self.condition:
-            if self.active is not None or self.finals or self.drafts:
-                raise SpeechBusy("Cuộc gọi đang dùng bộ nhận diện. Mẫu đã lưu; hãy thử lại sau.", retry_after=5)
-            self.active = Ticket(str(user), False)
-        try:
-            yield
-        finally:
-            with self.condition:
-                self.active = None
-                self.condition.notify_all()
-
-    @contextmanager
     def slot(self, user, preview):
         ticket = Ticket(str(user), preview)
         queue = self.drafts if preview else self.finals

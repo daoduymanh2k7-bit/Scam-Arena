@@ -100,8 +100,7 @@ kiểm tra chất lượng giọng nói, micro, LLM hoặc HTTPS bên ngoài.
 
 Sau đó mỗi lần push/merge vào `main` đều chạy quy trình trên. Không cần máy cá nhân mở.
 Build dùng cache Docker hiện có; đổi dữ liệu/model Rasa vẫn có thể train lại lâu.
-Chỉ khi chọn `STT_PROVIDER=whisper_cpp` mới build/chạy dịch vụ C++.
-Với mặc định Faster-Whisper INT8, dịch vụ C++ cũ được dừng sau khi app mới healthy để giải phóng RAM.
+Nhận diện hỗ trợ `deepgram` và `faster_whisper`. Dịch vụ C++ cũ được gỡ theo nhãn Compose của dự án sau khi app mới healthy. Với Deepgram, deploy kiểm tra có key nhưng không gửi yêu cầu tính phí.
 Deploy cũng kiểm tra model Faster-Whisper nạp được trong container; kiểm tra này chưa đánh giá chất lượng nhận diện.
 VPS 2 CPU build có thể làm bản đang chạy chậm; khi đổi image có thể gián đoạn ngắn.
 

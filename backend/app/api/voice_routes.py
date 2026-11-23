@@ -17,6 +17,18 @@ router = APIRouter(prefix="/api/voice", tags=["voice"])
 MAX_AUDIO_BYTES = 15 * 1024 * 1024
 
 
+@router.get("/stt-status")
+def stt_status(user: dict = Depends(get_current_user)):
+    """Configuration presence only, never a paid probe or key validity claim."""
+    provider = os.getenv("STT_PROVIDER", "faster_whisper")
+    if provider == "deepgram":
+        from app.voice.deepgram import metadata
+        return {"provider": provider, **metadata(), "key_configured": bool(os.getenv("DEEPGRAM_API_KEY", "").strip()),
+                "language": os.getenv("DEEPGRAM_LANGUAGE", "vi"), "transport": "bounded_audio_clips",
+                "key_verified": False}
+    return {"provider": provider, "key_required": False, "key_verified": False}
+
+
 @router.post("/transcribe/partial")
 async def transcribe_partial(response: Response, audio: UploadFile = File(...),
                              user: dict = Depends(get_current_user)) -> dict:
@@ -59,19 +71,21 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
         raise HTTPException(status_code=413, detail="Tệp âm thanh vượt giới hạn 15 MB.")
 
     from app.voice.transcription import SpeechBusy, speech_to_text, decoder_beam_size
-    from app.voice.whisper_cpp import InvalidAudio
+    from app.voice.audio import InvalidAudio
 
     try:
         started = time.monotonic()
         text = await run_in_threadpool(speech_to_text, content, user_id=str(user["user_id"]))
-        cpp = os.getenv("STT_PROVIDER", "faster_whisper") == "whisper_cpp"
+        if os.getenv("STT_PROVIDER", "faster_whisper") == "deepgram":
+            from app.voice.deepgram import metadata
+            return {"text": text, **metadata(), "elapsed_ms": round((time.monotonic() - started) * 1000)}
         return {
             "text": text,
-            "engine": "whisper.cpp" if cpp else "Faster-Whisper",
-            "model": os.getenv("WHISPER_CPP_MODEL", "base-q8_0") if cpp else os.getenv("WHISPER_MODEL", "base"),
-            "compute_type": "" if cpp else os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
+            "engine": "Faster-Whisper",
+            "model": os.getenv("WHISPER_MODEL", "base"),
+            "compute_type": os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
             "elapsed_ms": round((time.monotonic() - started) * 1000),
-            "beam_size": 0 if cpp else decoder_beam_size(),
+            "beam_size": decoder_beam_size(),
         }
     except SpeechBusy as exc:
         raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": str(exc.retry_after)}) from exc

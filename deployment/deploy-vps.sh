@@ -32,8 +32,10 @@ release_compose=(docker compose -p scam-arena --env-file "$app/.env" -f "$releas
 provider=$("${release_compose[@]}" config --format json | python3 -c 'import json,sys; print(json.load(sys.stdin)["services"]["scam-arena"]["environment"]["STT_PROVIDER"])')
 build_services=(scam-arena rasa)
 case "$provider" in
-  whisper_cpp) build_services+=(whisper-cpp) ;;
   faster_whisper) ;;
+  deepgram)
+    "${release_compose[@]}" config --format json | python3 -c 'import json,sys; value=json.load(sys.stdin)["services"]["scam-arena"]["environment"].get("DEEPGRAM_API_KEY", ""); sys.exit(0 if value.strip() else "DEEPGRAM_API_KEY must be configured on VPS")'
+    ;;
   *) echo "Unsupported STT_PROVIDER" >&2; exit 1 ;;
 esac
 # Keep the running installation untouched if the new images cannot build.
@@ -54,15 +56,16 @@ rsync -a --delete \
   --exclude='/deployment/database.dump' \
   "$release/" "$app/"
 
-if [[ "$provider" == whisper_cpp ]]; then
-  docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 whisper-cpp
-fi
 docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 scam-arena
 curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8000/health
 if [[ "$provider" == faster_whisper ]]; then
   # Also verify the selected model can load; web health alone cannot prove ASR readiness.
   docker compose -p scam-arena exec -T scam-arena python -c 'from app.voice.transcription import warmup_speech; warmup_speech(); print("Faster-Whisper model load verified")' < /dev/null
-  docker compose -p scam-arena stop whisper-cpp
 fi
+# Retire only the old optional service from this Compose project after health succeeds.
+legacy_cpp_ids=$(docker ps -aq --filter label=com.docker.compose.project=scam-arena --filter label=com.docker.compose.service=whisper-cpp)
+while IFS= read -r legacy_cpp_id; do
+  if [[ -n "$legacy_cpp_id" ]]; then docker rm -f "$legacy_cpp_id"; fi
+done <<< "$legacy_cpp_ids"
 printf '\n%s\n' "$revision" > "$app/.deployed-revision"
 printf '\nDeployed %s. Database backup: %s\n' "$revision" "$backup"

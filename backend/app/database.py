@@ -71,24 +71,7 @@ def initialize_database() -> None:
             """
         )
         _migrate_intent_phrase_rules(cursor)
-        cursor.execute("""CREATE TABLE IF NOT EXISTS voice_samples (
-            sample_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id TEXT NOT NULL REFERENCES app_users(user_id) ON DELETE CASCADE,
-            audio BYTEA NOT NULL CHECK (octet_length(audio) BETWEEN 1 AND 480044),
-            duration_ms INTEGER NOT NULL CHECK (duration_ms BETWEEN 1000 AND 15000),
-            kind TEXT NOT NULL CHECK (kind IN ('read', 'natural')),
-            prompt_text TEXT NOT NULL DEFAULT '',
-            machine_text TEXT NOT NULL DEFAULT '',
-            transcript TEXT NOT NULL DEFAULT '' CHECK (char_length(transcript)<=2000),
-            status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','rejected')),
-            revision INTEGER NOT NULL DEFAULT 1,
-            consent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            CHECK (status <> 'confirmed' OR length(trim(transcript))>0)
-        );
-        CREATE INDEX IF NOT EXISTS voice_samples_owner_idx ON voice_samples(user_id, created_at DESC)
-        """)
+        # Retired personal-voice tables, if present, are preserved without modification.
         _create_dialogue_tables(cursor)
         cursor.execute("""CREATE TABLE IF NOT EXISTS conversation_memories (
             session_id UUID PRIMARY KEY REFERENCES call_sessions(session_id) ON DELETE CASCADE,

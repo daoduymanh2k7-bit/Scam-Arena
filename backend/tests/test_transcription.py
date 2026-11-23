@@ -1,6 +1,5 @@
 import asyncio
 import io
-import json
 import struct
 import threading
 import wave
@@ -13,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.api import voice_routes
 from app.auth import get_current_user
-from app.voice import transcription, whisper_cpp
+from app.voice import transcription, audio
 
 
 def wav_bytes(rate=16000, channels=1, seconds=0.1):
@@ -27,7 +26,7 @@ def wav_bytes(rate=16000, channels=1, seconds=0.1):
 
 
 def test_normalizes_stereo_48khz_to_mono_pcm16():
-    data = whisper_cpp.normalize_audio(wav_bytes(48000, 2))
+    data = audio.normalize_audio(wav_bytes(48000, 2))
     with wave.open(io.BytesIO(data)) as wav:
         assert (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) == (16000, 1, 2)
         assert wav.getnframes() == 1600
@@ -47,7 +46,7 @@ def test_normalizes_webm_from_message_recorder():
             container.mux(packet)
         for packet in stream.encode(None):
             container.mux(packet)
-    data = whisper_cpp.normalize_audio(source.getvalue())
+    data = audio.normalize_audio(source.getvalue())
     with wave.open(io.BytesIO(data)) as wav:
         assert (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) == (16000, 1, 2)
         assert 1500 <= wav.getnframes() <= 1800
@@ -55,43 +54,22 @@ def test_normalizes_webm_from_message_recorder():
 
 @pytest.mark.parametrize("content", [b"invalid", b"", wav_bytes(seconds=31)], ids=["invalid", "empty", "too_long"])
 def test_rejects_invalid_or_long_audio(content):
-    with pytest.raises(whisper_cpp.InvalidAudio):
-        whisper_cpp.normalize_audio(content)
-
-
-def test_cpp_request_preserves_vietnamese_and_uses_fixed_fields(monkeypatch):
-    monkeypatch.setenv("WHISPER_CPP_URL", "http://speech:8080/")
-    text = "Tôi không cung cấp mã xác thực."
-    with patch.object(whisper_cpp, "urlopen", return_value=io.BytesIO(json.dumps({"text": text}).encode())) as send:
-        assert whisper_cpp.transcribe(wav_bytes()) == text
-    request = send.call_args.args[0]
-    assert request.full_url == "http://speech:8080/inference"
-    assert b'name="language"\r\n\r\nvi\r\n' in request.data
-    assert b'name="temperature_inc"\r\n\r\n0.0\r\n' in request.data
-    assert b'filename="speech.wav"' in request.data
-    assert b"RIFF" in request.data
-    assert send.call_args.kwargs["timeout"] == 45
-
-
-@pytest.mark.parametrize("payload", [{"error": "failed"}, {"text": None}, []])
-def test_cpp_rejects_bad_response(payload):
-    with patch.object(whisper_cpp, "urlopen", return_value=io.BytesIO(json.dumps(payload).encode())):
-        with pytest.raises(RuntimeError):
-            whisper_cpp.transcribe(wav_bytes())
+    with pytest.raises(audio.InvalidAudio):
+        audio.normalize_audio(content)
 
 
 def test_cpu_busy_and_failure_release_lock(monkeypatch):
-    monkeypatch.setenv("STT_PROVIDER", "whisper_cpp")
+    monkeypatch.setenv("STT_PROVIDER", "faster_whisper")
     transcription._inference_lock.acquire()
     try:
         with pytest.raises(transcription.SpeechBusy):
             transcription.speech_to_text(b"unused")
     finally:
         transcription._inference_lock.release()
-    with patch.object(whisper_cpp, "transcribe", side_effect=RuntimeError("failed")):
+    with patch.object(transcription, "_faster_whisper", side_effect=RuntimeError("failed")):
         with pytest.raises(RuntimeError):
             transcription.speech_to_text(b"unused")
-    with patch.object(whisper_cpp, "transcribe", return_value="Tôi không đồng ý."):
+    with patch.object(transcription, "_faster_whisper", return_value="Tôi không đồng ý."):
         assert transcription.speech_to_text(b"unused") == "Tôi không đồng ý."
 
 
@@ -128,7 +106,7 @@ def test_faster_normalizes_audio_and_removes_temporary_file():
 
 def test_warmup_only_loads_selected_engine_and_respects_inference(monkeypatch):
     with patch.object(transcription, "_get_model") as load:
-        monkeypatch.setenv("STT_PROVIDER", "whisper_cpp")
+        monkeypatch.setenv("STT_PROVIDER", "deepgram")
         transcription.warmup_speech()
         load.assert_not_called()
         monkeypatch.setenv("STT_PROVIDER", "faster_whisper")
@@ -151,7 +129,7 @@ def client():
 
 @pytest.mark.parametrize("error,status", [
     (transcription.SpeechBusy("busy"), 429),
-    (whisper_cpp.InvalidAudio("bad audio"), 400),
+    (audio.InvalidAudio("bad audio"), 400),
     (TimeoutError("private internal error"), 503),
 ])
 def test_api_maps_audio_errors_without_leaking_details(error, status):
@@ -164,8 +142,7 @@ def test_api_maps_audio_errors_without_leaking_details(error, status):
 
 
 def test_api_runs_decoder_off_event_loop(monkeypatch):
-    monkeypatch.setenv("STT_PROVIDER", "whisper_cpp")
-    monkeypatch.setenv("WHISPER_CPP_MODEL", "base-q8_0")
+    monkeypatch.setenv("STT_PROVIDER", "deepgram")
 
     def decode(_, **options):
         assert threading.current_thread() is not threading.main_thread()
@@ -177,8 +154,8 @@ def test_api_runs_decoder_off_event_loop(monkeypatch):
         result = api.post("/api/voice/transcribe", files={"audio": ("voice.wav", b"audio", "audio/wav")})
     assert result.status_code == 200
     assert result.json()["text"] == "Tôi sẽ tự xác minh."
-    assert result.json()["engine"] == "whisper.cpp"
-    assert result.json()["model"] == "base-q8_0"
+    assert result.json()["engine"] == "Deepgram"
+    assert result.json()["model"] == "nova-3"
     assert isinstance(result.json()["elapsed_ms"], int)
 
 

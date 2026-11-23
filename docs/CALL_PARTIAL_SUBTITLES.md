@@ -53,9 +53,9 @@ a second resident model/server on the 2-core / 4 GB VPS.
   complete-utterance recognition continues as before.
 
 Set `STT_PARTIAL_ENABLED=false` in the private `.env`, then recreate the app to
-disable server drafts. Default is true. The optional whisper.cpp provider uses
+disable server drafts. Default is true. The Deepgram provider uses
 complete-utterance recognition, with an explicit unavailable draft response.
-No SQL migration, new paid API key or extra container is required.
+Local drafts require no SQL migration or extra container. Deepgram requires its own API key.
 
 ## Tradeoffs
 

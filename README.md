@@ -151,10 +151,8 @@ Compose tự đọc `.env` ở thư mục gốc. Các giá trị mặc định d
 | `LINE_LLM_TIMEOUT_SECONDS` | `3` | Timeout cho mỗi yêu cầu LLM. |
 | `LINE_POOL_SIZE` | `5` | Số câu tối thiểu trong kho cho mỗi nhóm cache trước khi ngừng gọi LLM. |
 | `LINE_PROMPT_VERSION` | `v2` | Phiên bản prompt, đồng thời tách các nhóm cache theo prompt. |
-| `STT_PROVIDER` | `faster_whisper` | Engine nhận diện được chọn từ phép so sánh local hiện tại. `whisper_cpp` vẫn có thể bật để đối chứng. |
+| `STT_PROVIDER` | `faster_whisper` | Chọn `deepgram` cho nhận diện cloud tiếng Việt; `faster_whisper` là dự phòng local. Xem `docs/DEEPGRAM_SETUP.md`. |
 | `WHISPER_COMPUTE_TYPE` | `int8` | Lượng tử hóa của Faster-Whisper trên CPU. |
-| `WHISPER_CPP_MODEL` | `base-q8_0` | Model đa ngôn ngữ lượng tử hóa: `base-q8_0` hoặc `base-q5_1`. Đổi biến này cần build lại dịch vụ `whisper-cpp`. |
-| `WHISPER_CPP_TIMEOUT_SECONDS` | `45` | Giới hạn chờ nhận diện phía ứng dụng; không phải mục tiêu độ trễ. |
 | `WHISPER_MODEL` | `base` | Model đa ngôn ngữ của Faster-Whisper. |
 | `RASA_NLU_TIMEOUT_SECONDS` | `2` | Timeout gọi dịch vụ Rasa nội bộ. |
 | `PIPER_SENTENCE_PAUSE_MS` | `350` | Khoảng nghỉ giữa câu khi Piper đọc. |
@@ -228,7 +226,7 @@ Luật an toàn kiểm tra hành vi nguy hiểm. Với câu đồng ý hoặc ph
 
 ## Dữ liệu và sao lưu
 
-PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` giữ tài khoản, phiên, transcript, luật, câu thoại và điểm ưu tiên qua các lần build/restart. `whisper-cache` giữ model Faster-Whisper; model whisper.cpp tùy chọn nằm trong image riêng, có kiểm tra SHA-256 khi build; thư mục `voices/` giữ model Piper.
+PostgreSQL là nguồn dữ liệu lúc chạy. Docker volume `postgres-data` giữ tài khoản, phiên, transcript, luật, câu thoại và điểm ưu tiên qua các lần build/restart. `whisper-cache` giữ model Faster-Whisper; thư mục `voices/` giữ model Piper.
 
 Các bảng chính:
 
@@ -331,7 +329,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 - Chế độ cuộc gọi là giao diện mô phỏng, chưa khởi tạo cuộc gọi điện thoại thực.
 - LLM là tùy chọn; API key có thể hết quota hoặc provider lỗi. Khi lỗi, hệ thống dùng lời thoại cố định hoặc giữ nhãn luật để phiên tiếp tục.
 - Provider free có thể giới hạn quota, tốc độ, model khả dụng và định dạng JSON; fallback không đảm bảo luôn sinh được câu.
-- Nhận diện mặc định dùng Faster-Whisper `base` INT8 trên CPU; model được nạp nền khi app khởi động, lần đầu cần tải model. Trong lúc nạp, web vẫn hoạt động nhưng yêu cầu nhận diện có thể báo bận. whisper.cpp Q8/Q5 là tùy chọn đối chứng, chưa có benchmark trên giọng người dùng thật.
+- Nhận diện mặc định dùng Faster-Whisper `base` INT8 trên CPU; model được nạp nền khi app khởi động, lần đầu cần tải model. Trong lúc nạp, web vẫn hoạt động nhưng yêu cầu nhận diện có thể báo bận. Khi chọn Deepgram, ứng dụng không nạp model local và không cần thu giọng huấn luyện trước.
 - Piper cần file voice trong `voices/`; nếu chưa tải voice, nhập bàn phím vẫn dùng được nhưng TTS không hoạt động.
 - Rasa chạy trong container riêng; build đầu tải image lớn và train model. Các câu huấn luyện chưa phải kết quả đánh giá độ chính xác production.
 - Tài khoản chưa có xác minh email hoặc tự khôi phục mật khẩu. Quên mật khẩu cần quản trị viên xử lý.
@@ -340,10 +338,11 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 
 ## Tài liệu bổ sung
 
-- [Nhận diện tiếng Việt bằng whisper.cpp lượng tử hóa](docs/QUANTIZED_SPEECH.md)
 - [So sánh engine và lựa chọn mặc định](docs/STT_ENGINE_COMPARISON.md)
 - [Tự động triển khai VPS bằng GitHub Actions](docs/GITHUB_ACTIONS_DEPLOY.md)
 - [Schema PostgreSQL](docs/POSTGRESQL.md)
 - [Schema kịch bản](docs/SCENARIO_SCHEMA.md)
 - [Thiết kế và nhãn nhận diện intent](docs/INTENT_DETECTION.md)
 - [JSON Schema kịch bản](docs/scenario.schema.json)
+
+- [Thiết lập Deepgram cho nhận diện tiếng Việt](docs/DEEPGRAM_SETUP.md)

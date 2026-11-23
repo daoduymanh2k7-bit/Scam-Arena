@@ -1,3 +1,5 @@
+> Historical benchmark. The optional C++ engine and comparison command have been removed; use this report only as past measurement evidence.
+
 # Lựa chọn engine nhận diện: Faster-Whisper INT8
 
 Ngày so sánh: 20/11/2026. Quyết định hiện tại: **Faster-Whisper base INT8** làm mặc định.

@@ -43,24 +43,12 @@ def partial_interval_ms() -> int:
     return _scheduler.interval_ms()
 
 
-def transcribe_sample(audio_bytes: bytes, *, user_id: str) -> str:
-    """Optional sample preview, never added to the call queues."""
-    with _scheduler.sample_slot(user_id):
-        if not _inference_lock.acquire(blocking=False):
-            raise SpeechBusy()
-        try:
-            provider = os.getenv("STT_PROVIDER", "faster_whisper")
-            if provider == "whisper_cpp":
-                from app.voice.whisper_cpp import transcribe
-                return transcribe(audio_bytes)
-            if provider != "faster_whisper":
-                raise RuntimeError("Unsupported STT provider")
-            return _faster_whisper(audio_bytes)
-        finally:
-            _inference_lock.release()
-
-
 def _transcribe(audio_bytes: bytes, *, preview: bool, user_id: str) -> str:
+    if os.getenv("STT_PROVIDER", "faster_whisper") == "deepgram":
+        if preview:
+            raise ValueError("Repeated cloud previews are disabled")
+        from app.voice.deepgram import transcribe
+        return transcribe(audio_bytes, user_id=user_id)
     with _scheduler.slot(user_id, preview):
         # The separate lock also protects startup model warmup.
         if not _inference_lock.acquire(blocking=False):
@@ -68,12 +56,9 @@ def _transcribe(audio_bytes: bytes, *, preview: bool, user_id: str) -> str:
         provider = os.getenv("STT_PROVIDER", "faster_whisper")
         started = time.monotonic()
         try:
-            if provider == "whisper_cpp":
-                from app.voice.whisper_cpp import transcribe
-                return transcribe(audio_bytes)
             if provider == "faster_whisper":
                 return _faster_whisper(audio_bytes, preview=True) if preview else _faster_whisper(audio_bytes)
-            raise RuntimeError("STT_PROVIDER must be whisper_cpp or faster_whisper")
+            raise RuntimeError("STT_PROVIDER must be deepgram or faster_whisper")
         finally:
             _inference_lock.release()
             logger.info("speech_to_text provider=%s partial=%s elapsed_ms=%d", provider, preview,
@@ -88,7 +73,7 @@ def decoder_beam_size() -> int:
 
 
 def _faster_whisper(audio_bytes: bytes, *, beam_size: int | None = None, preview: bool = False) -> str:
-    from app.voice.whisper_cpp import normalize_audio
+    from app.voice.audio import normalize_audio
 
     audio_bytes = normalize_audio(audio_bytes)
     file_descriptor, path = tempfile.mkstemp(suffix=".wav")
