@@ -24,7 +24,7 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
     if len(content) > MAX_AUDIO_BYTES:
         raise HTTPException(status_code=413, detail="Tệp âm thanh vượt giới hạn 15 MB.")
 
-    from app.voice.transcription import SpeechBusy, speech_to_text
+    from app.voice.transcription import SpeechBusy, speech_to_text, decoder_beam_size
     from app.voice.whisper_cpp import InvalidAudio
 
     try:
@@ -37,6 +37,7 @@ async def transcribe(audio: UploadFile = File(...), user: dict = Depends(get_cur
             "model": os.getenv("WHISPER_CPP_MODEL", "base-q8_0") if cpp else os.getenv("WHISPER_MODEL", "base"),
             "compute_type": "" if cpp else os.getenv("WHISPER_COMPUTE_TYPE", "int8"),
             "elapsed_ms": round((time.monotonic() - started) * 1000),
+            "beam_size": 0 if cpp else decoder_beam_size(),
         }
     except SpeechBusy as exc:
         raise HTTPException(status_code=429, detail=str(exc), headers={"Retry-After": "2"}) from exc
@@ -90,7 +91,12 @@ def _speak_text(text: str, voice: str | None = None) -> Response:
         raise HTTPException(status_code=404, detail="Giọng đọc này chưa được cài đặt.")
 
     try:
+        started = time.monotonic()
         audio = text_to_speech(text, voice or "default")
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Tạo giọng đọc thất bại. Kiểm tra model Piper.") from exc
-    return Response(content=audio, media_type="audio/wav")
+    duration_ms = (time.monotonic() - started) * 1000
+    return Response(content=audio, media_type="audio/wav", headers={
+        "Server-Timing": f"tts;dur={duration_ms:.1f}",
+        "Cache-Control": "no-store",
+    })

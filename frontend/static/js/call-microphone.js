@@ -4,7 +4,7 @@
   const ASSETS = "/vendor/vad/v0.0.31-ort1.22.0/";
   const SETTINGS = Object.freeze({
     model: "v5", positiveSpeechThreshold: 0.5, negativeSpeechThreshold: 0.35,
-    redemptionMs: 550, preSpeechPadMs: 300, minSpeechMs: 96,
+    redemptionMs: 400, preSpeechPadMs: 300, minSpeechMs: 96,
     submitUserSpeechOnPause: false, startOnLoad: false,
   });
   let libraryPromise;
@@ -56,6 +56,7 @@
     constructor(callbacks = {}, dependencies = {}) {
       this.callbacks = callbacks;
       this.deps = dependencies;
+      this.now = dependencies.now || (() => performance.now());
       this.context = dependencies.context || new (root.AudioContext || root.webkitAudioContext)();
       this.resuming = this.context.resume();
       // Avoid an unhandled rejection while the permission prompt is open.
@@ -97,6 +98,11 @@
           resumeStream: async () => this.stream,
           ortConfig: (ort) => { ort.env.wasm.numThreads = 1; ort.env.wasm.proxy = false; ort.env.logLevel = "error"; },
           onSpeechStart: () => this._startSpeech(),
+          onFrameProcessed: (probabilities) => {
+            if (this._valid() && probabilities.isSpeech >= SETTINGS.positiveSpeechThreshold) {
+              this.lastVoiceAt = this.now();
+            }
+          },
           onSpeechEnd: (samples) => this._speech(samples, 16000),
           onVADMisfire: () => this._misfire(),
         });
@@ -145,7 +151,9 @@
 
     _speech(samples, rate) {
       if (!this._valid() || !samples?.length) return;
-      const data = { samples, rate, capture_method: this.method };
+      const captured = this.now();
+      const data = { samples, rate, capture_method: this.method, captured_at_ms: captured,
+        vad_wait_ms: this.vad && Number.isFinite(this.lastVoiceAt) ? captured - this.lastVoiceAt : null };
       this.setEnabled(false); // Close the gate before starting upload/TTS.
       this.callbacks.onSpeech?.(data);
     }
@@ -178,6 +186,7 @@
       this.enabled = enabled;
       const cycle = ++this.cycle;
       this.activeCycle = -1;
+      this.lastVoiceAt = null;
       this._setTracks(enabled);
       clearTimeout(this.maxTimer);
       this.transitions = this.transitions.then(async () => {

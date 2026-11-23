@@ -28,7 +28,7 @@ jobs:
       - name: Check deployment script
         run: bash -n deployment/deploy-vps.sh
       - name: Test call microphone lifecycle
-        run: node --test frontend/tests/call-microphone.test.cjs
+        run: node --test frontend/tests/*.test.cjs
 
   deploy:
     needs: test

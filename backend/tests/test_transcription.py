@@ -187,3 +187,30 @@ def test_api_requires_auth():
     app.include_router(voice_routes.router)
     with TestClient(app) as api:
         assert api.post("/api/voice/transcribe", files={"audio": ("voice.wav", b"audio")}).status_code == 401
+
+
+@pytest.mark.parametrize("beam", [1, 3, 5])
+def test_beam_selection_is_applied_to_decoder(monkeypatch, beam):
+    monkeypatch.setenv("WHISPER_BEAM_SIZE", str(beam))
+    def decode(path, **kwargs):
+        assert kwargs["beam_size"] == beam
+        return iter([SimpleNamespace(text="Không đồng ý.")]), None
+    with patch.object(transcription, "_get_model", return_value=SimpleNamespace(transcribe=decode)):
+        assert transcription._faster_whisper(wav_bytes()) == "Không đồng ý."
+
+
+def test_invalid_beam_is_not_silently_applied(monkeypatch):
+    monkeypatch.setenv("WHISPER_BEAM_SIZE", "999")
+    with pytest.raises(ValueError):
+        transcription.decoder_beam_size()
+
+
+def test_tts_returns_server_timing_without_changing_audio():
+    import sys
+    fake = SimpleNamespace(available_caller_voices=lambda: [], text_to_speech=lambda *_: b"RIFFtest")
+    with patch.dict(sys.modules, {"app.voice.synthesis": fake}), client() as api:
+        result = api.post("/api/voice/speak", json={"text": "Alo"})
+    assert result.status_code == 200
+    assert result.content == b"RIFFtest"
+    assert result.headers["server-timing"].startswith("tts;dur=")
+    assert result.headers["cache-control"] == "no-store"

@@ -50,7 +50,14 @@ def speech_to_text(audio_bytes: bytes) -> str:
         _inference_lock.release()
 
 
-def _faster_whisper(audio_bytes: bytes) -> str:
+def decoder_beam_size() -> int:
+    value = int(os.getenv("WHISPER_BEAM_SIZE", "3"))
+    if value not in (1, 3, 5):
+        raise ValueError("WHISPER_BEAM_SIZE must be 1, 3 or 5")
+    return value
+
+
+def _faster_whisper(audio_bytes: bytes, *, beam_size: int | None = None) -> str:
     from app.voice.whisper_cpp import normalize_audio
 
     audio_bytes = normalize_audio(audio_bytes)
@@ -58,7 +65,9 @@ def _faster_whisper(audio_bytes: bytes) -> str:
     try:
         with os.fdopen(file_descriptor, "wb") as audio_file:
             audio_file.write(audio_bytes)
-        segments, _ = _get_model().transcribe(path, language="vi")
+        segments, _ = _get_model().transcribe(
+            path, language="vi", beam_size=decoder_beam_size() if beam_size is None else beam_size,
+        )
         return "".join(segment.text for segment in segments).strip()
     finally:
         Path(path).unlink(missing_ok=True)

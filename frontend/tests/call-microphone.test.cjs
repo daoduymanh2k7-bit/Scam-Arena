@@ -101,3 +101,17 @@ test('long speech flush submits once and closes the listening gate', async () =>
   assert.equal(flush, false);
   await f.capture.destroy();
 });
+
+test('endpoint timing uses only speech frames from the current turn', async () => {
+  let now = 100;
+  const f = fixture({ dependencies: { now: () => now } });
+  await f.capture.initialize(); await f.capture.setEnabled(true);
+  await f.capture._queueFrame(async () => f.options().onFrameProcessed({ isSpeech: 0.9 }));
+  now = 500;
+  await f.capture._queueFrame(async () => f.options().onSpeechEnd(new Float32Array(1600)));
+  assert.equal(f.events[0].vad_wait_ms, 400);
+  await f.capture.setEnabled(true);
+  await f.capture._queueFrame(async () => f.options().onSpeechEnd(new Float32Array(1600)));
+  assert.equal(f.events[1].vad_wait_ms, null);
+  await f.capture.destroy();
+});

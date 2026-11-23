@@ -67,6 +67,8 @@
   const intentMethods = { rule: "Luật", rasa: "Rasa", llm: "LLM", fallback: "Dự phòng" };
 
   function addSubtitleInfo(entry, text) {
+    const existing = entry.querySelector(".call-subtitle-info div");
+    if (existing) { existing.textContent += ` · ${text}`; return; }
     const info = document.createElement("details");
     info.className = "call-subtitle-info";
     const toggle = document.createElement("summary");
@@ -102,7 +104,7 @@
     phoneAudio.load();
   }
 
-  function playAudio(source, loop = false) {
+  function playAudio(source, loop = false, onStarted = null) {
     stopAudio();
     phoneAudio.loop = loop;
     phoneAudio.src = source;
@@ -112,19 +114,22 @@
         cancelPlayback = null;
         phoneAudio.removeEventListener("ended", ended);
         phoneAudio.removeEventListener("error", failed);
+        phoneAudio.removeEventListener("playing", playing);
         resolve(played);
       };
       const cancel = () => finish(false);
       const ended = () => finish(true);
       const failed = () => finish(false);
+      const playing = () => { onStarted?.(); };
       cancelPlayback = cancel;
       phoneAudio.addEventListener("ended", ended);
       phoneAudio.addEventListener("error", failed);
+      phoneAudio.addEventListener("playing", playing, { once: true });
       phoneAudio.play().then(() => { if (loop) finish(true); }, failed);
     });
   }
 
-  async function speakLine(line, run, metadata = {}) {
+  async function speakLine(line, run, metadata = {}, latency = null, onStarted = null) {
     if (run !== callRun) return false;
     const source = lineSources[metadata.line_source ?? "fixed"] ?? "Không rõ nguồn";
     const timing = metadata.line_source && metadata.line_source !== "fixed" && Number.isFinite(metadata.line_latency_ms)
@@ -132,11 +137,17 @@
       : "";
     addSubtitle("caller", line, `Nguồn: ${source}${timing}`);
     try {
-      const wav = await Api.speakText(line, currentVoice);
+      const request = () => Api.speakText(line, currentVoice, latency);
+      const wav = latency ? await latency.measure("tts_ms", request) : await request();
       if (run !== callRun) return false;
       const url = URL.createObjectURL(wav);
       try {
-        return await playAudio(url);
+        latency?.beginPlayback();
+        return await playAudio(url, false, () => {
+          if (run !== callRun) return;
+          latency?.audioStarted();
+          onStarted?.();
+        });
       } finally {
         URL.revokeObjectURL(url);
       }
@@ -196,7 +207,7 @@
     }
   }
 
-  async function handleReply(text, elapsed, run, recognition = "Whisper") {
+  async function handleReply(text, elapsed, run, recognition = "Whisper", latency = null) {
     clearTimeout(greetingTimer);
     const subtitle = addSubtitle("speech", text);
     const isIntro = introPhase !== "scenario";
@@ -204,6 +215,7 @@
     setTurnBusy(true);
     callStatus.textContent = "Đang xử lý câu trả lời…";
     try {
+      const replyStarted = performance.now();
       let response;
       if (introPhase !== "scenario") {
         const normalized = text.toLocaleLowerCase("vi").replace(/[.,!?…]+/g, " ").replace(/\s+/g, " ").trim();
@@ -239,8 +251,11 @@
       }
 
       const line = response.bot_text;
+      if (latency) latency.reply_ms = performance.now() - replyStarted;
       callStatus.textContent = "Người gọi đang nói…";
-      const heard = line ? await speakLine(line, run, response) : true;
+      const heard = line ? await speakLine(line, run, response, latency, () => {
+        if (latency) addSubtitleInfo(subtitle, latency.description());
+      }) : true;
       if (run !== callRun) return;
       if (response.ended) {
         const score = Number.isFinite(response.score) ? ` · ${response.score}/100` : "";
@@ -314,14 +329,18 @@
     setTurnBusy(true);
     callStatus.textContent = "Đang nhận diện lời nói…";
     try {
-      const result = await Api.transcribeAudio(samplesToWav(data.samples, data.rate));
+      const latency = new CallLatency(data);
+      const audio = await latency.measure("encode_ms", () => samplesToWav(data.samples, data.rate));
+      const result = await latency.measure("stt_ms", () => Api.transcribeAudio(audio));
+      latency.stt_server_ms = result.elapsed_ms;
       if (run !== callRun) return;
       const text = result.text.trim();
       if (!text) throw new Error("Chưa nghe rõ câu vừa rồi.");
       const recognition = [data.capture_method, result.engine || "Whisper", result.model,
         typeof result.compute_type === "string" ? result.compute_type.toUpperCase() : null,
-        Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null].filter(Boolean).join(" · ");
-      await handleReply(text, elapsed, run, recognition);
+        Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null,
+        result.beam_size > 0 ? `beam ${result.beam_size}` : null].filter(Boolean).join(" · ");
+      await handleReply(text, elapsed, run, recognition, latency);
     } catch (error) {
       if (run !== callRun) return;
       addSubtitle("notice", error.message);

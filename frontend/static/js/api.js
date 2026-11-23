@@ -50,7 +50,7 @@ const Api = (() => {
       form.append("audio", blob, blob.type === "audio/wav" ? "recording.wav" : "recording.webm");
       return fetch("/api/voice/transcribe", { method: "POST", body: form }).then(asJson);
     },
-    async speakText(text, voiceId = null) {
+    async speakText(text, voiceId = null, timing = null) {
       const query = voiceId ? `?voice=${encodeURIComponent(voiceId)}` : "";
       const response = await fetch(`/api/voice/speak${query}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -61,7 +61,10 @@ const Api = (() => {
         try { detail = (await response.json()).detail || detail; } catch (_) { /* empty response */ }
         throw new Error(detail);
       }
-      return response.blob();
+      const audio = await response.blob();
+      const duration = response.headers.get("Server-Timing")?.match(/(?:^|,)\s*tts;dur=([\d.]+)/)?.[1];
+      if (timing && duration !== undefined) timing.tts_server_ms = Number(duration);
+      return audio;
     },
   };
 })();
