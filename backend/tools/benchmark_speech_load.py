@@ -22,6 +22,7 @@ import urllib.parse
 import urllib.request
 
 import psycopg
+import av
 
 
 class Reply:
@@ -79,6 +80,19 @@ def prefix(pcm, seconds):
     return output.getvalue()
 
 
+def normalize(audio):
+    """Independent of app package version so the old deployed image can be measured."""
+    pcm = bytearray()
+    resampler = av.AudioResampler(format="s16", layout="mono", rate=16000)
+    with av.open(io.BytesIO(audio)) as source:
+        for frame in source.decode(audio=0):
+            for converted in resampler.resample(frame):
+                pcm.extend(converted.to_ndarray().tobytes())
+        for converted in resampler.resample(None):
+            pcm.extend(converted.to_ndarray().tobytes())
+    return prefix(pcm, len(pcm) / 32000)
+
+
 def cgroup(name):
     try:
         return Path("/sys/fs/cgroup", name).read_text()
@@ -124,8 +138,7 @@ async def run(args):
             response = await clients[0].post("/api/voice/speak", params=query,
                 json={"text": "Tôi không đồng ý chuyển tiền vì tôi muốn tự gọi tổng đài để xác minh thông tin trước, bạn hãy cho tôi biết tên đơn vị và số điện thoại liên hệ chính thức để tôi kiểm tra lại."})
             response.raise_for_status()
-            from app.voice.whisper_cpp import normalize_audio
-            args.audio.write_bytes(normalize_audio(response.content))
+            args.audio.write_bytes(normalize(response.content))
         audio = args.audio.read_bytes()
         with wave.open(io.BytesIO(audio)) as wav:
             assert (wav.getframerate(), wav.getnchannels(), wav.getsampwidth()) == (16000, 1, 2)
@@ -136,6 +149,7 @@ async def run(args):
         # Warm the resident HTTP decoder; no duplicate benchmark model is loaded.
         warm = await clients[0].post("/api/voice/transcribe", files={"audio": ("warm.wav", audio, "audio/wav")})
         warm.raise_for_status()
+        decoder = {key: warm.json().get(key) for key in ("engine", "model", "compute_type", "beam_size")}
 
         async def utterance(index, users, round_no, started):
             client = clients[index]
@@ -212,6 +226,7 @@ async def run(args):
         else:
             cleanup_ok = True
     report = dict(label=args.label, rounds=args.rounds, adaptive=args.adaptive, cadence_s=args.cadence,
+                  decoder=decoder,
                   audio_sha256=hashlib.sha256(audio).hexdigest(), audio_duration_s=duration,
                   phases=phases, rows=rows, cleanup_ok=cleanup_ok)
     print(json.dumps(report, ensure_ascii=False), flush=True)

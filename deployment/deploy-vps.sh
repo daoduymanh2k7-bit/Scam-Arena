@@ -41,7 +41,7 @@ esac
 
 cd "$app"
 backup="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-$revision.dump"
-docker compose -p scam-arena exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-acl' > "$backup.tmp"
+docker compose -p scam-arena exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-acl' > "$backup.tmp" < /dev/null
 test -s "$backup.tmp"
 mv "$backup.tmp" "$backup"
 
@@ -61,7 +61,7 @@ docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 scam-are
 curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8000/health
 if [[ "$provider" == faster_whisper ]]; then
   # Also verify the selected model can load; web health alone cannot prove ASR readiness.
-  docker compose -p scam-arena exec -T scam-arena python -c 'from app.voice.transcription import warmup_speech; warmup_speech(); print("Faster-Whisper model load verified")'
+  docker compose -p scam-arena exec -T scam-arena python -c 'from app.voice.transcription import warmup_speech; warmup_speech(); print("Faster-Whisper model load verified")' < /dev/null
   docker compose -p scam-arena stop whisper-cpp
 fi
 printf '\n%s\n' "$revision" > "$app/.deployed-revision"

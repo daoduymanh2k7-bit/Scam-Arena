@@ -64,6 +64,7 @@ jobs:
           set -euo pipefail
           mkdir -p speech-load-results
           ssh production 'if test -s /opt/scam-arena/.deployed-revision; then cat /opt/scam-arena/.deployed-revision; else printf "unknown\n"; fi' > speech-load-results/before-revision.txt
+          ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/before-image-id.txt
           ssh production 'docker exec -i scam-arena python - --label before --cadence 2.1 --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
           ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
       - name: Upload tracked source and deploy
@@ -74,6 +75,8 @@ jobs:
           # Expand the runner-provided SHA locally, then pass it as a remote argument.
           # shellcheck disable=SC2029
           ssh production "bash -s -- '${GITHUB_SHA}'" < deployment/deploy-vps.sh
+          # shellcheck disable=SC2029
+          ssh production "grep -Fxq '${GITHUB_SHA}' /opt/scam-arena/.deployed-revision"
       - name: Measure updated VPS speech service
         if: inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]')
         run: |
@@ -82,6 +85,7 @@ jobs:
           ssh production 'docker exec -i scam-arena python - --label after --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/after.json
           ssh production 'rm -f /root/scam-arena-speech-load.wav'
           printf '%s\n' "$GITHUB_SHA" > speech-load-results/after-revision.txt
+          ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/after-image-id.txt
       - name: Save speech load measurements
         if: always() && (inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]'))
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
