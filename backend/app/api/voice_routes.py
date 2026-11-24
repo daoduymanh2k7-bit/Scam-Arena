@@ -4,8 +4,9 @@ import os
 import time
 import io
 import wave
+from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
@@ -25,8 +26,44 @@ def stt_status(user: dict = Depends(get_current_user)):
         from app.voice.deepgram import metadata
         return {"provider": provider, **metadata(), "key_configured": bool(os.getenv("DEEPGRAM_API_KEY", "").strip()),
                 "language": os.getenv("DEEPGRAM_LANGUAGE", "vi"), "transport": "bounded_audio_clips",
+                "streaming_enabled": os.getenv("DEEPGRAM_STREAMING_ENABLED", "true").lower() in {"true", "1"},
                 "key_verified": False}
     return {"provider": provider, "key_required": False, "key_verified": False}
+
+
+@router.websocket("/transcribe/stream")
+async def transcribe_stream(websocket: WebSocket):
+    # Cookie authentication alone is insufficient for cross-site WebSocket requests.
+    origin = urlsplit(websocket.headers.get("origin", ""))
+    if origin.scheme not in {"http", "https"} or origin.netloc != websocket.headers.get("host"):
+        await websocket.close(code=1008)
+        return
+    from app.auth import COOKIE_NAME
+    try:
+        user = await run_in_threadpool(get_current_user, token=websocket.cookies.get(COOKIE_NAME))
+    except HTTPException:
+        await websocket.close(code=1008)
+        return
+    from app.voice.deepgram_stream import enabled, relay
+    if not enabled():
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    try:
+        await relay(websocket, str(user["user_id"]))
+    except (WebSocketDisconnect, ConnectionError):
+        pass
+    except Exception:
+        # Never expose provider messages, credentials or audio through diagnostics.
+        try:
+            await websocket.send_json({"type": "error", "message": "Streaming chưa sẵn sàng; chuyển sang nhận diện cả câu."})
+        except (RuntimeError, WebSocketDisconnect):
+            pass
+    finally:
+        try:
+            await websocket.close()
+        except (RuntimeError, WebSocketDisconnect):
+            pass
 
 
 @router.post("/transcribe/partial")

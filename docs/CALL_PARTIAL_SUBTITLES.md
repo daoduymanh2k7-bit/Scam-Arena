@@ -53,8 +53,10 @@ a second resident model/server on the 2-core / 4 GB VPS.
   complete-utterance recognition continues as before.
 
 Set `STT_PARTIAL_ENABLED=false` in the private `.env`, then recreate the app to
-disable server drafts. Default is true. The Deepgram provider uses
-complete-utterance recognition, with an explicit unavailable draft response.
+disable local server drafts. Default is true. Deepgram call captions use a separate
+WebSocket relay controlled by `DEEPGRAM_STREAMING_ENABLED` (default true), not
+growing REST snapshots. See [Deepgram setup](DEEPGRAM_SETUP.md) for finalization,
+limits and REST fallback. The snapshot endpoint remains unavailable for Deepgram.
 Local drafts require no SQL migration or extra container. Deepgram requires its own API key.
 
 ## Tradeoffs

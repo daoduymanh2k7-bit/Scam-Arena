@@ -137,3 +137,21 @@ test('draft audio includes pre-roll, grows at bounded intervals and stops on mut
   assert.equal(packets.length, 2);
   await f.capture.destroy();
 });
+
+test('stream sends pre-roll once, new frames once, flushes tail and gates mute', async () => {
+  const packets = [];
+  const f = fixture({ callbacks: { onStreamAudio: samples => packets.push(new Float32Array(samples)) } });
+  await f.capture.initialize(); await f.capture.setEnabled(true);
+  const send = value => f.capture._queueFrame(async () => f.options().onFrameProcessed(
+    { isSpeech: 0.9 }, new Float32Array(512).fill(value)));
+  await send(1); await send(2);
+  await f.capture._queueFrame(async () => f.options().onSpeechStart());
+  await send(3); await send(4); await send(5);
+  await f.capture._queueFrame(async () => f.options().onSpeechEnd(new Float32Array(2560)));
+  const flattened = packets.flatMap(x => [...x]);
+  assert.equal(flattened.length, 2560);
+  for (let i = 0; i < 5; i++) assert.ok(flattened.slice(i * 512, (i + 1) * 512).every(x => x === i + 1));
+  await send(6);
+  assert.equal(packets.reduce((n, x) => n + x.length, 0), 2560);
+  await f.capture.destroy();
+});

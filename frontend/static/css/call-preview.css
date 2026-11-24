@@ -65,6 +65,8 @@
 .call-subtitle-info summary::-webkit-details-marker { display: none; }
 .call-subtitle-info[open] summary { background: #50466b; }
 .call-subtitle-info > div { margin-top: 5px; color: #d5cce8; font-size: 11px; line-height: 1.45; }
+.call-retry-reply { margin-top: 8px; padding: 5px 9px; border: 1px solid #8880a4; border-radius: 7px; background: #343047; color: #eee9ff; font-size: 12px; cursor: pointer; }
+.call-retry-reply:disabled { opacity: .45; cursor: default; }
 
 .call-scenario-picker {
   grid-area: 1 / 3;

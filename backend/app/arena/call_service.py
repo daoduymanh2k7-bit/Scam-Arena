@@ -30,6 +30,7 @@ from app.schemas import (
 from app.arena.normalization import normalize_phrase
 from app.database import clear_intent_rule_cache
 from app.arena.line_generator import resolve_bot_line, regenerate_line_for_turn
+from app.arena.phone_dialogue import phone_opening, clarification_fallback
 import logging
 
 logger = logging.getLogger(__name__)
@@ -158,7 +159,7 @@ def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message
             session_id=session_id,
             scenario_key=scenario["scenario_name"],
             scenario_title=scenario["title"],
-            bot_text=opening_line["line_text"],
+            bot_text=phone_opening(opening_line["line_text"]) if interaction_mode == "call" else opening_line["line_text"],
             stage=node["stage"],
         )
 
@@ -227,6 +228,8 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             raise ValueError("Phiên gọi đang ở node kết thúc.")
         if not user_text.strip():
             raise ValueError("Câu trả lời không được để trống.")
+        if session["interaction_mode"] == "call" and session["turn_no"] == 0:
+            session["caller_line"] = phone_opening(session["caller_line"])
 
         result = detect_intent(
             user_text,
@@ -362,6 +365,9 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             stage = session["stage"]
             outcome = None
             ended = False
+            if session["interaction_mode"] == "call" and session["stage"] == "intro" and intent == "unknown":
+                payload = session.get("scenario_payload") or {}
+                bot_text = clarification_fallback(user_text, caller_line, bot_text, payload.get("category", ""))
         else:
             target_node_id = target["target_node_id"]
             bot_text = target["target_text"]
@@ -377,6 +383,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                 target_node=target_node_id, intent=intent, user_text_masked=user_text_masked,
                 original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
                 context={"sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
+                         "caller_line": caller_line,
                          "interaction_mode": session["interaction_mode"]},
             )
             bot_text = line_result.text
@@ -470,13 +477,23 @@ def rate_generated_line(session_id: UUID, turn_no: int, line_id: int, user_id: s
     return LinePreferenceResponse(line_id=line_id,reaction='like',preference_score=score)
 
 
+def _check_regeneration_turn(turn, turn_no, old_line_id):
+    if not turn:
+        raise KeyError(turn_no)
+    if turn["interaction_mode"] == "call" and (turn["latest_turn_no"] != turn_no or turn["ended_at"] is not None):
+        raise ValueError("Chỉ có thể tạo lại câu trả lời mới nhất khi cuộc gọi đang diễn ra.")
+    if old_line_id is not None and old_line_id != turn["line_id"]:
+        raise ValueError("Câu trả lời đã thay đổi. Hãy dùng câu mới nhất.")
+
+
 def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None, user_id: str) -> RegeneratedLineResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
-        cursor.execute("""SELECT t.target_node_id,t.intent,t.is_reprompt,s.scenario_id
+        cursor.execute("""SELECT t.target_node_id,t.intent,t.is_reprompt,s.scenario_id,
+                              t.line_id,t.line_source,t.bot_reply_text,s.interaction_mode,s.ended_at,s.turn_no AS latest_turn_no
                        FROM call_turns t JOIN call_sessions s USING(session_id)
                        WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s""",(session_id,user_id,turn_no))
         turn=cursor.fetchone()
-        if not turn: raise KeyError(turn_no)
+        _check_regeneration_turn(turn, turn_no, old_line_id)
         if not turn['target_node_id'] or not turn['intent']: raise ValueError('Lượt này chưa hỗ trợ tạo lại lời thoại.')
         cursor.execute("SELECT is_terminal FROM dialogue_nodes WHERE node_id=%s",(turn['target_node_id'],))
         target=cursor.fetchone()
@@ -488,8 +505,18 @@ def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None
             if not cursor.fetchone(): raise KeyError(old_line_id)
     result=regenerate_line_for_turn(session_id=session_id,turn_no=turn_no,old_line_id=old_line_id,user_id=user_id)
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
-        if old_line_id is not None:
-            _adjust_line_preference(cursor,old_line_id,-1)
+        # Generation happens outside locks. Recheck under the session/turn locks so
+        # a double click or a concurrent new turn cannot penalize/replace stale text.
+        cursor.execute("""SELECT t.line_id,t.bot_reply_text,s.interaction_mode,s.ended_at,s.turn_no AS latest_turn_no
+                          FROM call_turns t JOIN call_sessions s USING(session_id)
+                          WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s FOR UPDATE OF s,t""",
+                       (session_id,user_id,turn_no))
+        current = cursor.fetchone()
+        _check_regeneration_turn(current, turn_no, old_line_id)
+        if current['line_id'] != turn['line_id'] or current['bot_reply_text'] != turn['bot_reply_text']:
+            raise ValueError("Câu trả lời đã được tạo lại. Hãy dùng câu mới nhất.")
+        if turn['line_id'] is not None and turn['line_source'] != 'fixed':
+            _adjust_line_preference(cursor,turn['line_id'],-1)
         cursor.execute("""UPDATE call_turns SET bot_reply_text=%s,line_id=%s,line_source=%s,line_latency_ms=%s
                        WHERE session_id=%s AND turn_no=%s""",
                        (result.text,result.line_id,result.source,result.latency_ms,session_id,turn_no))

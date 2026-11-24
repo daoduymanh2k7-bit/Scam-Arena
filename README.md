@@ -346,3 +346,5 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 - [JSON Schema kịch bản](docs/scenario.schema.json)
 
 - [Thiết lập Deepgram cho nhận diện tiếng Việt](docs/DEEPGRAM_SETUP.md)
+- [Tạo câu trả lời khác trong cuộc gọi và điểm ưu tiên lời thoại](docs/CALL_REPLY_RETRY.md)
+- Cuộc gọi Deepgram hỗ trợ phụ đề streaming qua WebSocket, chốt câu bằng Silero; REST được giữ làm dự phòng. Đặt `DEEPGRAM_STREAMING_ENABLED=false` để so sánh cách cũ.

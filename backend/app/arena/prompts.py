@@ -15,6 +15,9 @@ DIALOGUE_PROMPT = (
     + CONTEXT_RULES +
     "Đọc player_text cùng recent_turns, earlier_unsummarized_turns và conversation_summary. "
     "Trả lời trực tiếp câu hỏi hoặc phản ứng mới nhất trước; chỉ nối tới objective khi phù hợp. "
+    "caller_line là lời người gọi vừa nói mà người chơi đang đáp lại. Nhãn unknown không có nghĩa câu nói vô nghĩa: "
+    "'Giao dịch gì vậy?' là câu hỏi cần giải thích; 'Có, tôi đang nghe máy' xác nhận đang nghe, "
+    "hãy nói tiếp nội dung, không hỏi lại còn nghe máy hay yêu cầu người chơi giải thích yêu cầu của họ. "
     "Nếu câu nghe được mơ hồ, thiếu nghĩa hoặc có khả năng sai nhận diện, hỏi lại ngắn gọn một ý; "
     "lượt này chỉ làm rõ, chưa thúc đẩy requested_action. Ví dụ nghe 'dạ rồi kia chưa xem cái gì ấy' "
     "thì hỏi 'Anh/chị nói lại giúp tôi được không ạ?', không yêu cầu đọc mã. "

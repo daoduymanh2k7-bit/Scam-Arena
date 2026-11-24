@@ -33,10 +33,12 @@
   let cancelPlayback = null;
   let callRun = 0;
   let sessionId = null;
+  let latestCallTurn = null;
   let introPhase = "greeting";
   let turnBusy = false;
   let microphone = null;
   let partialSpeech = null;
+  let streamingSpeech = null;
   let partialEntry = null;
   let micMuted = false;
   let micError = "";
@@ -131,13 +133,59 @@
     });
   }
 
-  async function speakLine(line, run, metadata = {}, latency = null, onStarted = null) {
+  function updateRetryButtons() {
+    subtitlesLog.querySelectorAll(".call-retry-reply").forEach(button => {
+      button.disabled = turnBusy || !sessionId || Number(button.dataset.turn) !== latestCallTurn;
+    });
+  }
+
+  function addReplyRetry(entry, metadata, run) {
+    if (!Number.isInteger(metadata.turn_no) || metadata.ended) return;
+    const ownerSession = sessionId;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "call-retry-reply";
+    button.dataset.turn = metadata.turn_no;
+    button.textContent = "Tạo câu trả lời khác";
+    button.title = "Dùng lại câu bạn vừa nói; giữ nguyên điểm và nhánh kịch bản.";
+    button.addEventListener("click", async () => {
+      if (turnBusy || run !== callRun || sessionId !== ownerSession || latestCallTurn !== metadata.turn_no) return;
+      clearTimeout(greetingTimer);
+      streamingSpeech?.cancel();
+      setTurnBusy(true);
+      stopAudio();
+      button.textContent = "Đang tạo câu mới…";
+      callStatus.textContent = "Đang tạo câu trả lời khác…";
+      try {
+        const alternative = await Api.regenerateLine(ownerSession, metadata.turn_no,
+          metadata.line_source === "fixed" ? null : metadata.line_id);
+        if (run !== callRun || sessionId !== ownerSession) return;
+        const heard = await speakLine(alternative.bot_text, run, alternative, null, null, entry);
+        if (!heard && run === callRun) addSubtitle("notice", "Không phát được âm thanh. Câu mới đã có trong phụ đề.");
+      } catch (error) {
+        if (run === callRun) addSubtitle("notice", `Chưa tạo được câu mới: ${error.message}`);
+      } finally {
+        if (run === callRun) {
+          button.textContent = "Tạo câu trả lời khác";
+          waitForReply();
+        }
+      }
+    });
+    entry.append(button);
+    updateRetryButtons();
+  }
+
+  async function speakLine(line, run, metadata = {}, latency = null, onStarted = null, replacement = null) {
     if (run !== callRun) return false;
     const source = lineSources[metadata.line_source ?? "fixed"] ?? "Không rõ nguồn";
     const timing = metadata.line_source && metadata.line_source !== "fixed" && Number.isFinite(metadata.line_latency_ms)
       ? ` · ${metadata.line_latency_ms} ms`
       : "";
-    addSubtitle("caller", line, `Nguồn: ${source}${timing}`);
+    const entry = replacement || addSubtitle("caller", line);
+    entry.querySelector("p").textContent = line;
+    entry.querySelectorAll(".call-subtitle-info, .call-retry-reply").forEach(item => item.remove());
+    addSubtitleInfo(entry, `Nguồn: ${source}${timing}`);
+    addReplyRetry(entry, metadata, run);
     try {
       const request = () => Api.speakText(line, currentVoice, latency);
       const wav = latency ? await latency.measure("tts_ms", request) : await request();
@@ -160,6 +208,7 @@
 
   function setTurnBusy(busy) {
     turnBusy = busy;
+    updateRetryButtons();
     syncMicrophone();
   }
 
@@ -248,6 +297,7 @@
       } else {
         response = await Api.submitCallTurn(sessionId, text, elapsed);
         if (run !== callRun) return;
+        latestCallTurn = response.turn_no;
         const intent = intentNames[response.intent] ?? "Chưa xác định";
         const method = intentMethods[response.intent_method] ?? "Không rõ";
         addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Ý định: ${intent} · Cách gán nhãn: ${method}`);
@@ -293,6 +343,7 @@
     if (!microphone?.ready) return;
     void microphone.setEnabled(!turnBusy && !micMuted);
     if (turnBusy || micMuted) clearPartial();
+    if (micMuted) streamingSpeech?.cancel();
   }
 
   function clearPartial() {
@@ -302,6 +353,8 @@
   }
 
   function releaseMicrophone() {
+    streamingSpeech?.cancel();
+    streamingSpeech = null;
     clearPartial();
     partialSpeech = null;
     subtitlesLog.querySelectorAll(".call-subtitle--partial").forEach(entry => entry.remove());
@@ -342,18 +395,31 @@
     return new Blob([buffer], { type: "audio/wav" });
   }
 
-  async function recognizeSpeech(data, elapsed, run, draft = null) {
+  async function recognizeSpeech(data, elapsed, run, draft = null, streamResult = null) {
     setTurnBusy(true);
     callStatus.textContent = "Đang nhận diện lời nói…";
     try {
       const latency = new CallLatency(data);
-      const audio = await latency.measure("encode_ms", () => samplesToWav(data.samples, data.rate));
-      const result = await latency.measure("stt_ms", () => Api.transcribeAudio(audio));
+      let result;
+      if (streamResult) {
+        latency.encode_ms = 0;
+        result = await latency.measure("stt_ms", () => streamResult);
+      }
+      if (!result) {
+        if (run !== callRun) return;
+        const alreadyWaited = latency.stt_ms || 0;
+        const audio = await latency.measure("encode_ms", () => samplesToWav(data.samples, data.rate));
+        result = await latency.measure("stt_ms", () => Api.transcribeAudio(audio));
+        latency.stt_ms += alreadyWaited;
+        if (streamResult || data.stream_fallback) result.transport = "rest_fallback";
+      }
       latency.stt_server_ms = result.elapsed_ms;
+      latency.transport = result.transport;
       if (run !== callRun) return;
       const text = result.text.trim();
       if (!text) throw new Error("Chưa nghe rõ câu vừa rồi.");
       const recognition = [data.capture_method, result.engine || "Whisper", result.model,
+        result.transport === "websocket" ? "Streaming" : result.transport === "rest_fallback" ? "REST dự phòng" : null,
         typeof result.compute_type === "string" ? result.compute_type.toUpperCase() : null,
         Number.isFinite(result.elapsed_ms) ? `${result.elapsed_ms} ms` : null,
         result.beam_size > 0 ? `beam ${result.beam_size}` : null].filter(Boolean).join(" · ");
@@ -368,6 +434,7 @@
 
   async function openMicrophone(run) {
     if (microphone) return;
+    let pendingContext = null;
     micError = "";
     updateMicButton();
     if (!turnBusy) callStatus.textContent = listeningStatus();
@@ -375,7 +442,19 @@
       if (!navigator.mediaDevices?.getUserMedia || !(window.AudioContext || window.webkitAudioContext) || !window.CallMicrophone) {
         throw new Error("unsupported");
       }
+      // Resume under the answer-button gesture before awaiting network config.
+      pendingContext = new (window.AudioContext || window.webkitAudioContext)();
+      pendingContext.resume().catch(() => {});
       const current = () => mic === microphone && run === callRun;
+      const streamingConfig = await fetch("/api/voice/stt-status").then(r => r.ok ? r.json() : {}).catch(() => ({}));
+      if (run !== callRun) { void pendingContext.close(); return; }
+      const stream = streamingConfig.streaming_enabled && streamingConfig.key_configured && window.CallStream
+        ? new CallStream(text => {
+          if (!current() || turnBusy || micMuted || !partialEntry) return;
+          partialEntry.querySelector("p").textContent = text;
+          subtitlesLog.scrollTop = subtitlesLog.scrollHeight;
+        }) : null;
+      streamingSpeech = stream;
       const preview = new PartialSpeech(
         (data, signal) => Api.transcribePartial(samplesToWav(data.samples, data.rate), signal),
         (text) => {
@@ -395,24 +474,31 @@
           mic.elapsed = responseDelay();
           callStatus.textContent = "Đang nghe bạn nói…";
           clearPartial();
-          preview.start();
+          if (stream && !stream.failed && mic.method === "Silero VAD v5") stream.start();
+          else if (!streamingConfig.streaming_enabled) preview.start();
           partialEntry = addSubtitle("speech", "Đang nghe…");
           partialEntry.classList.add("call-subtitle--partial");
           partialEntry.querySelector("strong").textContent = "Máy đang nghe · Chữ tạm";
         },
         onPartialAudio: (data) => {
-          if (current() && !turnBusy && !micMuted) void preview.offer(data);
+          if (!stream && current() && !turnBusy && !micMuted) void preview.offer(data);
         },
-        wantsPartial: () => preview.canOffer(),
+        wantsPartial: () => !stream && preview.canOffer(),
+        onStreamAudio: samples => {
+          if (current() && !turnBusy && !micMuted) stream?.offer(samples);
+        },
         onSpeech: (data) => {
           if (!current() || turnBusy || micMuted) return;
           preview.stop();
           const draft = partialEntry;
           partialEntry = null;
           if (draft) draft.querySelector("strong").textContent = "Đang chốt câu…";
-          void recognizeSpeech(data, mic.elapsed, run, draft);
+          const streamResult = stream?.session ? stream.finish().catch(() => null) : null;
+          data.stream_fallback = Boolean(stream?.failed);
+          void recognizeSpeech(data, mic.elapsed, run, draft, streamResult);
         },
         onMisfire: () => {
+          stream?.cancel();
           if (current() && !turnBusy) { clearPartial(); callStatus.textContent = listeningStatus(); }
         },
         onFallback: () => {
@@ -425,13 +511,15 @@
           updateMicButton();
           if (!turnBusy) callStatus.textContent = micError;
         },
-      });
+      }, { context: pendingContext });
       microphone = mic;
+      pendingContext = null;
       await mic.initialize();
       if (!current()) { void mic.destroy().catch(() => {}); return; }
       syncMicrophone();
       if (!turnBusy && !micMuted) waitForReply();
     } catch (error) {
+      if (pendingContext) void pendingContext.close().catch(() => {});
       if (run !== callRun) return;
       releaseMicrophone();
       micError = error.message === "unsupported"
@@ -534,6 +622,7 @@
       sessionId = null;
     }
     introPhase = "greeting";
+    latestCallTurn = null;
     setTurnBusy(state === "active");
     phone.dataset.callState = state;
     callerTitle.textContent = state === "idle" ? "Điện thoại" : "Số không xác định";

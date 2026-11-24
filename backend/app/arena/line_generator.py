@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 from app.arena.normalization import normalize_phrase
+from app.arena.phone_dialogue import phone_opening, listening_acknowledgement
 from app.database import get_connection_pool
 from app.arena.conversation_memory import memory_context
 from app.arena.xapikey_client import request_json as request_xapikey_json, settings as xapikey_settings
@@ -41,6 +42,9 @@ def validate_line(text, player_text='', context=None):
     if re.search(r'\b(?:tôi là (?:một )?ai|mô hình ngôn ngữ|trợ lý ai|as an ai)\b',text,re.I): return None
     if '```' in text or text.strip().casefold()==player_text.strip().casefold(): return None
     if context:
+        if listening_acknowledgement(player_text) and re.search(
+                r"con nghe may|giai thich.*yeu cau cua (?:minh|ban)", normalize_phrase(text)):
+            return None
         line_fold=text.casefold()
         scenario_context=' '.join(str(context.get(k,'')) for k in (
             'scenario_title','scenario_category','sample_line','user_context','objective','requested_action','tactics'))
@@ -284,7 +288,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
         return fixed
     except Exception as exc:
         log.warning('Generated line unavailable: %s',exc)
-        if context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns')): return fixed
+        if intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns'))): return fixed
         try:
             with get_connection_pool().connection() as c,c.cursor() as cur:
                 cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=cur.fetchall()
@@ -308,9 +312,10 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
     with get_connection_pool().connection() as c,c.cursor() as cur:
         cur.execute("""SELECT sc.scenario_id,sc.scenario_name,sc.title,sc.payload,t.target_node_id,t.intent,t.is_reprompt,
                             t.user_text_masked,t.bot_reply_text,t.line_id,default_line.line_text AS text,n.node_key,
-                            n.objective,n.tactic,n.requested_action,s.interaction_mode
+                            n.objective,n.tactic,n.requested_action,s.interaction_mode,opening.line_text AS opening_text
                      FROM call_turns t JOIN call_sessions s USING(session_id)
                      JOIN scenarios sc ON sc.scenario_id=s.scenario_id
+                     LEFT JOIN dialogue_lines opening ON opening.line_id=s.opening_line_id
                      LEFT JOIN dialogue_nodes n ON n.node_id=t.target_node_id
                      LEFT JOIN dialogue_lines default_line ON default_line.node_id=n.node_id
                        AND default_line.source='fixed' AND default_line.is_reprompt=t.is_reprompt
@@ -333,6 +338,8 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
             'tactics':[row['tactic']] if row['tactic'] else [],'requested_action':row['requested_action'] or 'other',
             'sample_line':row['text'] or row['bot_reply_text'] or '', 'intent':row['intent'],
             'player_text':row['user_text_masked'] or '',
+            'caller_line':history[-1]['bot_reply_text'] if history else (
+                phone_opening(row.get('opening_text') or '') if row['interaction_mode']=='call' else row.get('opening_text') or ''),
             'recent_turns':[{'player_text_masked':r['user_text_masked'],'intent':r['intent'],'bot_line':r['bot_reply_text']} for r in history],
             'avoid_lines':[row['bot_reply_text']] if row['bot_reply_text'] else [],
             'instruction':'Đây là lần trả lời lại cùng một câu người chơi. Hãy đưa ra phản ứng khác, tự nhiên và đúng tình huống; không lặp câu cũ.'}

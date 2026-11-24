@@ -146,6 +146,7 @@
       if (!this._valid()) return;
       this.previewSpeaking = true;
       this.previewSent = 0;
+      this.streamSent = 0;
       clearTimeout(this.maxTimer);
       const cycle = this.cycle;
       this.maxTimer = setTimeout(() => this._flushLongSpeech(cycle), 14000);
@@ -153,15 +154,28 @@
     }
 
     _previewFrame(frame, speechProbability) {
-      if (!this._valid() || !frame || !this.callbacks.onPartialAudio) return;
+      if (!this._valid() || !frame || !(this.callbacks.onPartialAudio || this.callbacks.onStreamAudio)) return;
       this.previewFrames ||= [];
       if (!this.previewSpeaking && this.previewFrames.length >= 10) this.previewFrames.shift();
       // At most 15 seconds including pre-roll; final utterances are capped at 14s.
       if (this.previewFrames.length >= 468) return;
       this.previewFrames.push(new Float32Array(frame));
       const count = this.previewFrames.reduce((total, chunk) => total + chunk.length, 0);
+      // Send only NEW PCM, including pre-roll once and trailing VAD silence.
+      // Four Silero frames are approximately 128ms at 16 kHz.
+      if (this.previewSpeaking && this.callbacks.onStreamAudio && count - this.streamSent >= 2048) {
+        const audio = new Float32Array(count - this.streamSent);
+        let position = 0;
+        for (const chunk of this.previewFrames) {
+          const begin = Math.max(0, this.streamSent - position);
+          if (begin < chunk.length) audio.set(chunk.subarray(begin), Math.max(0, position - this.streamSent));
+          position += chunk.length;
+        }
+        this.streamSent = count;
+        this.callbacks.onStreamAudio(audio);
+      }
       // Do not start a new decoder while waiting for trailing silence to end.
-      if (!this.previewSpeaking || speechProbability < SETTINGS.positiveSpeechThreshold
+      if (!this.callbacks.onPartialAudio || !this.previewSpeaking || speechProbability < SETTINGS.positiveSpeechThreshold
           || count - this.previewSent < (this.previewSent ? 16800 : 19200)
           || (this.callbacks.wantsPartial && !this.callbacks.wantsPartial())) return;
       this.previewSent = count;
@@ -174,6 +188,16 @@
     _speech(samples, rate) {
       if (!this._valid() || !samples?.length) return;
       const captured = this.now();
+      if (this.previewSpeaking && this.callbacks.onStreamAudio && this.previewFrames?.length) {
+        const all = this.previewFrames;
+        let position = 0;
+        for (const chunk of all) {
+          const begin = Math.max(0, this.streamSent - position);
+          if (begin < chunk.length) this.callbacks.onStreamAudio(chunk.subarray(begin));
+          position += chunk.length;
+        }
+        this.streamSent = position;
+      }
       const data = { samples, rate, capture_method: this.method, captured_at_ms: captured,
         vad_wait_ms: this.vad && Number.isFinite(this.lastVoiceAt) ? captured - this.lastVoiceAt : null };
       this.setEnabled(false); // Close the gate before starting upload/TTS.

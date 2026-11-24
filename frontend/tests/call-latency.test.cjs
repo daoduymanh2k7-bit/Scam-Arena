@@ -24,3 +24,10 @@ test('missing or failed timing is explicit rather than fabricated', async () => 
   assert.match(timing.description(), /chưa đo được/);
   assert.doesNotMatch(timing.description(), /NaN/);
 });
+
+test('stream latency is post-endpoint wait, not the full recognition duration', () => {
+  const timing = new CallLatency();
+  timing.transport = 'websocket'; timing.stt_ms = 450; timing.stt_server_ms = 400;
+  assert.match(timing.description(), /Chờ chốt chữ streaming: 450 ms/);
+  assert.doesNotMatch(timing.description(), /HTTP còn lại/);
+});
