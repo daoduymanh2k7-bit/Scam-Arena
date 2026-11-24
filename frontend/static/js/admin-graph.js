@@ -100,7 +100,7 @@
     linesDialog.querySelector("#admin-lines-title").textContent = `${scenario.title} · ${nodeTitle(node)}`;
     renderNodeDetails(linesContent, scenario, node);
     linesContent.scrollTop = 0;
-    if (!linesDialog.open) linesDialog.showModal();
+    if (!linesDialog.open) linesDialog.show();
   }
   function renderNodeDetails(details, scenario, node) {
     details.replaceChildren();
@@ -494,18 +494,22 @@
       error.hidden = false;
     }
   }
-  openButton.addEventListener("click", () => {
-    if (!dialog.open) dialog.showModal();
-    if (!scenarios.length) loadScenarios();
+  document.addEventListener('arena:catalog-updated', () => {
+    scenarios=[];selectedScenarioKey=null;
+    if(!dialog.hidden)loadScenarios();
   });
-  document.getElementById("admin-close").addEventListener("click", () => dialog.close());
+  document.addEventListener("arena:viewchange", event => {
+    if(event.detail.mode!=="scenarios")return;
+    if (!scenarios.length) loadScenarios();
+    else requestAnimationFrame(fitGraph);
+  });
   scenarioSelect.addEventListener("change", () => {
     const scenario = scenarios.find((item) => item.key === scenarioSelect.value);
     if (scenario) selectScenario(scenario);
   });
   overviewButton.addEventListener("click", () => {
     overview.scrollTop = 0;
-    overviewDialog.showModal();
+    overviewDialog.show();
   });
   document.getElementById("admin-overview-close").addEventListener("click", () => overviewDialog.close());
   overviewDialog.addEventListener("click", (event) => { if (event.target === overviewDialog) overviewDialog.close(); });
@@ -545,5 +549,4 @@
   }, { passive: false });
   document.getElementById("admin-lines-close").addEventListener("click", () => linesDialog.close());
   linesDialog.addEventListener("click", (event) => { if (event.target === linesDialog) linesDialog.close(); });
-  dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
 })();

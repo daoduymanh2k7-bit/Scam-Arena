@@ -31,8 +31,10 @@ def test_non_admin_cannot_view_or_publish_practice_catalog():
     app=FastAPI();app.include_router(router)
     app.dependency_overrides[get_current_user]=lambda:{'user_id':'test','role':'user'}
     with TestClient(app) as client:
-        for path in ['report','reviews','catalog']:
+        for path in ['report','reviews','catalog','drafts']:
             assert client.get('/api/practice/admin/'+path).status_code==403
+        assert client.post('/api/practice/admin/validate',json={'document':{}}).status_code==403
+        assert client.post('/api/practice/admin/drafts',json={'document':{}}).status_code==403
         assert client.post('/api/practice/admin/reviews',json={'document':{}}).status_code==403
         assert client.post('/api/practice/admin/reviews/1/approve').status_code==403
         assert client.post('/api/practice/admin/catalog/1/selection',json={'enabled':False,'weight':1}).status_code==403

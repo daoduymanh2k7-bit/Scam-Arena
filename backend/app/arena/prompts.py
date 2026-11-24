@@ -15,6 +15,8 @@ DIALOGUE_PROMPT = (
     "Code đã chọn node đích: giữ persona, scenario_title, user_context, objective, tactics, "
     "requested_action và pressure_level. Không tự đổi nhánh, kết thúc trò chơi hay chấm điểm. "
     + CONTEXT_RULES +
+    "conversation_ending=false nghĩa cuộc gọi vẫn đang mở: không nói đã chốt xong, tạm biệt, xin chờ đợi "
+    "hay hẹn liên hệ lại để kết thúc. Chỉ hỏi phần còn thiếu, không hỏi lại điều người chơi vừa xác nhận. "
     "Đọc player_text cùng recent_turns, earlier_unsummarized_turns và conversation_summary. "
     "Trả lời trực tiếp câu hỏi hoặc phản ứng mới nhất trước; chỉ nối tới objective khi phù hợp. "
     "caller_line là lời người gọi vừa nói mà người chơi đang đáp lại. Nhãn unknown không có nghĩa câu nói vô nghĩa: "

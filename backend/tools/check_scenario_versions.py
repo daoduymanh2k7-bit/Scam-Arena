@@ -132,10 +132,50 @@ def run():
         assert not inbox(new.session_id,owner)['can_resend']
         # Keep the earlier version-isolation exercise active below.
         new=calls.start_call('bank',user,'call')
+        # Reproduce short location replies with no external LLM calls.
+        with patch.object(calls,'detect_intent',return_value=SimpleNamespace(intent=Intent.UNKNOWN,matched_rule=None)), \
+             patch.object(calls,'reclassify_unknown',return_value=None) as reclassify, \
+             patch.object(calls,'resolve_bot_line',side_effect=lambda **kw: LineResult(kw['fixed_text'],None,'fixed',0)) as generate:
+            for family,text in [('delivery','Ở sảnh đi'),('appointment','Đúng lịch nhé'),('support','Mở ứng dụng là bị thoát.')]:
+                closed=calls.start_call(f'practice-{family}-ordinary-1',user,'call')
+                reclassify.reset_mock();generate.reset_mock()
+                result=calls.submit_turn(closed.session_id,text,2,user)
+                assert result.ended and result.outcome=='safe' and result.intent_method=='rule'
+                assert 'kết thúc cuộc gọi' in result.bot_text
+                assert not reclassify.called and not generate.called
+                with pool.connection() as c:
+                    persisted=c.execute('SELECT ended_at,world_state,n.is_terminal FROM call_sessions cs JOIN dialogue_nodes n ON n.node_id=cs.current_node_id WHERE session_id=%s',(closed.session_id,)).fetchone()
+                    assert persisted['ended_at'] and persisted['is_terminal'] and persisted['world_state']['service_completion']
+                try: calls.submit_turn(closed.session_id,text,2,user)
+                except ValueError: pass
+                else: raise AssertionError('Accepted speech after the service call ended')
+            for scenario,text in [('practice-delivery-ordinary-1','Ở sảnh được không?'),('practice-delivery-impostor-1','Ở sảnh đi')]:
+                active=calls.start_call(scenario,user,'call')
+                assert not calls.submit_turn(active.session_id,text,2,user).ended
         admin_user={'user_id':user,'role':'admin'}
         with pool.connection() as c:
             submitted=c.execute("SELECT definition->'document' AS doc FROM scenario_versions WHERE version_id=(SELECT active_version_id FROM scenarios WHERE scenario_name='practice-support-ordinary-1')").fetchone()['doc']
         submitted['version']+=1;submitted['stages'][0]['opening_line']='Tôi gọi để trao đổi về phiếu hỗ trợ của anh/chị.'
+        from app.api.practice_routes import save_draft,drafts,Draft,validate_preview
+        before_versions=None
+        with pool.connection() as c:
+            before_versions=c.execute('SELECT count(*) AS n FROM scenario_versions').fetchone()['n']
+        saved_draft=save_draft(Draft(document={'title':'Unfinished editor draft'}),admin_user)
+        assert drafts(admin_user)[0]['document']=={'title':'Unfinished editor draft'}
+        updated_draft=save_draft(Draft(document=submitted,draft_id=saved_draft['draft_id'],expected_revision=1),admin_user)
+        assert updated_draft['revision']==2
+        try: save_draft(Draft(document={},draft_id=saved_draft['draft_id'],expected_revision=1),admin_user)
+        except HTTPException as exc: assert exc.status_code==409
+        else: raise AssertionError('Stale draft overwrote newer content')
+        with pool.connection() as c:
+            other=c.execute("INSERT INTO app_users(username,password_hash) VALUES('another-admin-check','test') RETURNING user_id").fetchone()['user_id']
+        assert drafts({'user_id':other,'role':'admin'})==[]
+        try: save_draft(Draft(document={},draft_id=saved_draft['draft_id'],expected_revision=2),{'user_id':other,'role':'admin'})
+        except HTTPException as exc: assert exc.status_code==404
+        else: raise AssertionError('Another admin overwrote a private draft')
+        assert validate_preview(Review(document=submitted),admin_user)['valid']
+        with pool.connection() as c:
+            assert c.execute('SELECT count(*) AS n FROM scenario_versions').fetchone()['n']==before_versions
         pending=propose(Review(document=submitted),admin_user)
         published=decide(pending['review_id'],'approve',admin_user)
         assert published['version_id']
@@ -151,6 +191,11 @@ def run():
                     bounded_turn=calls.submit_turn(bounded.session_id,'Tôi muốn tiếp tục đối chiếu.',2,user)
                 if bounded_turn.ended: break
         assert bounded_turn.ended and bounded_turn.turn_no==12
+        custom=copy.deepcopy(submitted);custom['id']='practice-editor-created-check';custom['version']=1
+        custom_review=propose(Review(document=custom),admin_user)
+        assert decide(custom_review['review_id'],'approve',admin_user)['version_id']
+        custom_call=calls.start_call(custom['id'],user,'call')
+        assert custom_call.session_id and custom_call.practice_context
         from app.api.practice_routes import configure_selection,Selection
         with pool.connection() as c:
             configurable=c.execute("SELECT scenario_id FROM scenarios WHERE scenario_name='practice-support-ordinary-1'").fetchone()['scenario_id']

@@ -291,7 +291,13 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
         )
         caller_line = _masked_text(session["caller_line"])
         user_text_masked = _masked_text(user_text)
-        if result.intent is Intent.UNKNOWN and result.matched_rule is None:
+        from app.arena.service_completion import service_completion
+        completion = service_completion(session.get('scenario_payload') or {}, session['node_key'],
+            session['requested_action'], session['caller_line'], user_text, intent)
+        if completion:
+            intent = 'comply'
+            intent_method = 'rule'
+        if intent == 'unknown' and result.matched_rule is None:
             # Reclassify unresolved replies with masked context before transition lookup.
             try:
                 scenario_payload = session.get("scenario_payload") or {}
@@ -402,6 +408,16 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                     target = _terminal_node(cursor, session["scenario_version_id"], "timeout")
                     unknown_count = 0
 
+        if completion:
+            terminal = _terminal_node(cursor, session['scenario_version_id'], 'safe')
+            if terminal is not None:
+                target = terminal
+                target['target_text'] = completion.closing
+                score_delta, feedback, critical, unknown_count = 0, None, False, 0
+                from psycopg.types.json import Jsonb
+                cursor.execute("UPDATE call_sessions SET world_state=world_state || %s WHERE session_id=%s",
+                    (Jsonb({'service_completion': {'reason': completion.reason, 'turn_no': next_turn_no}}),session_id))
+
         if next_turn_no >= session['max_turns'] and (target is None or not target['target_is_terminal']):
             target=_terminal_node(cursor,session['scenario_version_id'],'timeout')
             unknown_count=0
@@ -435,7 +451,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                 scenario_id=session["scenario_id"], session_id=session_id,
                 target_node=target_node_id, intent=intent, user_text_masked=user_text_masked,
                 original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
-                context={"sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
+                context={"conversation_ending": False, "sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
                          "caller_line": caller_line, "case_facts": session["case_parameters"],
                          "available_messages": available_messages,
                          "interaction_mode": session["interaction_mode"]},

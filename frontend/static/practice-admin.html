@@ -1,6 +1,38 @@
-<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản trị cuộc gọi</title><style>
-body{font:16px system-ui;background:#171522;color:#eee;margin:0}main{max-width:1100px;margin:28px auto;padding:20px}section{background:#252137;border:1px solid #514665;padding:20px;border-radius:12px;margin:18px 0}button,select,textarea{font:inherit;padding:9px;border-radius:7px;background:#343047;color:#eee;border:1px solid #887aa4}button{cursor:pointer;margin:5px}textarea{display:block;width:95%;min-height:330px;font:13px monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere}a{color:#bfc6ff}button:disabled{opacity:.5}</style>
-<main><a href="/">← Quay lại</a><h1>Quản trị cuộc gọi</h1><p id="status" role="status">Đang kiểm tra quyền admin…</p><div id="content" hidden>
-<section><h2>Thống kê phân biệt thật/giả</h2><button id="refresh">Tải lại</button><pre id="report"></pre></section>
-<section><h2>Soạn và kiểm tra bản mới</h2><p>Chọn mẫu rồi chỉnh sửa JSON. Lưu đề xuất chỉ đưa vào hàng đợi; bản đang chạy chỉ đổi khi duyệt phát hành.</p><select id="catalog"></select><p><label><input type="checkbox" id="enabled"> Cho phép bộ chọn sử dụng</label> <label>Trọng số <input id="weight" type="number" min="0.01" max="10000" step="0.1"></label><button id="selection">Lưu cấu hình chọn</button></p><textarea id="document" aria-label="JSON kịch bản"></textarea><button id="submit">Kiểm tra và lưu đề xuất</button></section>
-<section><h2>Hàng đợi duyệt</h2><div id="reviews"></div></section></div></main><script src="/js/practice-admin.js?v=2"></script></html>
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản trị kịch bản · Scam Arena</title><link rel="stylesheet" href="/css/practice-admin.css?v=1"></head>
+<body><main>
+<a id="standalone-back" href="/">← Quay lại Scam Arena</a>
+<header><p class="eyebrow">QUẢN TRỊ CUỘC GỌI</p><h1>Xây dựng tình huống luyện tập</h1><p>Soạn nội dung, thử các nhánh và duyệt trước khi đưa vào sử dụng.</p></header>
+<p id="status" class="status" role="status">Đang kiểm tra quyền quản trị…</p>
+<div id="content" hidden>
+<nav class="tabs" aria-label="Các mục quản trị"><button data-tab="editor" aria-pressed="true">Soạn kịch bản</button><button data-tab="drafts" aria-pressed="false">Bản nháp của tôi</button><button data-tab="reviews" aria-pressed="false">Chờ duyệt</button><button data-tab="stats" aria-pressed="false">Thống kê</button></nav>
+<div id="editor" data-panel>
+<section class="catalog-bar"><label>Kịch bản đã phát hành<select id="catalog" aria-label="Kịch bản đã phát hành"></select></label><button id="new" type="button">＋ Tạo mới</button><button id="clone" type="button">Nhân bản</button></section>
+<div class="editor-heading"><div><h2 id="editor-title">Nội dung kịch bản</h2><p id="editor-state">Chưa chỉnh sửa</p></div><div class="actions"><button id="save-draft" type="button">Lưu nháp</button><button id="preview-open" type="button">▷ Chạy thử luồng</button><button id="submit" class="primary" type="button">Gửi duyệt</button></div></div>
+<form id="editor-form">
+<section><h2>1. Thông tin và bối cảnh</h2><div class="fields">
+<label class="wide">Tên kịch bản<input id="title" maxlength="120" required></label>
+<label>Chủ đề<select id="family"><option value="delivery">Giao hàng</option><option value="appointment">Đặt lịch</option><option value="support">Hỗ trợ khách hàng</option></select></label>
+<label>Loại cuộc gọi<select id="kind"><option value="benign">Bình thường</option><option value="fraud">Giả mạo</option></select></label>
+<label>Độ khó<select id="difficulty"><option value="beginner">Cơ bản</option><option value="intermediate">Trung bình</option><option value="advanced">Nâng cao</option></select></label>
+<label>Tên nhân vật<input id="persona-name" maxlength="80"></label><label>Vai trò người gọi<input id="persona-role" maxlength="120"></label><label>Mức gây áp lực (1–5)<input id="pressure" type="number" min="1" max="5"></label>
+<label class="wide">Tóm tắt tình huống<textarea id="summary" maxlength="500"></textarea></label>
+<label class="wide">Bối cảnh người chơi biết trước<textarea id="context" maxlength="1000" placeholder="Ví dụ: Bạn đã đặt một đơn hàng, dự kiến giao chiều nay."></textarea></label>
+<label class="wide">Cách nói của nhân vật<textarea id="speaking" maxlength="300"></textarea></label>
+</div></section>
+<section><h2>2. Bằng chứng và bài học</h2><p class="hint">Có thể dùng {reference}, {window}, {place}; hệ thống điền dữ liệu mô phỏng cho mỗi cuộc gọi.</p><div class="fields">
+<label class="wide">Thông tin trong hồ sơ / email xác nhận<textarea id="evidence" maxlength="1500"></textarea></label><label class="wide">Kết quả kiểm tra kênh chính thức<textarea id="official" maxlength="1500"></textarea></label><label class="wide">Bài học sau cuộc gọi<textarea id="lesson" maxlength="1500"></textarea></label>
+</div></section>
+<section><div class="section-title"><h2>3. Các bước hội thoại</h2><button id="add-stage" type="button">＋ Thêm bước</button></div><label>Bước mở đầu<select id="start"></select></label><p class="hint">Ở mỗi bước, chọn đích đến cho từng phản ứng. Chọn “Kết thúc…” khi công việc đã xong.</p><div id="stages"></div></section>
+<section><div class="section-title"><h2>4. Dấu hiệu cần cảnh giác</h2><button id="add-flag" type="button">＋ Thêm dấu hiệu</button></div><p class="hint">Cuộc gọi giả mạo cần ít nhất một dấu hiệu, gắn với bước xuất hiện.</p><div id="flags"></div></section>
+<details class="advanced"><summary>Chấm điểm theo phản ứng</summary><label>Điểm ban đầu<input id="base-score" type="number" min="0" max="100"></label><div id="rules"></div><button id="add-rule" type="button">＋ Thêm luật điểm</button></details>
+<details class="advanced" id="json-panel"><summary>Nâng cao · JSON và mã kịch bản</summary><p class="hint">Form là cách soạn chính. Bấm Áp dụng JSON để nhập thay đổi từ ô bên dưới; dữ liệu chưa áp dụng sẽ không được gửi duyệt.</p><label>Mã kịch bản<input id="scenario-id" readonly></label><label>Toàn bộ cấu hình<textarea id="document" spellcheck="false" aria-label="JSON kịch bản"></textarea></label><div class="actions"><button id="json-export" type="button">Cập nhật JSON từ form</button><button id="json-apply" type="button">Áp dụng JSON vào form</button></div><p id="json-state" class="hint"></p></details>
+</form>
+<section class="selection"><h2>Tần suất sử dụng bản đang phát hành</h2><p class="hint">Chỉ áp dụng cho kịch bản đã phát hành; không phát hành bản nháp.</p><label class="inline"><input id="enabled" type="checkbox"> Cho phép chọn ngẫu nhiên</label><label>Trọng số xuất hiện<input id="weight" type="number" min="0.01" max="10000" step="0.1"></label><button id="selection" type="button">Lưu tần suất</button></section>
+</div>
+<section id="drafts" data-panel hidden><h2>Bản nháp của tôi</h2><p class="hint">Lưu riêng trên máy chủ theo tài khoản admin. Chưa xuất hiện trong cuộc gọi của người chơi.</p><div id="draft-list"></div></section>
+<section id="reviews" data-panel hidden><h2>Hàng đợi duyệt phát hành</h2><p class="hint">Duyệt tạo phiên bản mới. Các cuộc gọi đang diễn ra giữ phiên bản cũ.</p><button id="reviews-refresh" type="button">Tải lại</button><div id="review-list"></div></section>
+<section id="stats" data-panel hidden><div class="section-title"><h2>Thống kê luyện tập</h2><button id="refresh" type="button">Tải lại</button></div><div id="stat-cards"></div><details><summary>Xem số liệu chi tiết</summary><pre id="report"></pre></details></section>
+</div>
+<dialog id="preview" aria-labelledby="preview-title"><div class="section-title"><h2 id="preview-title">Chạy thử luồng hội thoại</h2><button id="preview-close" aria-label="Đóng chạy thử" type="button">×</button></div><p class="hint">Chọn phản ứng để kiểm tra đường đi và điểm kết thúc. Không gọi LLM, Rasa, micro; không phát hành hoặc lưu cuộc gọi thật.</p><div id="preview-log" role="log" aria-live="polite"></div><div id="preview-choices" class="actions"></div><button id="preview-reset" type="button">Thử lại từ đầu</button></dialog>
+</main><script>if(new URLSearchParams(location.search).get('embedded')==='1')document.getElementById('standalone-back').remove();</script><script src="/js/practice-editor-core.js?v=1"></script><script src="/js/practice-admin.js?v=3"></script></body></html>

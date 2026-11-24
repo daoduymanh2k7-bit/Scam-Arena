@@ -1,7 +1,5 @@
 (() => {
   const dialog = document.getElementById("help-dialog");
-  const openButton = document.getElementById("help-open");
-  const closeButton = document.getElementById("help-close");
   const tabs = [...dialog.querySelectorAll('[role="tab"]')];
 
   function selectTab(tab, focus = false) {
@@ -14,10 +12,6 @@
     if (focus) tab.focus();
   }
 
-  openButton.addEventListener("click", () => {
-    if (!dialog.open) dialog.showModal();
-  });
-  closeButton.addEventListener("click", () => dialog.close());
   tabs.forEach((tab, index) => {
     tab.addEventListener("click", () => selectTab(tab));
     tab.addEventListener("keydown", (event) => {
@@ -30,8 +24,5 @@
       event.preventDefault();
       selectTab(tabs[next], true);
     });
-  });
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
   });
 })();

@@ -351,3 +351,5 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 - Cuộc gọi Deepgram hỗ trợ phụ đề streaming qua WebSocket, chốt câu bằng Silero; REST được giữ làm dự phòng. Đặt `DEEPGRAM_STREAMING_ENABLED=false` để so sánh cách cũ.
 
 Cuộc gọi có hộp thư mô phỏng trong điện thoại: email xác nhận theo hồ sơ, SMS mã 6 số có thời hạn 3 phút, gửi lại tối thiểu sau 20 giây và tối đa 3 mã/phiên (mã cũ mất hiệu lực). Bấm thông báo để đọc hoặc dùng biểu tượng hộp thư rồi quay lại cuộc gọi. Dữ liệu được lưu theo phiên, chỉ chủ phiên xem được; không gửi SMS/Gmail thật và không cần quyền thông báo của trình duyệt. LLM chỉ nhận tên thông báo đã cấp, không được cung cấp mã OTP riêng.
+
+Admin mở **Duyệt cuộc gọi → Soạn kịch bản** để tạo mới, nhân bản và chỉnh nội dung bằng form. **Lưu nháp** lưu riêng theo tài khoản trên máy chủ; **Chạy thử luồng** kiểm tra các nhánh bằng phản ứng chọn sẵn, không gọi LLM/Rasa hoặc tạo phiên chơi. **Gửi duyệt** kiểm tra schema/đường đi; chỉ **Duyệt phát hành** mới kích hoạt phiên bản mới. JSON nằm trong mục nâng cao và cần bấm **Áp dụng JSON vào form** trước khi gửi.

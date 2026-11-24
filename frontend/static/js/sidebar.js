@@ -1,18 +1,25 @@
 (() => {
-  const history = document.getElementById('sidebar-history-dialog');
-  const openHistory = document.getElementById('sidebar-history-open');
   const account = document.getElementById('account-controls');
-  openHistory.addEventListener('click', () => {
-    if (!history.open) history.showModal();
-    window.ArenaHistory?.refreshAll();
+  document.addEventListener('click', event => {
+    if (!account.contains(event.target)) account.open = false;
   });
-  document.getElementById('sidebar-history-close').addEventListener('click', () => history.close());
-  history.addEventListener('click', event => { if (event.target === history) history.close(); });
-  document.addEventListener('click', event => { if (!account.contains(event.target)) account.open = false; });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && account.open) {
       account.open = false;
       account.querySelector('summary').focus();
+    }
+  });
+  window.addEventListener('message', event => {
+    const frame=document.getElementById('practice-admin-frame');
+    if(event.origin===location.origin && event.source===frame?.contentWindow && event.data?.type==='arena:catalog-updated')
+      document.dispatchEvent(new CustomEvent('arena:catalog-updated'));
+  });
+  document.addEventListener('arena:viewchange', event => {
+    account.open = false;
+    if(event.detail.mode==='history')window.ArenaHistory?.refreshAll();
+    if(event.detail.mode==='practice') {
+      const frame=document.getElementById('practice-admin-frame');
+      if(!frame.getAttribute('src'))frame.src=frame.dataset.src;
     }
   });
 })();

@@ -484,3 +484,14 @@
 .phone-notice-dismiss { position: absolute; right: 3px; top: 4px; width: 26px; height: 26px; border: 0; border-radius: 50%; background: transparent; color: #777b87; font-size: 17px; cursor: pointer; }
 @keyframes phone-notice-arrive { from { opacity: 0; transform: translateY(-115%); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .phone-sms-banner,.phone-inbox-overlay { animation: none; } }
+
+/* Reveal the transcript only after answering; keep it for the call debrief. */
+.call-subtitles[hidden] { display: none; }
+.call-subtitles:not([hidden]) { animation: call-subtitles-reveal .3s cubic-bezier(.2,.8,.2,1); }
+@keyframes call-subtitles-reveal { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: translateX(0); } }
+@media(max-width:820px) {
+  #app-content #call-static-screen:not([hidden]):has(.call-subtitles[hidden]) { grid-template-rows: minmax(0,1fr) 0 auto; }
+  .call-subtitles:not([hidden]) { animation-name: call-subtitles-reveal-mobile; }
+  @keyframes call-subtitles-reveal-mobile { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media(prefers-reduced-motion:reduce) { .call-subtitles:not([hidden]) { animation: none; } }

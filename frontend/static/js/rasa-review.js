@@ -134,12 +134,11 @@
     }
   }
 
-  $("open").addEventListener("click", () => {
-    dialog.showModal();
+  document.addEventListener("arena:viewchange", event => {
+    if(event.detail.mode!=="rasa")return;
     offset = 0;
     run();
   });
-  $("close").addEventListener("click", () => dialog.close());
   $("collect").addEventListener("click", () => run(() => request("/collect", "POST")));
   $("filter").addEventListener("change", () => { offset = 0; run(); });
   $("prev").addEventListener("click", () => { offset -= pageSize; run(); });

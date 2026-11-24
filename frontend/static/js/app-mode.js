@@ -15,6 +15,7 @@
   const scenarioToggle = document.getElementById('call-scenario-toggle');
   const scenarioMenu = document.getElementById('call-scenario-menu');
   const scenarioStatus = document.getElementById("call-scenarios-status");
+  const subtitlesPanel = callScreen.querySelector(".call-subtitles");
   const subtitlesLog = document.getElementById("call-subtitles-log");
   const subtitlesEmpty = document.getElementById("call-subtitles-empty");
   const micButton = document.getElementById("phone-call-mute");
@@ -715,6 +716,8 @@
     latestCallTurn = null;
     setTurnBusy(state === "active");
     phone.dataset.callState = state;
+    if (state === 'idle' || state === 'ringing') subtitlesPanel.hidden = true;
+    else if (state === 'active') subtitlesPanel.hidden = false;
     if (isMixed() && state==='ringing') {
       mixedSession=null;
       practicePanel.querySelector('[data-context]').textContent='Bạn sẽ nhận một cuộc gọi dịch vụ chưa rõ thật/giả. Bối cảnh cụ thể xuất hiện khi cuộc gọi bắt đầu.';
@@ -778,26 +781,47 @@
     }
   });
 
-  function showMode(mode) {
-    const isCall = mode === "call";
+  function showMode(mode, focus = true) {
+    const signedIn = document.body.dataset.authenticated === 'true';
+    const extraScreens = [...document.querySelectorAll('[data-workspace-screen]')];
+    const allowed = ['call','message','login',...extraScreens.map(screen=>screen.dataset.workspaceScreen)];
+    if (!allowed.includes(mode)) return false;
+    if (!signedIn && !['help','login'].includes(mode)) return false;
+    if (['rasa','scenarios','practice'].includes(mode) && document.body.dataset.userRole !== 'admin') return false;
+    const previous = document.body.dataset.workspace;
+    document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
+    const isCall = mode === 'call';
     const enteringCall = isCall && callScreen.hidden;
-    messageScreen.hidden = isCall;
+    messageScreen.hidden = mode !== 'message';
     callScreen.hidden = !isCall;
-    if (!isCall) resetCall();
+    extraScreens.forEach(screen=>screen.hidden=screen.dataset.workspaceScreen!==mode);
+    document.getElementById('auth-panel').hidden = mode !== 'login';
+    document.getElementById('app-content').hidden = mode === 'login';
+    document.body.dataset.workspace = mode;
+    if (previous === 'call' && !isCall) resetCall();
     if (enteringCall) {
       loadCallScenarios();
       void CallMicrophone.preload().catch(() => {});
     }
-    modeButtons.forEach((button) => {
+    modeButtons.forEach(button => {
       const active = button.dataset.mode === mode;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
+      button.classList.toggle('is-active',active);
+      if(button.tagName==='BUTTON')button.setAttribute('aria-pressed',String(active));
+      if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
     });
+    if (focus) {
+      const target = extraScreens.find(screen=>!screen.hidden);
+      if(target)target.focus({preventScroll:true});
+    }
+    document.dispatchEvent(new CustomEvent('arena:viewchange',{detail:{mode,previous}}));
+    return true;
   }
+  modeButtons.forEach(button=>button.addEventListener('click',event=>{
+    event.preventDefault();showMode(button.dataset.mode);
+  }));
+  window.ArenaWorkspace = {show:showMode};
+  const initialView = () => showMode(document.body.dataset.authenticated === 'true' ? 'message' : 'login',false);
+  document.addEventListener('arena:authenticated',initialView);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialView,{once:true});else initialView();
 
-  modeButtons.forEach((button) => {
-    button.addEventListener("click", () => showMode(button.dataset.mode));
-  });
-
-  showMode("message");
 })();

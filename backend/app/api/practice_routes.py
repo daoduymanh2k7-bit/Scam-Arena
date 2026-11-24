@@ -148,15 +148,51 @@ def configure_selection(scenario_id: int,body: Selection,user=Depends(require_ad
         return row
 
 
-@router.post('/admin/reviews')
-def propose(body: Review,user=Depends(require_admin)):
-    if len(json.dumps(body.document))>200000: raise HTTPException(413,'Kịch bản quá lớn.')
+def checked_document(document):
+    if len(json.dumps(document))>200000: raise HTTPException(413,'Kịch bản quá lớn.')
     try:
-        doc=validated_document(body.document)
+        doc=validated_document(document)
         if doc['family'] not in FAMILIES: raise ValueError('Họ tình huống chưa được hỗ trợ.')
         if not doc['id'].startswith('practice-'): raise ValueError('ID tình huống phải bắt đầu bằng practice-.')
-        if doc['status']!='published': raise ValueError('Đặt status=published trong bản đề xuất; chỉ phát hành sau khi admin bấm duyệt.')
+        if doc['status']!='published': raise ValueError('Bản đề xuất phải có status=published; chỉ phát hành sau khi admin bấm duyệt.')
     except ValueError as exc: raise HTTPException(422,str(exc)) from exc
+    return doc
+
+
+class Draft(BaseModel):
+    document: dict
+    draft_id: int | None = Field(default=None,gt=0)
+    expected_revision: int | None = Field(default=None,gt=0)
+
+
+@router.post('/admin/validate')
+def validate_preview(body: Review,user=Depends(require_admin)):
+    return {'document':checked_document(body.document),'valid':True}
+
+
+@router.get('/admin/drafts')
+def drafts(user=Depends(require_admin)):
+    with get_connection_pool().connection() as c:
+        return c.execute('SELECT draft_id,document,revision,updated_at FROM practice_admin_drafts WHERE owner_id=%s ORDER BY updated_at DESC LIMIT 100',(user['user_id'],)).fetchall()
+
+
+@router.post('/admin/drafts')
+def save_draft(body: Draft,user=Depends(require_admin)):
+    if len(json.dumps(body.document))>200000: raise HTTPException(413,'Bản nháp quá lớn.')
+    with get_connection_pool().connection() as c:
+        if body.draft_id is None:
+            return c.execute('INSERT INTO practice_admin_drafts(owner_id,document) VALUES(%s,%s) RETURNING draft_id,revision,updated_at',(user['user_id'],Jsonb(body.document))).fetchone()
+        row=c.execute('UPDATE practice_admin_drafts SET document=%s,revision=revision+1,updated_at=now() WHERE draft_id=%s AND owner_id=%s AND revision=%s RETURNING draft_id,revision,updated_at',
+                      (Jsonb(body.document),body.draft_id,user['user_id'],body.expected_revision)).fetchone()
+        if row:return row
+        exists=c.execute('SELECT 1 FROM practice_admin_drafts WHERE draft_id=%s AND owner_id=%s',(body.draft_id,user['user_id'])).fetchone()
+        if not exists:raise HTTPException(404,'Không tìm thấy bản nháp của bạn.')
+        raise HTTPException(409,'Bản nháp đã được sửa ở cửa sổ khác. Tải lại bản nháp trước khi lưu.')
+
+
+@router.post('/admin/reviews')
+def propose(body: Review,user=Depends(require_admin)):
+    doc=checked_document(body.document)
     with get_connection_pool().connection() as c:
         return c.execute('INSERT INTO practice_reviews(document,submitted_by) VALUES(%s,%s) RETURNING review_id,status',(Jsonb(doc),user['user_id'])).fetchone()
 

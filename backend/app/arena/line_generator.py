@@ -42,6 +42,12 @@ def validate_line(text, player_text='', context=None):
     if re.search(r'\b(?:tôi là (?:một )?ai|mô hình ngôn ngữ|trợ lý ai|as an ai)\b',text,re.I): return None
     if '```' in text or text.strip().casefold()==player_text.strip().casefold(): return None
     if context:
+        if context.get('conversation_ending') is False:
+            closing = normalize_phrase(text)
+            if re.search(r'\b(?:(?:ket thuc|ngat|cup|dung) (?:cuoc goi|may)|tam biet|hen gap lai)\b',closing):
+                return None
+            if re.search(r'\b(?:da|se) (?:ghi nhan|xac nhan|dat lich)\b.*\b(?:xin cho|lien he lai|cam on)\b',closing):
+                return None
         if 'biên lai' in text.casefold() and not any(m.get('channel')=='receipt' for m in context.get('available_messages',[])):
             return None
         if listening_acknowledgement(player_text) and re.search(
@@ -348,7 +354,7 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
             'tactics':[row['tactic']] if row['tactic'] else [],'requested_action':row['requested_action'] or 'other',
             'sample_line':render(row['text'] or row['bot_reply_text'] or '',row['case_parameters']), 'intent':row['intent'],
             'case_facts':row['case_parameters'],
-            'available_messages':available_messages,
+            'available_messages':available_messages, 'conversation_ending':False,
             'player_text':row['user_text_masked'] or '',
             'caller_line':history[-1]['bot_reply_text'] if history else (
                 phone_opening(row.get('opening_text') or '') if row['interaction_mode']=='call' else row.get('opening_text') or ''),
