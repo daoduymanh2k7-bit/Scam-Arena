@@ -1,0 +1,240 @@
+/* Shared light palette, loaded last on every application page. */
+:root {
+  color-scheme: light;
+  --surface: #fff;
+  --surface-soft: #f7f7fa;
+  --surface-violet: #f3effc;
+  --ink: #252330;
+  --muted: #6c687b;
+  --line: #e3e0ea;
+  --accent: #7450c2;
+  --accent-hover: #603caf;
+  --green: var(--accent);
+  --card: var(--surface);
+  --coral: #b33951;
+  color: var(--ink);
+  background: var(--surface);
+}
+html, body, body .app-shell,
+.app-shell:has(#message-mode:not([hidden])),
+.app-shell:has(#app-content > .workspace-screen:not([hidden])) {
+  background: var(--surface);
+  color: var(--ink);
+}
+body .app-shell { box-shadow: none; }
+body .app-shell::before { background: none; }
+body, #app-content, .app-mode-panel, .transcript, .sidebar-scroll,
+.call-subtitles-log, .admin-graph-scroll { scrollbar-color: #c9c2d7 transparent; }
+a { color: var(--accent); }
+:is(input,select,textarea) { accent-color: var(--accent); }
+:is(input,select,textarea,button,summary,a):focus-visible { outline-color: #9773d5; }
+::selection { background: #e5d9fa; color: #382159; }
+
+/* Navigation and account popover. */
+#mode-nav.app-sidebar { background: #faf9fc; border-right-color: var(--line); color: var(--muted); }
+.sidebar-brand, .brand-mark { background: linear-gradient(140deg,#8b65d9,#6855bd); color: white; }
+#mode-nav .sidebar-item { color: var(--muted); }
+#mode-nav .sidebar-item:hover { background: #efecf5; color: #493363; }
+#mode-nav .sidebar-item.is-active, #mode-nav .sidebar-account[open] > summary { background: #ece5f8; color: #6740ae; }
+#mode-nav .sidebar-item.is-active::before { background: var(--accent); }
+#mode-nav .sidebar-admin, .sidebar-footer { border-color: var(--line); }
+.sidebar-group-label, .sidebar-account-caption { color: var(--muted); }
+.sidebar-account-menu { background: white; border-color: #d7cde7; color: var(--ink); box-shadow: 0 12px 36px #35234b18; }
+#mode-nav #auth-logout { background: #f7f2fa; border-color: #ded2e8; color: #784367; }
+
+/* Shared panels, forms, history and help. */
+.intro h1, .brand, .section-heading h2, .result-panel h2, .result-panel h3,
+.scenario-card strong, .history-card-heading strong, .review-card > strong,
+.help-content h3, .help-content strong, .auth-panel h1 { color: var(--ink); }
+.intro-copy, .muted-note, .scenario-card span, .history-card > p, .review-card > p,
+.scoring-note, .latency, footer, .help-content p, .help-content,
+.rasa-review-note, .rasa-speaker-row small, .rasa-review-toolbar [role="status"] { color: var(--muted); }
+.eyebrow, .help-heading .eyebrow, .history-card summary, .utility-panel > summary,
+.help-content h4 { color: var(--accent); }
+.panel, .utility-panel, .history-card, .review-card, .help-dialog,
+#auth-panel, #arena-result, #app-content > .workspace-screen {
+  background: white; border-color: var(--line); color: var(--ink);
+  box-shadow: none; backdrop-filter: none;
+}
+.help-dialog { box-shadow: 0 20px 60px #35234b1a; }
+.help-dialog::backdrop { background: #39304835; }
+.help-open, .help-close { background: #f5f2fa; border-color: #ded7e9; color: #705285; }
+.help-tabs button { color: var(--muted); }
+.help-tabs button[aria-selected="true"] { background: var(--surface-violet); border-color: #d9ccea; color: #62409c; }
+.scenario-card { background: #faf9fc; border-color: var(--line); color: var(--ink); }
+.scenario-card:hover, .scenario-card:focus-visible { background: #f3effb; border-color: #bba5dc; }
+.scenario-card::before { background: var(--accent); }
+.button-primary, #auth-panel .button-primary { background: var(--accent); color: white; }
+.button-primary:hover, #auth-panel .button-primary:hover { background: var(--accent-hover); }
+.button-secondary, #auth-panel .button-secondary, .bubble-action, .admin-open,
+.admin-small-button, .admin-map-tools button { background: #f5f1fb; border-color: #d9cdeb; color: #60418a; }
+.button-secondary:hover, .bubble-action:hover, .admin-open:hover,
+.admin-small-button:hover, .admin-map-tools button:hover { background: #ebe3f7; }
+.button-quiet { color: var(--muted); }
+.button-danger { background: #fff1f3; border-color: #efccd4; color: #ab3550; }
+.error, #rasa-review-error { color: #ad304c; }
+#auth-panel label, #auth-panel h1 { color: var(--ink); }
+#auth-panel .muted-note { color: var(--muted); }
+#auth-panel input, .review-fields select, .review-fields input,
+.rasa-review-toolbar select, .rasa-speaker-row select, .rasa-sample-row select {
+  background: white; border-color: #d9d3e3; color: var(--ink);
+}
+.saved-message, .review-card blockquote { background: #f5f3f9; color: var(--ink); border-left-color: #a186c9; }
+.saved-message.player { background: #eee8f8; }
+.history-card-heading span, .score-display strong, #arena-result .score-display strong { color: #7048b2; }
+.result-panel li, #arena-result li { background: var(--surface-soft); color: var(--ink); }
+.safe-note, #arena-result .safe-note { background: #eef7f2; color: #32694f; }
+#arena-result h3 { color: var(--ink); }
+#arena-result .scoring-note, #arena-result .latency { color: var(--muted); }
+.rasa-speaker-row, .rasa-sample-row { background: #faf9fc; border-color: var(--line); }
+footer, .topbar { border-color: var(--line); }
+
+/* Call setup, captions and lightweight controls. */
+#call-static-screen:not([hidden]) { color: var(--ink); }
+.call-subtitles, .call-scenario-picker { background: white; border-color: #ded8e9; color: var(--ink); }
+.call-subtitle { background: #f3effa; border-color: #9b7dca; }
+.call-subtitle--speech, .call-subtitle--typed { background: #f0f3f7; border-color: #a0aabb; }
+.call-subtitle strong { color: #705093; }
+.call-subtitle--speech strong, .call-subtitle--typed strong { color: #53647a; }
+.call-subtitle--notice strong { color: #976425; }
+.call-subtitle p, .call-live-heading h2 { color: var(--ink); }
+.call-subtitles-empty, .call-picker-hint, .call-menu-label { color: var(--muted); }
+.call-subtitle-info summary, .call-retry-reply { background: #faf8fd; border-color: #cbbddd; color: #76568e; }
+.call-subtitle-info[open] summary { background: #eae0f6; }
+.call-subtitle-info > div { color: #655676; }
+.call-scenario-menu, .practice-debrief { border-color: var(--line); }
+.call-scenario-options button { background: #f8f6fb; border-color: #dcd4e8; color: #493759; }
+.call-scenario-options button:hover { background: #eee7f8; }
+.call-random-start { background: linear-gradient(120deg,#8563cf,#6d53b8); }
+.call-scenario-toggle { background: #7050b5; }
+.practice-call-panel, .practice-call-panel [data-context] { color: var(--ink); }
+.practice-settings { background: #faf9fc; border-color: var(--line); }
+.practice-settings > summary, .practice-settings label,
+.practice-call-panel .practice-kicker, .practice-call-panel > label { color: var(--muted); }
+.practice-call-panel select, .practice-call-panel textarea { background: white; border-color: #d9cfe6; color: var(--ink); }
+.practice-call-panel button { background: #f5f1fb; border-color: #d5c7e6; color: #66438c; }
+.practice-call-panel [data-evidence-text] { background: var(--surface-soft); color: #53465f; }
+.practice-call-panel [data-result] { color: #5d4b70; }
+@keyframes call-subtitles-focus {
+  from { opacity: 0; transform: translate3d(24px,12px,0) scale(.975); filter: blur(3px); border-color: #bda5e9; }
+  to { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); border-color: #ded8e9; }
+}
+
+/* Light phone screen; black camera island and semantic call buttons stay recognizable. */
+.call-device { box-shadow: 0 16px 40px #34283f1c, inset 0 0 0 2px #ffffff60; }
+.call-device-screen, .call-device-screen[data-call-state="active"] { background: linear-gradient(155deg,#f7f5fc,#eeedf3); color: var(--ink); }
+.phone-status, .phone-caller, #call-static-screen .phone-caller h2, .phone-action { color: var(--ink); }
+.phone-caller p, [data-call-state="active"] .phone-caller p, .phone-preview-label { color: #6b6677; }
+.phone-battery { border-color: #514b5e; }
+.phone-battery::after { background: #514b5e; }
+.phone-avatar { background: #e5ddef; border-color: #d0c3df; }
+.phone-avatar::before, .phone-avatar::after { background: #a293b3; }
+.phone-action-icon { background: #e3dfeb; }
+.phone-action-icon.phone-red, .phone-action-icon.phone-green { color: white; }
+.phone-home { background: #6d657b; }
+.phone-inbox-launcher { color: #684290; background: #fff; border-color: #dcd0e9; }
+.phone-inbox-badge:not(:empty) { color: white; }
+.phone-return-call { background: #7655b3; }
+
+/* Message conversation. */
+#message-mode { --chat-line: var(--line); --chat-muted: var(--muted); }
+#message-mode .intro .eyebrow { color: var(--accent); }
+#message-mode .intro-copy, .message-picker-note { color: var(--muted); }
+#message-mode #arena-picker { background: white; border-color: var(--line); }
+#message-mode .scenario-card { background: #faf9fc; border-color: var(--line); }
+#message-mode .scenario-card:hover { background: #f1ecf9; border-color: #b8a0d9; }
+#message-mode .scenario-card strong { color: var(--ink); }
+#message-mode .scenario-card span { color: var(--muted); }
+#message-mode #arena-random-btn { background: var(--accent); border-color: var(--accent); }
+.message-sim-pill { background: #f5f1fb; border-color: #dfd3ed; color: #73538e; }
+#message-mode #arena-session.message-chat-panel { background: white; border-color: var(--line); box-shadow: 0 12px 40px #37244c0a; }
+#arena-session.message-chat-panel .message-chat-header { background: #faf9fc; border-color: var(--line); }
+#arena-session.message-chat-panel .caller-icon { background: #ece3f7; color: #7953aa; box-shadow: none; }
+#arena-session.message-chat-panel .caller h2 { color: var(--ink); }
+#arena-session.message-chat-panel .caller p, #arena-session .message-session-note { color: var(--muted); }
+#arena-session.message-chat-panel .bubble.scammer { background: #f4f3f7; border-color: #e7e3ed; color: var(--ink); }
+#arena-session.message-chat-panel .bubble.user { background: #ece4f8; border-color: #dcd0ec; color: #38294c; }
+#arena-session .message-bubble-footer, #arena-session .bubble.user .message-bubble-footer,
+#arena-session .message-bubble-info > div { color: #776783; }
+#arena-session .message-bubble-info > div, #arena-session.message-chat-panel .bubble-options { border-color: #dacee5; }
+#arena-session.message-chat-panel .bubble-options summary { color: #74528e; }
+#arena-session.message-chat-panel .bubble-action { background: #fcfaff; border-color: #d6c8e5; color: #65447d; }
+#arena-session .message-composer-area { background: #faf9fc; border-color: var(--line); }
+#arena-session.message-chat-panel #arena-status, #arena-session #message-input-hint,
+#arena-session .message-typing { color: var(--muted); }
+#arena-session.message-chat-panel .reply-box { background: white; border-color: #d9cfe6; }
+#arena-session.message-chat-panel .reply-box textarea { color: var(--ink); }
+#arena-session.message-chat-panel .reply-box textarea::placeholder { color: #898193; }
+#arena-session.message-chat-panel #arena-mic-btn { color: #6c527f; background: #f5f1fa; border-color: #e5dcec; }
+#arena-session.message-chat-panel #arena-send-btn { background: var(--accent); border-color: var(--accent); }
+#arena-session.message-chat-panel #arena-finish-btn { color: #785798; }
+#arena-session.message-chat-panel #arena-cancel-btn { color: var(--muted); }
+
+/* Scenario map, Rasa reviews and dialogue catalog. */
+.workspace-frame iframe { background: white; }
+.admin-status, .admin-legend, .admin-path-status, #admin-zoom-level,
+.admin-stage-lines > p, .admin-lines-content { color: var(--muted); }
+.admin-graph-scroll { background: #faf9fc; border-color: var(--line); }
+.admin-side-column, .admin-node-details, .admin-scenario-overview { background: white; border-color: var(--line); color: var(--ink); }
+.admin-map-frame .admin-legend { background: #fffffff0; }
+.admin-node-details h3 { color: var(--ink); }
+.admin-node-details h4, .admin-lines-content h4, .admin-line-badge,
+.admin-scenario-overview > summary, .admin-scenario-overview h4 { color: var(--accent); }
+.admin-node-details blockquote, .admin-dialogue-lines blockquote { background: #f5f2fa; color: #4e3d60; }
+.graph-node-card { fill: #f2ecfa; stroke: #a28abd; }
+.graph-node.start .graph-node-card { fill: #eef0fc; stroke: #8d86c9; }
+.graph-node.safe .graph-node-card { fill: #edf7f0; stroke: #78ac8c; }
+.graph-node.risk .graph-node-card { fill: #fdf0f3; stroke: #ce8a9c; }
+.graph-node.timeout .graph-node-card { fill: #f1f1f5; stroke: #a5a0b0; }
+.graph-node-title { fill: #332b40; }
+.graph-node-note { fill: #766a80; }
+.admin-dialog .graph-node.is-dim { opacity: .72; }
+.graph-node-tag, .graph-node.start .graph-node-tag { fill: #755793; }
+.graph-node.safe .graph-node-tag { fill: #38744e; }
+.graph-node.risk .graph-node-tag { fill: #a54860; }
+.graph-node.timeout .graph-node-tag { fill: #746d80; }
+.graph-edge-label-bg, .admin-dialog .graph-edges rect.is-path { fill: white; stroke: #d1c4df; }
+.graph-edge-label, .admin-dialog .graph-edges text.is-path { fill: #6d577d; }
+
+/* Compact user administration. */
+.users-screen .users-note, .users-screen label, .users-table thead th,
+.user-role, .user-date, .users-pagination, .users-event small { color: var(--muted); }
+.users-screen .users-filters, .users-table thead, .users-detail { background: #f8f6fb; border-color: var(--line); }
+.users-screen input, .users-screen select, .users-screen textarea { background: white; border-color: #d8cce5; color: var(--ink); }
+.users-button { background: #f1ebf9; border-color: #d7c8e7; color: #6a478b; }
+.users-button:hover, .users-table tbody tr:hover { background: #eee6f7; }
+.users-list, .users-table th, .users-table td, .users-event { border-color: var(--line); }
+.user-account-name, .user-number { color: var(--ink); }
+.user-state { background: #f0f8f3; border-color: #bcdac9; color: #397454; }
+.user-state.locked { background: #fff0f4; border-color: #e7c1cd; color: #ab4665; }
+.users-screen .users-error { color: #ad304c; }
+
+/* Standalone / embedded scenario authoring page. */
+body.practice-editor { background: white; color: var(--ink); }
+.practice-editor header > p, .practice-editor .hint, .practice-editor label,
+.practice-editor input[readonly], .practice-editor .editor-heading p,
+.practice-editor .stat span { color: var(--muted); }
+.practice-editor .eyebrow, .practice-editor details > summary,
+.practice-editor .stage-badge { color: var(--accent); }
+.practice-editor button { background: #f2ecfa; border-color: #d4c3e6; color: #65438a; }
+.practice-editor button:hover { background: #eae0f6; }
+.practice-editor button.primary { background: var(--accent); border-color: var(--accent); color: white; }
+.practice-editor button.danger { background: #fff0f3; color: #a53d59; }
+.practice-editor input, .practice-editor select, .practice-editor textarea { background: white; border-color: #d9cde5; color: var(--ink); }
+.practice-editor section, .practice-editor .advanced, .practice-editor dialog { background: white; border-color: var(--line); color: var(--ink); }
+.practice-editor .editor-heading { background: white; border-color: var(--line); }
+.practice-editor .tabs { border-color: var(--line); }
+.practice-editor .tabs button { background: transparent; border-color: transparent; color: var(--muted); }
+.practice-editor .tabs button[aria-pressed="true"] { background: #eee6f8; border-color: #d9c7ed; color: #6b458f; }
+.practice-editor .stage-card, .practice-editor .list-card, .practice-editor .flag-card,
+.practice-editor .rule-card, .practice-editor .stat, .practice-editor .status,
+.practice-editor #preview-log p { background: #f8f6fb; border-color: #e0d7e9; color: var(--ink); }
+.practice-editor .transition-grid { background: #f2eef7; }
+.practice-editor #preview-log .player { background: #eee5fa; }
+.practice-editor pre { color: #655372; }
+.practice-editor .status.error { color: #a53d59; border-color: #e7bdc9; }
+.practice-editor dialog::backdrop { background: #39304835; }
+
+.help-content code { background:#f0ebf7; color:#70508c; }
+.admin-scenario-picker select { background:white; border-color:#d9cfe6; color:var(--ink); }
+.phone-battery::before { background:#514b5e; }

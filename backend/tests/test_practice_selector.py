@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 import pytest
 from app.arena.practice_catalog import documents,case_variables,render,FAMILIES
-from app.arena.practice_selector import choose
+from app.arena.practice_selector import choose, replay_selection
 from app.arena.scenario_loader import _load_one,ScenarioLoadError
 
 
@@ -30,7 +30,7 @@ def test_replay_and_difficulty_and_truth_class_are_stable():
     assert choose(rows,[1],2,'a')==choose(rows,[1],2,'a')
     assert all(choose(rows,[],2,str(seed))['difficulty']==2 for seed in range(100))
     kinds=[choose(rows,[],1,str(seed))['scenario_kind'] for seed in range(1000)]
-    assert 400<kinds.count('benign')<600
+    assert 700<kinds.count('fraud')<800
     assert any(kinds[i]==kinds[i+1] for i in range(len(kinds)-1))
 
 
@@ -39,3 +39,54 @@ def test_recency_reduces_selection_without_forcing_alternation():
     picked=[choose(rows,[0,0,0],1,str(seed))['scenario_id'] for seed in range(1000)]
     assert picked.count(0)<100
     assert picked.count(1)>300 and picked.count(2)>300
+
+
+def test_each_truth_class_rotates_without_repeats_until_its_pool_is_covered():
+    rows=[dict(scenario_id=i,scenario_kind=kind,difficulty=1,selection_weight=1)
+          for i,kind in enumerate(['fraud']*3+['benign']*3)]
+    counts={};recent=[];cycles={'fraud':[],'benign':[]}
+    for seed in range(400):
+        row=choose(rows,recent,1,str(seed),counts)
+        key=str(row['scenario_id']);kind=row['scenario_kind']
+        cycles[kind].append(row['scenario_id'])
+        counts[key]=counts.get(key,0)+1
+        recent=([row['scenario_id']]+recent)[:12]
+    for history in cycles.values():
+        for start in range(0,len(history)-2,3):
+            assert len(set(history[start:start+3]))==3
+    assert 270<len(cycles['fraud'])<330
+
+
+def test_new_and_less_seen_scenarios_override_weights_and_old_recency():
+    rows=[dict(scenario_id=i,scenario_kind='fraud',difficulty=1,selection_weight=10000 if i==0 else 1)
+          for i in range(3)]
+    for seed in range(100):
+        assert choose(rows,[],1,str(seed),{'0':200,'1':50})['scenario_id']==2
+        assert choose(rows,[],1,str(seed),{0:200,1:50,2:50})['scenario_id']!=0
+
+
+def test_more_fraud_variants_do_not_change_the_class_probability():
+    rows=[dict(scenario_id=i,scenario_kind='fraud' if i else 'benign',difficulty=1,selection_weight=1)
+          for i in range(100)]
+    assert 700<sum(choose(rows,[],1,str(seed))['scenario_kind']=='fraud' for seed in range(1000))<800
+
+
+def test_counts_survive_json_replay_and_do_not_force_a_different_difficulty():
+    rows=[dict(scenario_id=i,scenario_kind=kind,difficulty=level,selection_weight=1)
+          for i,(kind,level) in enumerate([('fraud',1),('fraud',2),('benign',1),('benign',2)])]
+    counts={0:0,1:10,2:0,3:10}
+    for seed in range(50):
+        first=choose(rows,[1,3],2,str(seed),counts)
+        assert first['difficulty']==2
+        assert choose(rows,[1,3],2,str(seed),json.loads(json.dumps(counts)))==first
+
+
+def test_old_selection_snapshots_keep_the_original_equal_class_replay():
+    import random
+    rows=[dict(scenario_id=i,scenario_kind=kind,difficulty=1,selection_weight=1)
+          for i,kind in enumerate(['benign','fraud'])]
+    snapshot={'policy':'mixed-v1','candidates':rows,'recent':[],'level':1}
+    for seed in range(100):
+        key=str(seed)
+        expected=random.Random(key).choice(['benign','fraud'])
+        assert replay_selection(snapshot,key)['scenario_kind']==expected

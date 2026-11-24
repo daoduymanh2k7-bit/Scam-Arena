@@ -48,7 +48,9 @@ jobs:
         env:
           PYTHONPATH: backend
           DATABASE_URL: postgresql://arena_checks:ci-local-only@127.0.0.1:5432/arena_checks
-        run: python backend/tools/check_scenario_versions.py
+        run: |
+          python backend/tools/check_scenario_versions.py
+          python backend/tools/check_user_management.py
       - name: Test call microphone lifecycle
         run: node --test frontend/tests/*.test.cjs
 

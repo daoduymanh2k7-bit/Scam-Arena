@@ -14,7 +14,7 @@ def service_completion(payload, node_key, requested_action, caller_line, user_te
     family = payload.get('family')
     if (payload.get('scenario_kind') != 'benign' or requested_action != 'other'
             or payload.get('id') != f'practice-{family}-ordinary-' + str({'beginner':1,'intermediate':2,'advanced':3}.get(payload.get('difficulty'),0))
-            or node_key not in {'intro','details','confirmation'}
+            or (node_key not in {'intro','details','confirmation'} and not (node_key=='verification' and family=='appointment' and 'lich nay co dung voi lich' in normalize_phrase(caller_line)))
             or intent in {'refuse','hang_up','share_sensitive','transfer_money'}):
         return None
     text = normalize_phrase(user_text)
@@ -39,7 +39,7 @@ def service_completion(payload, node_key, requested_action, caller_line, user_te
     elif family == 'appointment':
         relevant = bool(re.search(r'\b(?:lich|hen|gio|tien)\b',caller))
         if relevant and (when or acknowledgement or re.search(r'\b(?:dung lich|theo lich|xac nhan lich|van tien|giu nguyen lich)\b',text)):
-            return Completion('appointment_confirmed','Vâng, tôi ghi nhận lịch hẹn mình vừa thống nhất. Anh/chị có thể đối chiếu trong ứng dụng. Cảm ơn anh/chị, tôi kết thúc cuộc gọi tại đây.')
+            return Completion('appointment_confirmed','Vâng, tôi ghi nhận lịch hẹn mình vừa thống nhất. Anh/chị có thể đối chiếu trong thư xác nhận. Cảm ơn anh/chị, tôi kết thúc cuộc gọi tại đây.')
     elif family == 'support':
         resolved = bool(re.search(r'\b(?:da het loi|het loi roi|da lam duoc|chay binh thuong|hoat dong binh thuong|da sua duoc)\b',text))
         if resolved:

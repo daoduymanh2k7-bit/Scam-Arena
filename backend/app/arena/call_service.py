@@ -33,6 +33,7 @@ from app.arena.line_generator import resolve_bot_line, regenerate_line_for_turn
 from app.arena.phone_dialogue import phone_opening, clarification_fallback
 from app.arena.scenario_versions import session_seed
 from app.arena.practice_catalog import render
+from app.arena.phone_ui import screen_feedback, ground_service_line
 import logging
 
 logger = logging.getLogger(__name__)
@@ -291,13 +292,15 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
         )
         caller_line = _masked_text(session["caller_line"])
         user_text_masked = _masked_text(user_text)
+        ui_reply = screen_feedback(session.get('scenario_payload') or {}, session['requested_action'],
+            session['caller_line'], user_text, session['case_parameters']) if session['interaction_mode']=='call' else None
         from app.arena.service_completion import service_completion
         completion = service_completion(session.get('scenario_payload') or {}, session['node_key'],
             session['requested_action'], session['caller_line'], user_text, intent)
         if completion:
             intent = 'comply'
             intent_method = 'rule'
-        if intent == 'unknown' and result.matched_rule is None:
+        if intent == 'unknown' and result.matched_rule is None and not ui_reply:
             # Reclassify unresolved replies with masked context before transition lookup.
             try:
                 scenario_payload = session.get("scenario_payload") or {}
@@ -418,6 +421,12 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                 cursor.execute("UPDATE call_sessions SET world_state=world_state || %s WHERE session_id=%s",
                     (Jsonb({'service_completion': {'reason': completion.reason, 'turn_no': next_turn_no}}),session_id))
 
+        if ui_reply and intent not in {'hang_up','refuse','share_sensitive','transfer_money'}:
+            target = None
+            score_delta, feedback, critical, unknown_count = 0, None, False, 0
+        else:
+            ui_reply = None
+
         if next_turn_no >= session['max_turns'] and (target is None or not target['target_is_terminal']):
             target=_terminal_node(cursor,session['scenario_version_id'],'timeout')
             unknown_count=0
@@ -439,13 +448,15 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             ended = outcome is not None
 
         bot_text=render(bot_text,session["case_parameters"])
+        if session['interaction_mode']=='call' and not ended:
+            bot_text=ui_reply or ground_service_line(bot_text,session.get('scenario_payload') or {},session['case_parameters'])
         from app.arena.notifications import request_artifact,brief
         if session['interaction_mode']=='call' and not ended:
             cursor.execute('SELECT requested_action FROM dialogue_nodes WHERE node_id=%s',(target_node_id,))
             request_artifact(cursor,session_id,cursor.fetchone()['requested_action'])
         available_messages=brief(cursor,session_id)
         line_result = None
-        if not (target is not None and target["target_is_terminal"]):
+        if not ui_reply and not (target is not None and target["target_is_terminal"]):
             # The session row is locked here; keep LINE_LLM_TIMEOUT_SECONDS short (default 3s).
             line_result = resolve_bot_line(
                 scenario_id=session["scenario_id"], session_id=session_id,
@@ -453,7 +464,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                 original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
                 context={"conversation_ending": False, "sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
                          "caller_line": caller_line, "case_facts": session["case_parameters"],
-                         "available_messages": available_messages,
+                         "available_messages": available_messages, "phone_ui": session["interaction_mode"] == "call",
                          "interaction_mode": session["interaction_mode"]},
             )
             bot_text = line_result.text

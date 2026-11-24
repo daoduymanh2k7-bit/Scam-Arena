@@ -26,6 +26,31 @@
       }
       this.overlay.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();this.close();}};
     }
+    setUtilities(panel, sources) {
+      this.utilities=panel;this.utilitySources=sources;
+      this.utilityParking=element('div');this.utilityParking.hidden=true;this.screen.append(this.utilityParking);this.utilityParking.append(panel);
+      this.utilityLauncher=element('button','phone-inbox-launcher phone-tools-launcher','Tiện ích');
+      this.utilityLauncher.type='button';this.utilityLauncher.hidden=true;
+      this.utilityLauncher.onclick=()=>this.showTools();this.screen.append(this.utilityLauncher);
+    }
+    enableUtilities(enabled){if(this.utilityLauncher)this.utilityLauncher.hidden=!enabled;}
+    updateUtilities(){
+      if(!this.utilityView)return;
+      for(const [key,source] of Object.entries(this.utilitySources))this.utilityView.querySelector(`[data-tool-${key}]`).textContent=source.textContent;
+    }
+    clearContent(){
+      if(this.utilities && this.content.contains(this.utilities))this.utilityParking.append(this.utilities);
+      this.content.replaceChildren();
+    }
+    showTools(){
+      this.hideNotice();clearInterval(this.expiryTimer);this.openId=null;this.tab='tools';
+      this.overlay.hidden=false;this.overlay.querySelector('.phone-inbox-back').hidden=true;
+      this.overlay.querySelector('h3').textContent='Tiện ích cuộc gọi';this.overlay.querySelector('nav').hidden=true;
+      this.utilityView=element('div','phone-call-utilities');
+      this.utilityView.innerHTML='<p class="phone-context" data-tool-context></p><div class="phone-tool-actions"></div><p class="phone-evidence" data-tool-evidence></p><p role="status" data-tool-result></p>';
+      this.utilityView.querySelector('.phone-tool-actions').append(this.utilities);
+      this.content.replaceChildren(this.utilityView);this.status.textContent='';this.updateUtilities();
+    }
     async request(path,body,signal){
       const response=await fetch(`/api/voice/inbox/${encodeURIComponent(this.session)}${path}`,body===undefined?{signal}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});
       const data=await response.json();if(!response.ok)throw Error(data.detail||'Chưa tải được thông báo.');return data;
@@ -46,7 +71,7 @@
             this.seen.add(message.message_id);if(!message.read_at)this.queue.push(message);
           }
           this.updateBadge();if(!this.currentNotice)this.next();
-          if(!this.overlay.hidden){if(this.openId)this.drawMessage(this.openId);else this.showList(false);}
+          if(!this.overlay.hidden){if(this.openId)this.drawMessage(this.openId);else if(this.tab==='tools')this.showTools();else this.showList(false);}
         }catch(error){if(error.name!=='AbortError'&&generation===this.generation)this.status.textContent=error.message;}
         finally{if(generation===this.generation)this.loading=null;}
       })();return this.loading;
@@ -70,9 +95,10 @@
     dismiss(){clearTimeout(this.noticeTimer);this.banner.hidden=true;this.currentNotice=null;this.nextTimer=setTimeout(()=>this.next(),350);}
     hideNotice(){clearTimeout(this.noticeTimer);clearTimeout(this.nextTimer);this.banner.hidden=true;this.currentNotice=null;}
     showList(focus=true){
+      if(this.tab==='tools')this.tab='all';
       this.hideNotice();clearInterval(this.expiryTimer);this.openId=null;this.overlay.hidden=false;this.overlay.querySelector('.phone-inbox-back').hidden=true;
       this.overlay.querySelector('h3').textContent=this.tab==='email'?'Mail':this.tab==='sms'?'Tin nhắn':'Hộp thư';
-      this.overlay.querySelector('nav').hidden=false;this.content.replaceChildren();this.status.textContent='';
+      this.overlay.querySelector('nav').hidden=false;this.clearContent();this.status.textContent='';
       for(const b of this.overlay.querySelectorAll('nav button'))b.setAttribute('aria-pressed',String(b.dataset.channel===this.tab));
       const messages=this.messages.filter(m=>this.tab==='all'||m.channel===this.tab);
       if(!messages.length)this.content.append(element('p','phone-inbox-empty','Chưa có thông báo trong mục này.'));
@@ -92,7 +118,7 @@
     drawMessage(id){
       this.hideNotice();clearInterval(this.expiryTimer);const message=this.messages.find(m=>m.message_id===id);if(!message)return;
       this.openId=id;this.overlay.hidden=false;this.overlay.querySelector('nav').hidden=true;this.overlay.querySelector('.phone-inbox-back').hidden=false;
-      this.overlay.querySelector('h3').textContent=message.channel==='email'?'Mail':'Tin nhắn';this.content.replaceChildren();this.status.textContent='';
+      this.overlay.querySelector('h3').textContent=message.channel==='email'?'Mail':'Tin nhắn';this.clearContent();this.status.textContent='';
       const article=element('article','phone-message-reader '+message.channel);
       article.append(element('span','phone-message-channel',message.channel==='email'?'EMAIL MÔ PHỎNG':'SMS MÔ PHỎNG'),element('h4','',message.subject),element('strong','phone-message-from',message.sender));
       article.append(element('small','phone-message-date','Đến: tôi · '+new Date(message.created_at).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})));
@@ -110,9 +136,10 @@
       this.content.append(article);
     }
     close(){clearInterval(this.expiryTimer);this.overlay.hidden=true;this.launcher.focus({preventScroll:true});this.next();}
-    ended(){this.callEnded=true;this.canResend=false;this.overlay.querySelector('.phone-return-call span').textContent='Cuộc gọi đã kết thúc';if(this.openId)this.drawMessage(this.openId);}
+    ended(){this.enableUtilities(false);this.callEnded=true;this.canResend=false;this.overlay.querySelector('.phone-return-call span').textContent='Cuộc gọi đã kết thúc';if(this.openId)this.drawMessage(this.openId);}
     reset(){
       this.generation++;this.abort?.abort();this.loading=null;clearTimeout(this.noticeTimer);clearTimeout(this.nextTimer);clearInterval(this.expiryTimer);
+      this.enableUtilities(false);this.tab='all';this.utilityView=null;this.clearContent();
       this.session=null;this.callEnded=false;this.canResend=false;this.messages=[];this.seen=new Set();this.readIds=new Set();this.queue=[];this.currentNotice=null;this.openId=null;
       this.banner.hidden=true;this.overlay.hidden=true;this.launcher.hidden=true;this.overlay.querySelector('.phone-return-call span').textContent='● Đang diễn ra';
     }

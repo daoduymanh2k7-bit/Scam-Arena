@@ -70,11 +70,42 @@ def run():
             assert c.execute('SELECT count(*) AS n FROM practice_events WHERE session_id=%s',(ordinary.session_id,)).fetchone()['n']==1
         mixed=calls.start_call('mixed-delivery',user,'call')
         assert mixed.scenario_key=='mixed-delivery' and mixed.scenario_title=='Cuộc gọi dịch vụ'
-        from app.arena.practice_selector import choose
+        from app.arena.practice_selector import replay_selection
         with pool.connection() as c:
             saved=c.execute('SELECT random_seed,world_state,scenario_id FROM call_sessions WHERE session_id=%s',(mixed.session_id,)).fetchone()
             trace=saved['world_state']['selection']
-            assert choose(trace['candidates'],trace['recent'],trace['level'],saved['random_seed'])['scenario_id']==saved['scenario_id']
+            assert trace['fraud_probability']==0.75
+            assert replay_selection(trace,saved['random_seed'])['scenario_id']==saved['scenario_id']
+        # Exercise persisted rotation beyond the old 12-call memory window.
+        with pool.connection() as c:
+            rotation_user=c.execute("INSERT INTO app_users(username,password_hash) VALUES('rotation-check','test-only') RETURNING user_id").fetchone()['user_id']
+        cycles={'fraud':[],'benign':[]}
+        for index in range(40):
+            with patch.object(calls,'session_seed',return_value='rotation-'+str(index)):
+                rotation=calls.start_call('mixed-any',rotation_user,'call','beginner')
+            with pool.connection() as c:
+                saved=c.execute('SELECT random_seed,world_state,scenario_id FROM call_sessions WHERE session_id=%s',(rotation.session_id,)).fetchone()
+                trace=saved['world_state']['selection']
+                assert replay_selection(trace,saved['random_seed'])['scenario_id']==saved['scenario_id']
+                actual={str(row['scenario_id']):row['n'] for row in c.execute(
+                    'SELECT scenario_id,count(*) AS n FROM call_sessions WHERE user_id=%s AND session_id<>%s GROUP BY scenario_id',
+                    (rotation_user,rotation.session_id)).fetchall()}
+                assert trace['seen_counts']==actual
+                selected=next(row for row in trace['candidates'] if row['scenario_id']==saved['scenario_id'])
+                cycles[selected['scenario_kind']].append(saved['scenario_id'])
+            calls.finish_call(rotation.session_id,rotation_user)
+        for history in cycles.values():
+            for index in range(0,len(history)-2,3):
+                assert len(set(history[index:index+3]))==3
+        # Concurrent tabs must observe each other's committed selections.
+        from concurrent.futures import ThreadPoolExecutor
+        with pool.connection() as c:
+            parallel_user=c.execute("INSERT INTO app_users(username,password_hash) VALUES('parallel-rotation-check','test-only') RETURNING user_id").fetchone()['user_id']
+        with patch.object(calls,'session_seed',return_value='rotation-0'), ThreadPoolExecutor(max_workers=2) as executor:
+            parallel=list(executor.map(lambda _: calls.start_call('mixed-any',parallel_user,'call','beginner'),range(2)))
+        with pool.connection() as c:
+            chosen=c.execute('SELECT DISTINCT scenario_id FROM call_sessions WHERE user_id=%s',(parallel_user,)).fetchall()
+            assert len(chosen)==2
         for family in ['appointment','support','any']:
             call=calls.start_call('mixed-'+family,user,'call','advanced','assessment')
             assert call.practice_context and '{' not in call.bot_text

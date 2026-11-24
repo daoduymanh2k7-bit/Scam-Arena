@@ -71,7 +71,7 @@ body[data-authenticated="true"] #sidebar-login { display: none; }
   .sidebar-brand { width: 24px; height: 24px; font-size: 16px; border-radius: 8px; }
   .sidebar-scroll { padding-top: 6px; }
   .sidebar-primary,.sidebar-admin,.sidebar-footer { gap: 2px; }
-  #mode-nav .sidebar-item { min-height: 28px; padding-block: 4px; }
+  #mode-nav .sidebar-item { min-height: 26px; padding-block: 3px; }
   #mode-nav .sidebar-item svg { width: 18px; height: 18px; }
   #mode-nav .sidebar-admin { margin-top: 4px; padding-top: 4px; }
   .sidebar-footer { margin-top: 4px; padding-top: 4px; }

@@ -31,15 +31,28 @@ This is educational software, not a proctored or cheat-proof examination.
 
 ## Selection and replay
 
-The selector first chooses a truth class independently, then weights candidates
-near the requested difficulty. The most recent exact scenario is downweighted,
-with a further penalty for repeats in the last 12 calls. Repeats remain possible;
-there is no predictable true/false alternation. After at least five judgements,
+The selector first chooses fraud with 75% probability or benign with 25%, then
+finds the nearest requested difficulty in that class. It selects only the least
+encountered scenarios in that pool, using the account's full persisted history.
+Unseen scenarios therefore precede repeats; each class rotates independently.
+This preserves the 75/25 probability even when the catalog contains equal counts
+of benign and fraudulent scenarios. A fraud scenario may repeat before every
+benign scenario has been seen. Strict non-repetition across both classes would
+instead force the long-term ratio to match the catalog's composition.
+
+Selection weights and the last 12 calls break ties among equally encountered
+scenarios. New scenarios are prioritized as unseen; changing difficulty or topic
+restricts the eligible pool. Direct scenario selection bypasses random selection.
+An account-scoped transaction lock prevents concurrent starts from choosing
+without observing each other's sessions. There is no fixed true/false sequence.
+After at least five judgements,
 adaptive difficulty uses the last ten correct classifications without risky
 simulation events: >=80% advanced, >=50% intermediate, otherwise beginner.
 
-The case stores seed, candidate/weight snapshot, recent scenario IDs, selected
-level and policy version. Selection can be replayed from that snapshot. Case
+The case stores seed, candidate/weight snapshot, recent scenario IDs, lifetime
+encounter counts, selected level, class probability and policy version
+(`mixed-v2-class-cycles`). Selection can be replayed from that snapshot; legacy
+`mixed-v1` snapshots retain their original equal-class algorithm. Case
 variables include simulated reference, time window and location. The variables,
 scenario graph, fixed lines, transition scores and rubric metadata are versioned
 or pinned. Speech timing and stochastic LLM wording are not deterministic replay.

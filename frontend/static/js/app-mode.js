@@ -14,6 +14,9 @@
   const randomStart = document.getElementById('call-random-start');
   const scenarioToggle = document.getElementById('call-scenario-toggle');
   const scenarioMenu = document.getElementById('call-scenario-menu');
+  const callSetup = callScreen.querySelector('.call-setup');
+  const callLiveHeading = callScreen.querySelector('.call-live-heading');
+  const blockAnimations = new Map();
   const scenarioStatus = document.getElementById("call-scenarios-status");
   const subtitlesPanel = callScreen.querySelector(".call-subtitles");
   const subtitlesLog = document.getElementById("call-subtitles-log");
@@ -38,15 +41,48 @@
   const practicePanel = document.createElement('div');
   practicePanel.className='practice-call-panel';
   practicePanel.hidden = true;
-  practicePanel.innerHTML = `<p data-context>Bạn sẽ nhận một cuộc gọi dịch vụ chưa rõ thật/giả. Bối cảnh cụ thể xuất hiện khi cuộc gọi bắt đầu.</p>
-    <label>Độ khó <select data-difficulty><option value="adaptive">Theo kết quả luyện tập</option><option value="beginner">Cơ bản</option><option value="intermediate">Trung bình</option><option value="advanced">Nâng cao</option></select></label>
-    <label>Chế độ <select data-exercise><option value="training">Luyện tập</option><option value="assessment">Đánh giá (không tạo lại câu)</option></select></label>
-    <p>Công cụ trong điện thoại:</p><button type="button" data-event="check_context">Xem hồ sơ / đơn / lịch</button>
-    <button type="button" data-event="read_message">Đọc thông báo</button><button type="button" data-event="verify_official">Tự kiểm tra kênh chính thức</button>
-    <button type="button" data-event="open_requested_link" hidden>Mở liên kết mô phỏng</button><button type="button" data-event="share_demo_code" hidden>Gửi mã mô phỏng</button>
-    <p data-evidence-text></p><button type="button" data-finish-retry hidden>Lưu kết thúc lại</button><p>Nhận định sau cuộc gọi:</p><textarea data-reason rows="2" maxlength="1000" placeholder="Bạn dựa vào dấu hiệu nào? (không nhập dữ liệu thật)"></textarea>
-    <button type="button" data-judge="benign">Bình thường</button> <button type="button" data-judge="fraud">Giả mạo</button> <button type="button" data-judge="uncertain">Chưa đủ thông tin</button><p data-result></p>`;
-  scenarioMenu.after(practicePanel);
+  practicePanel.innerHTML = `<div class="practice-context"><span class="practice-kicker">Bối cảnh của bạn</span><p data-context>Bối cảnh cụ thể xuất hiện khi cuộc gọi bắt đầu.</p></div>
+    <details class="practice-settings"><summary>Tùy chọn luyện tập</summary>
+      <label>Độ khó <select data-difficulty><option value="adaptive">Theo kết quả luyện tập</option><option value="beginner">Cơ bản</option><option value="intermediate">Trung bình</option><option value="advanced">Nâng cao</option></select></label>
+      <label>Chế độ <select data-exercise><option value="training">Luyện tập</option><option value="assessment">Đánh giá (không tạo lại câu)</option></select></label>
+    </details>
+    <div class="practice-tools" hidden><p class="practice-kicker">Kiểm tra thông tin</p>
+      <button type="button" data-event="check_context">Xem hồ sơ / đơn / lịch</button>
+      <button type="button" data-event="read_message">Đọc thông báo</button><button type="button" data-event="verify_official">Tự kiểm tra kênh chính thức</button>
+      <button type="button" data-event="open_requested_link" hidden>Mở liên kết mô phỏng</button><button type="button" data-event="share_demo_code" hidden>Gửi mã mô phỏng</button>
+    </div>
+    <p data-evidence-text></p><button type="button" data-finish-retry hidden>Lưu kết thúc lại</button>
+    <div class="practice-debrief" hidden><p class="practice-kicker">Nhận định sau cuộc gọi</p><textarea data-reason rows="2" maxlength="1000" placeholder="Bạn dựa vào dấu hiệu nào? (không nhập dữ liệu thật)"></textarea>
+      <div class="practice-verdicts"><button type="button" data-judge="benign">Bình thường</button><button type="button" data-judge="fraud">Giả mạo</button><button type="button" data-judge="uncertain">Chưa đủ thông tin</button></div>
+    </div><p data-result role="status"></p>`;
+  callScreen.querySelector('.call-scenario-picker').append(practicePanel);
+  const practiceSettings = practicePanel.querySelector('.practice-settings');
+  const practiceTools = practicePanel.querySelector('.practice-tools');
+  const practiceDebrief = practicePanel.querySelector('.practice-debrief');
+  inbox.setUtilities(practiceTools,{context:practicePanel.querySelector('[data-context]'),evidence:practicePanel.querySelector('[data-evidence-text]'),result:practicePanel.querySelector('[data-result]')});
+
+  function revealBlock(element,show) {
+    const previous=blockAnimations.get(element);
+    const from=element.hidden?0:element.getBoundingClientRect().height;
+    previous?.cancel();blockAnimations.delete(element);
+    element.inert=!show;
+    if((element.hidden===!show&&!previous)||!element.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){
+      element.hidden=!show;element.style.height='';element.style.overflow='';return;
+    }
+    element.hidden=false;element.style.height='';
+    const to=show?element.getBoundingClientRect().height:0;
+    element.style.overflow='hidden';element.style.height=from+'px';
+    const animation=element.animate([
+      {height:from+'px',opacity:show?0:1,transform:show?'translateY(8px)':'translateY(0)'},
+      {height:to+'px',opacity:show?1:0,transform:show?'translateY(0)':'translateY(-6px)'}
+    ],{duration:show?360:220,easing:'cubic-bezier(.22,1,.36,1)',fill:'forwards'});
+    blockAnimations.set(element,animation);
+    animation.onfinish=()=>{
+      if(blockAnimations.get(element)!==animation)return;
+      element.hidden=!show;element.style.height='';element.style.overflow='';animation.cancel();blockAnimations.delete(element);
+    };
+  }
+
   const isMixed = () => selectedScenario?.startsWith('mixed-');
   const isAssessment = () => isMixed() && practicePanel.querySelector('[data-exercise]').value === 'assessment';
   async function refreshPractice() {
@@ -56,14 +92,15 @@
     if (!response.ok || mixedSession!==owner) return;
     const state=await response.json();
     practicePanel.querySelector('[data-context]').textContent=state.context;
-    practicePanel.querySelectorAll('[data-event]').forEach(button=>{
+    practiceTools.querySelectorAll('[data-event]').forEach(button=>{
       button.hidden=!state.actions.includes(button.dataset.event);
       button.disabled=state.ended;
     });
+    inbox.enableUtilities(!state.ended && phone.dataset.callState==='active');inbox.updateUtilities();
   }
-  practicePanel.addEventListener('click', async event => {
+  callScreen.addEventListener('click', async event => {
     const button=event.target.closest('button');
-    if (!button || !mixedSession) return;
+    if (!button || !mixedSession || !button.matches('[data-event],[data-judge],[data-finish-retry]')) return;
     const owner=mixedSession;
     button.disabled=true;
     try {
@@ -87,7 +124,8 @@
         practicePanel.querySelector('[data-result]').textContent=`Cuộc gọi ${data.actual_kind==='benign'?'bình thường':'giả mạo'}. ${data.correct?'Nhận định đúng.':data.judgement==='uncertain'?'Bạn chưa kết luận.':'Nhận định chưa đúng.'} Điểm đánh giá: ${data.evaluation_score}/100. ${data.verified_independently?'Đã kiểm tra kênh độc lập.':''} ${data.risk_action_recorded?'Có thao tác mô phỏng rủi ro.':''} ${data.explanation} ${data.note}`;
         practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=true);
       }
-    } catch(error) {if(mixedSession===owner){practicePanel.querySelector('[data-result]').textContent=error.message;button.disabled=false;}}
+      if(mixedSession===owner)inbox.updateUtilities();
+    } catch(error) {if(mixedSession===owner){practicePanel.querySelector('[data-result]').textContent=error.message;button.disabled=false;inbox.updateUtilities();}}
   });
   let introPhase = "greeting";
   let turnBusy = false;
@@ -649,7 +687,7 @@
           practicePanel.querySelector('[data-reason]').value='';
           practicePanel.querySelector('[data-evidence-text]').textContent='';
           practicePanel.querySelector('[data-result]').textContent='';
-          practicePanel.querySelectorAll('button').forEach(b=>b.disabled=true);
+          [...practicePanel.querySelectorAll('button'),...practiceTools.querySelectorAll('button')].forEach(b=>b.disabled=true);
           clock.textContent = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
           setCallState("ringing", "Cuộc gọi đến", true);
   }
@@ -716,6 +754,16 @@
     latestCallTurn = null;
     setTurnBusy(state === "active");
     phone.dataset.callState = state;
+    callScreen.dataset.callState = state;
+    const busyCall=state==='ringing'||state==='active';
+    if(state==='ended')practiceSettings.open=false;
+    if(busyCall)setScenarioMenu(false);
+    revealBlock(callSetup,!busyCall);
+    callLiveHeading.querySelector('h2').textContent=state==='ringing'?'Cuộc gọi đến':'Đang trò chuyện';
+    revealBlock(callLiveHeading,busyCall);
+    revealBlock(practiceSettings,isMixed()&&state!=='active');
+    revealBlock(practiceTools,isMixed()&&state==='active');
+    revealBlock(practiceDebrief,isMixed()&&state==='ended'&&Boolean(mixedSession));
     if (state === 'idle' || state === 'ringing') subtitlesPanel.hidden = true;
     else if (state === 'active') subtitlesPanel.hidden = false;
     if (isMixed() && state==='ringing') {
@@ -725,12 +773,12 @@
       practicePanel.querySelector('[data-result]').textContent='';
       practicePanel.querySelector('[data-evidence-text]').textContent='';
       practicePanel.querySelector('[data-finish-retry]').hidden=true;
-      practicePanel.querySelectorAll('button').forEach(b=>b.disabled=true);
+      [...practicePanel.querySelectorAll('button'),...practiceTools.querySelectorAll('button')].forEach(b=>b.disabled=true);
     }
     practicePanel.querySelectorAll('select').forEach(select=>select.disabled=state==='active');
     if (isMixed() && state==='ended') {
       practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=true);
-      practicePanel.querySelectorAll('[data-event]').forEach(b=>b.disabled=true);
+      practiceTools.querySelectorAll('[data-event]').forEach(b=>b.disabled=true);
       const owner=mixedSession;
       Promise.resolve(finishing || true).then(saved=>{
         if(run!==callRun || mixedSession!==owner || !owner)return;
@@ -787,7 +835,7 @@
     const allowed = ['call','message','login',...extraScreens.map(screen=>screen.dataset.workspaceScreen)];
     if (!allowed.includes(mode)) return false;
     if (!signedIn && !['help','login'].includes(mode)) return false;
-    if (['rasa','scenarios','practice'].includes(mode) && document.body.dataset.userRole !== 'admin') return false;
+    if (['rasa','scenarios','practice','users'].includes(mode) && document.body.dataset.userRole !== 'admin') return false;
     const previous = document.body.dataset.workspace;
     document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
     const isCall = mode === 'call';

@@ -79,12 +79,15 @@ def register(username: str, password: str) -> tuple[dict, str]:
 def login(username: str, password: str) -> tuple[dict, str]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            "SELECT user_id,username,password_hash,role FROM app_users WHERE username=%s",
+            "SELECT user_id,username,password_hash,role,is_locked FROM app_users WHERE username=%s FOR UPDATE",
             (username.strip().lower(),),
         )
         user = cursor.fetchone()
         if not user or not _verify_password(password, user["password_hash"]):
             raise ValueError("Tên đăng nhập hoặc mật khẩu không đúng.")
+        if user['is_locked']:
+            raise ValueError('Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.')
+        cursor.execute('UPDATE app_users SET last_login_at=now() WHERE user_id=%s',(user['user_id'],))
         token = _new_session(cursor, user["user_id"])
     return {"user_id": user["user_id"], "username": user["username"], "role": user["role"]}, token
 
@@ -103,7 +106,7 @@ def get_current_user(token: str | None = Cookie(default=None, alias=COOKIE_NAME)
         cursor.execute(
             """SELECT u.user_id,u.username,u.role FROM auth_sessions a
                JOIN app_users u USING(user_id)
-               WHERE a.token_hash=%s AND a.expires_at>now()""",
+               WHERE a.token_hash=%s AND a.expires_at>now() AND NOT u.is_locked""",
             (_token_hash(token),),
         )
         user = cursor.fetchone()
