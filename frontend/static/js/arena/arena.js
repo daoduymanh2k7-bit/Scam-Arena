@@ -12,8 +12,10 @@
   function setStatus(message) { status.textContent = message || ""; }
   function setBusy(value) {
     busy = value;
-    sendButton.disabled = value;
-    textInput.disabled = value;
+    sendButton.disabled = value || callEnded || !textInput.value.trim();
+    transcriptBox.setAttribute("aria-busy", String(value));
+    $("arena-typing").hidden = !value;
+    textInput.disabled = value || callEnded;
     micButton.disabled = value || callEnded;
   }
   const intentNames = {
@@ -33,27 +35,30 @@
     content.className = "bubble-text";
     content.textContent = text;
     bubble.appendChild(content);
-    if (metadata?.intent) {
-      const label = document.createElement("div");
-      label.className = "bubble-meta intent-label";
-      label.textContent = `Hệ thống nhận diện: ${intentNames[metadata.intent] || metadata.intent} · ${intentMethods[metadata.intent_method] || metadata.intent_method}`;
-      bubble.appendChild(label);
+    const footer = document.createElement("div");
+    footer.className = "message-bubble-footer";
+    const time = document.createElement("time");
+    time.dateTime = new Date().toISOString();
+    time.textContent = new Date().toLocaleTimeString("vi-VN", {hour:"2-digit",minute:"2-digit"});
+    footer.append(time);
+    if (metadata?.intent || metadata?.line_source) {
+      const info = document.createElement("details");
+      info.className = "message-bubble-info";
+      const toggle = document.createElement("summary");
+      toggle.textContent = "i";
+      toggle.setAttribute("aria-label", "Xem nguồn và thông tin nhận diện tin nhắn");
+      const detail = document.createElement("div");
+      if (metadata.intent) detail.textContent = `Nhận diện: ${intentNames[metadata.intent] || metadata.intent} · ${intentMethods[metadata.intent_method] || metadata.intent_method}`;
+      else detail.textContent = `Nguồn: ${lineSources[metadata.line_source] || metadata.line_source} · ${metadata.line_latency_ms ?? 0} ms`;
+      info.append(toggle, detail);
+      footer.append(info);
     }
-    if (metadata?.line_source) {
-      const info = document.createElement("span");
-      info.className = "bubble-info";
-      info.tabIndex = 0;
-      info.setAttribute("role", "note");
-      info.setAttribute("aria-label", `Nguồn lời thoại: ${lineSources[metadata.line_source] || metadata.line_source}; ${metadata.line_latency_ms ?? 0} mili giây`);
-      info.dataset.tooltip = `Nguồn: ${lineSources[metadata.line_source] || metadata.line_source}\nThời gian: ${metadata.line_latency_ms ?? 0} ms`;
-      info.textContent = "i";
-      bubble.appendChild(info);
-    }
+    bubble.append(footer);
     if (role !== "user" && metadata?.turn_no != null) {
       const options = document.createElement("details");
       options.className = "bubble-options";
       const summary = document.createElement("summary");
-      summary.textContent = "Mở rộng";
+      summary.textContent = "Tùy chọn trả lời";
       const actions = document.createElement("div");
       actions.className = "bubble-actions";
       const retry = document.createElement("button");
@@ -136,22 +141,18 @@
   async function showScammer(response) {
     const line = response.bot_text;
     if (!line) return;
+    $("arena-typing").hidden = true;
     addBubble(line, "scammer", { line_source: response.line_source || "fixed", line_latency_ms: response.line_latency_ms ?? 0,
       line_id: response.line_id, turn_no: response.turn_no });
     updateCallState(response);
-    setStatus("Đang phát lời thoại…");
+    setStatus("Đang phát giọng đọc…");
     await speak(line);
     if (!callEnded && response.intent === "unknown") {
-      setStatus("Chưa nhận diện rõ ý định. Hãy thử nói rõ bạn từ chối, muốn tự xác minh, nghi ngờ, hay đồng ý làm theo.");
+      setStatus("Bạn có thể diễn đạt rõ hơn để tiếp tục trò chuyện.");
     } else if (callEnded) {
-      setStatus("Cuộc gọi đã kết thúc. Xem kết quả để đọc bài học và phản hồi.");
+      setStatus("Cuộc trò chuyện đã kết thúc. Chọn xem điểm để đọc nhận xét.");
     } else if (!callEnded) {
-      const source = response.intent_method === "rasa"
-        ? "Rasa đã phân loại câu trả lời. "
-        : response.intent_method === "rule"
-          ? "Luật an toàn/dự phòng đã nhận diện câu trả lời. "
-          : "";
-      setStatus(`${source}Đến lượt bạn. Hãy bình tĩnh trả lời hoặc yêu cầu xác minh.`);
+      setStatus("Đến lượt bạn. Hãy trả lời theo cách bạn sẽ làm ngoài đời.");
     }
   }
   async function startSession(nextScenario) {
@@ -164,9 +165,10 @@
     $("arena-scenario-label").textContent = scenario.label;
     transcriptBox.replaceChildren();
     textInput.value = "";
+    resizeInput();
     setBusy(true);
     setCallTimer();
-    setStatus("Đang kết nối…");
+    setStatus("Đang mở cuộc trò chuyện…");
     try {
       const response = await Api.startCall(scenario.key);
       sessionId = response.session_id;
@@ -179,11 +181,12 @@
     const answer = text.trim();
     if (!answer || busy || callEnded || !scenario) return;
     setBusy(true);
-    setStatus("Đang xử lý câu trả lời…");
+    setStatus("Đang gửi tin nhắn…");
     try {
       const response = await Api.submitCallTurn(sessionId, answer, elapsed);
       addBubble(answer, "user", { intent: response.intent, intent_method: response.intent_method });
       textInput.value = "";
+      resizeInput();
       await showScammer(response);
     } catch (error) {
       setStatus(`Chưa gửi được câu trả lời: ${error.message}`);
@@ -192,7 +195,7 @@
   async function loadScenarios() {
     try {
       const scenarios = await Api.listScenarios();
-      scenarios.forEach((item) => {
+      scenarios.filter(item=>!item.key.startsWith('mixed-')).forEach((item) => {
         const button = document.createElement("button");
         button.className = "scenario-card";
         button.type = "button";
@@ -296,12 +299,20 @@
     }
   }
 
+  function resizeInput() {
+    textInput.style.height = 'auto';
+    textInput.style.height = Math.min(textInput.scrollHeight,112) + 'px';
+  }
+  textInput.addEventListener('input', () => {
+    resizeInput();
+    sendButton.disabled = busy || callEnded || !textInput.value.trim();
+  });
   sendButton.addEventListener("click", () => {
     const elapsed = lastScammerAt ? Math.max(0, (Date.now() - lastScammerAt) / 1000) : null;
     sendReply(textInput.value, elapsed);
   });
   textInput.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendButton.click(); }
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) { event.preventDefault(); sendButton.click(); }
   });
   micButton.addEventListener("click", toggleRecording);
   $("arena-random-btn").addEventListener("click", async () => {

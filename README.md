@@ -347,4 +347,7 @@ Khi public, tất cả người dùng dùng chung database và kho câu thoại.
 
 - [Thiết lập Deepgram cho nhận diện tiếng Việt](docs/DEEPGRAM_SETUP.md)
 - [Tạo câu trả lời khác trong cuộc gọi và điểm ưu tiên lời thoại](docs/CALL_REPLY_RETRY.md)
+- [Lộ trình cuộc gọi bình thường/giả mạo và phiên bản kịch bản](docs/MIXED_CALLS_ROADMAP.md)
 - Cuộc gọi Deepgram hỗ trợ phụ đề streaming qua WebSocket, chốt câu bằng Silero; REST được giữ làm dự phòng. Đặt `DEEPGRAM_STREAMING_ENABLED=false` để so sánh cách cũ.
+
+Cuộc gọi có hộp thư mô phỏng trong điện thoại: email xác nhận theo hồ sơ, SMS mã 6 số có thời hạn 3 phút, gửi lại tối thiểu sau 20 giây và tối đa 3 mã/phiên (mã cũ mất hiệu lực). Bấm thông báo để đọc hoặc dùng biểu tượng hộp thư rồi quay lại cuộc gọi. Dữ liệu được lưu theo phiên, chỉ chủ phiên xem được; không gửi SMS/Gmail thật và không cần quyền thông báo của trình duyệt. LLM chỉ nhận tên thông báo đã cấp, không được cung cấp mã OTP riêng.

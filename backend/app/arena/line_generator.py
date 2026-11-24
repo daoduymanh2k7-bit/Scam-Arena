@@ -42,6 +42,8 @@ def validate_line(text, player_text='', context=None):
     if re.search(r'\b(?:tôi là (?:một )?ai|mô hình ngôn ngữ|trợ lý ai|as an ai)\b',text,re.I): return None
     if '```' in text or text.strip().casefold()==player_text.strip().casefold(): return None
     if context:
+        if 'biên lai' in text.casefold() and not any(m.get('channel')=='receipt' for m in context.get('available_messages',[])):
+            return None
         if listening_acknowledgement(player_text) and re.search(
                 r"con nghe may|giai thich.*yeu cau cua (?:minh|ban)", normalize_phrase(text)):
             return None
@@ -247,13 +249,16 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
     try:
         with get_connection_pool().connection() as c, c.cursor() as cur:
             # Supply only published scenario metadata, the chosen target node and masked history.
-            cur.execute("SELECT payload FROM scenarios WHERE scenario_id=%s",(scenario_id,)); scenario_row=cur.fetchone()
+            cur.execute("""SELECT v.definition->'payload' || jsonb_build_object('title',v.definition->>'title') AS payload
+                           FROM call_sessions cs JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
+                           WHERE cs.session_id=%s""",(session_id,)); scenario_row=cur.fetchone()
             cur.execute("SELECT node_key,objective,tactic,requested_action FROM dialogue_nodes WHERE node_id=%s",(target_node,)); node_row=cur.fetchone()
             cur.execute("SELECT turn_no,user_text_masked,intent,bot_reply_text FROM call_turns WHERE session_id=%s ORDER BY turn_no DESC LIMIT 4",(session_id,)); history=list(reversed(cur.fetchall()))
             payload=scenario_row['payload'] if scenario_row else {}
             persona=payload.get('persona',{}) if isinstance(payload,dict) else {}
             if context is None: context={}
             context.update({'scenario_title':payload.get('title','') if isinstance(payload,dict) else '',
+                'scenario_kind':payload.get('scenario_kind','fraud'),
                 'scenario_category':payload.get('category','') if isinstance(payload,dict) else '',
                 'persona':persona,'user_context':payload.get('user_context','') if isinstance(payload,dict) else '',
                 'objective':(node_row or {}).get('objective',''),'tactics':[(node_row or {}).get('tactic','')],
@@ -262,7 +267,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
                 'recent_turns':[{'player_text_masked':r['user_text_masked'],'intent':r['intent'],'bot_line':r['bot_reply_text']} for r in history]})
             context.update(memory_context(cur,session_id,before_turn=(history[-1].get('turn_no',0)+1 if history else 1),
                 recent_start=(history[0].get('turn_no',0) if history else 0)))
-            has_memory=bool(context.get('conversation_summary') or context.get('earlier_unsummarized_turns'))
+            has_memory=bool(context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))
             params=(scenario_id,target_node,intent,is_reprompt,version)
             # An unclear reply can mean different things in different conversations.
             # Give the LLM the current context before falling back to stored lines.
@@ -288,7 +293,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
         return fixed
     except Exception as exc:
         log.warning('Generated line unavailable: %s',exc)
-        if intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns'))): return fixed
+        if intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))): return fixed
         try:
             with get_connection_pool().connection() as c,c.cursor() as cur:
                 cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=cur.fetchall()
@@ -310,11 +315,12 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
         raise RuntimeError('LLM chưa được bật hoặc chưa cấu hình API key Gemini, Groq, OpenRouter hay X-APIKEY.')
     start=time.monotonic()
     with get_connection_pool().connection() as c,c.cursor() as cur:
-        cur.execute("""SELECT sc.scenario_id,sc.scenario_name,sc.title,sc.payload,t.target_node_id,t.intent,t.is_reprompt,
+        cur.execute("""SELECT sc.scenario_id,sc.scenario_name,v.definition->>'title' AS title,v.definition->'payload' AS payload,t.target_node_id,t.intent,t.is_reprompt,
                             t.user_text_masked,t.bot_reply_text,t.line_id,default_line.line_text AS text,n.node_key,
-                            n.objective,n.tactic,n.requested_action,s.interaction_mode,opening.line_text AS opening_text
+                            n.objective,n.tactic,n.requested_action,s.interaction_mode,s.case_parameters,opening.line_text AS opening_text
                      FROM call_turns t JOIN call_sessions s USING(session_id)
                      JOIN scenarios sc ON sc.scenario_id=s.scenario_id
+                     JOIN scenario_versions v ON v.version_id=s.scenario_version_id
                      LEFT JOIN dialogue_lines opening ON opening.line_id=s.opening_line_id
                      LEFT JOIN dialogue_nodes n ON n.node_id=t.target_node_id
                      LEFT JOIN dialogue_lines default_line ON default_line.node_id=n.node_id
@@ -332,11 +338,17 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
                        WHERE session_id=%s AND turn_no<%s ORDER BY turn_no DESC LIMIT 4""",(session_id,turn_no))
         history=list(reversed(cur.fetchall()))
         scenario=row['payload'] if isinstance(row['payload'],dict) else {}
+        from app.arena.notifications import brief
+        available_messages=brief(cur,session_id)
+        from app.arena.practice_catalog import render
         context={'interaction_mode':row['interaction_mode'],'scenario_title':row['title'] or scenario.get('title',row['scenario_name']),
+            'scenario_kind':scenario.get('scenario_kind','fraud'),
             'scenario_category':scenario.get('category',''),'persona':scenario.get('persona',{}),
             'user_context':scenario.get('user_context',''),'objective':row['objective'] or '',
             'tactics':[row['tactic']] if row['tactic'] else [],'requested_action':row['requested_action'] or 'other',
-            'sample_line':row['text'] or row['bot_reply_text'] or '', 'intent':row['intent'],
+            'sample_line':render(row['text'] or row['bot_reply_text'] or '',row['case_parameters']), 'intent':row['intent'],
+            'case_facts':row['case_parameters'],
+            'available_messages':available_messages,
             'player_text':row['user_text_masked'] or '',
             'caller_line':history[-1]['bot_reply_text'] if history else (
                 phone_opening(row.get('opening_text') or '') if row['interaction_mode']=='call' else row.get('opening_text') or ''),
@@ -357,7 +369,7 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
         if row['bot_reply_text'] and line.casefold()==row['bot_reply_text'].strip().casefold():
             context.setdefault('avoid_lines',[]).append(line)
             continue
-        if context.get('conversation_summary') or context.get('earlier_unsummarized_turns'):
+        if context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'):
             return LineResult(line,None,'llm',int((time.monotonic()-start)*1000))
         with get_connection_pool().connection() as c,c.cursor() as cur:
             cur.execute("""INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,

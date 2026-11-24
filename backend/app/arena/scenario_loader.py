@@ -14,6 +14,16 @@ class ScenarioLoadError(ValueError):
 
 
 def _validate_graph(scenario: Scenario, source: str) -> None:
+    if scenario.scenario_kind == 'fraud' and not scenario.red_flags:
+        raise ScenarioLoadError(f'{source}: fraud scenarios require red flags.')
+    if scenario.scenario_kind=='benign':
+        if any(rule.intent.value=='comply' and rule.points_delta<0 for rule in scenario.scoring.rules):
+            raise ScenarioLoadError(f'{source}: không trừ điểm chỉ vì hợp tác với dịch vụ bình thường.')
+        for stage in scenario.stages:
+            if stage.requested_action.value not in {'none','other'}:
+                raise ScenarioLoadError(f'{source}: cuộc gọi bình thường không được yêu cầu hành động nhạy cảm.')
+            if any(t.on_intent.value=='comply' and t.next_stage_id=='END_UNSAFE' for t in stage.transitions):
+                raise ScenarioLoadError(f'{source}: không phạt đồng ý thao tác dịch vụ bình thường.')
     stages = {stage.id: stage for stage in scenario.stages}
     stage_ids = [stage.id for stage in scenario.stages]
     if len(stages) != len(stage_ids):

@@ -1,0 +1,16 @@
+(async () => {
+ const $=id=>document.getElementById(id);let catalog=[];
+ async function api(path,body){const response=await fetch('/api/practice/admin/'+path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.detail||'Yêu cầu thất bại');return data;}
+ function selected(){const row=catalog[$('catalog').value];if(row){$('document').value=JSON.stringify(row.document,null,2);$('enabled').checked=row.status==='published';$('weight').value=row.selection_weight;}}
+ async function refresh(){
+  const [report,rows,queue]=await Promise.all([api('report'),api('catalog'),api('reviews')]);
+  $('report').textContent=`Tổng lượt đánh giá: ${report.total} (đúng: ${report.correct})\nNghi ngờ nhầm cuộc gọi bình thường: ${report.false_alarms}\nBỏ sót cuộc gọi giả mạo: ${report.missed_frauds}\nChưa kết luận: ${report.uncertain}\n\nTheo chủ đề / loại / nhận định:\n`+JSON.stringify(report.classification,null,2)+'\n\nThao tác mô phỏng:\n'+JSON.stringify(report.events,null,2);
+  catalog=rows;$('catalog').replaceChildren();rows.forEach((row,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`${row.document.title} — phiên bản ${row.revision}`;$('catalog').append(o);});selected();
+  $('reviews').replaceChildren();queue.forEach(row=>{const card=document.createElement('section');const label=document.createElement('p');label.textContent=`#${row.review_id} · ${row.document.title} · ${row.status}`;card.append(label);const details=document.createElement('details');const title=document.createElement('summary');title.textContent='Xem toàn bộ nội dung';const pre=document.createElement('pre');pre.textContent=JSON.stringify(row.document,null,2);details.append(title,pre);card.append(details);
+   if(row.status==='pending')for(const [decision,text] of [['approve','Duyệt phát hành'],['reject','Từ chối']]){const b=document.createElement('button');b.textContent=text;b.onclick=async()=>{b.disabled=true;try{await api(`reviews/${row.review_id}/${decision}`,{});await refresh();$('status').textContent='Đã xử lý. Các cuộc gọi cũ vẫn giữ phiên bản cũ.';}catch(e){$('status').textContent=e.message;b.disabled=false;}};card.append(b);} $('reviews').append(card);});
+ }
+ $('selection').onclick=async()=>{const row=catalog[$('catalog').value];if(!row)return;try{await api(`catalog/${row.scenario_id}/selection`,{enabled:$('enabled').checked,weight:Number($('weight').value)});await refresh();$('status').textContent='Đã lưu. Chỉ áp dụng cho lượt chọn mới.';}catch(e){$('status').textContent=e.message;}};
+ $('catalog').onchange=selected;$('refresh').onclick=()=>refresh().catch(e=>$('status').textContent=e.message);
+ $('submit').onclick=async()=>{const b=$('submit');b.disabled=true;try{await api('reviews',{document:JSON.parse($('document').value)});await refresh();$('status').textContent='Đã kiểm tra cấu trúc và lưu vào hàng đợi duyệt.';}catch(e){$('status').textContent=e.message;}finally{b.disabled=false;}};
+ try{await refresh();$('content').hidden=false;$('status').textContent='Bạn đang dùng quyền quản trị.';}catch(e){$('status').textContent='Chưa truy cập được: '+e.message;}
+})();

@@ -45,9 +45,11 @@ def random_scenario() -> dict[str, str]:
 @router.post("/calls", response_model=StartCallResponse)
 def start_call(request: StartCallRequest, user: dict = Depends(get_current_user)) -> StartCallResponse:
     try:
-        return call_service.start_call(request.scenario_key, user["user_id"], request.interaction_mode)
+        return call_service.start_call(request.scenario_key, user["user_id"], request.interaction_mode,request.practice_difficulty,request.exercise_mode)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Không tìm thấy kịch bản đã xuất bản.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/calls/{session_id}/turn", response_model=CallTurnResponse)
@@ -109,6 +111,8 @@ def call_summary(session_id: UUID, user: dict = Depends(get_current_user)) -> Ca
         return call_service.get_call_summary(session_id,user["user_id"])
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Không tìm thấy phiên gọi.") from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.get("/calls/{session_id}/memory")

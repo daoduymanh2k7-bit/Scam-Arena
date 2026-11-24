@@ -109,9 +109,10 @@ def update_summary(session_id, user_id, force=False):
         return
     limit = word_limit()
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
-        cursor.execute("""SELECT cs.turn_no,cs.interaction_mode,s.title,cs.ended_at,
+        cursor.execute("""SELECT cs.turn_no,cs.interaction_mode,v.definition->>'title' AS title,cs.ended_at,
                                  m.summary_text,m.covered_turn,m.max_words,m.updated_at,l.line_text AS opening
                           FROM call_sessions cs JOIN scenarios s USING(scenario_id)
+                          JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
                           LEFT JOIN conversation_memories m USING(session_id)
                           LEFT JOIN dialogue_lines l ON l.line_id=cs.opening_line_id
                           WHERE cs.session_id=%s AND cs.user_id=%s""", (session_id, user_id))

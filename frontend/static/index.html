@@ -6,25 +6,54 @@
   <meta name="theme-color" content="#0f0e18">
   <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
   <link rel="stylesheet" href="/css/style.css?v=admin-rasa-review-1">
-  <link rel="stylesheet" href="/css/call-preview.css?v=reply-retry-1">
+  <link rel="stylesheet" href="/css/call-preview.css?v=inbox-1">
+  <link rel="stylesheet" href="/css/message-chat.css?v=1">
+  <link rel="stylesheet" href="/css/sidebar.css?v=2">
 </head>
 <body>
+  <nav id="mode-nav" class="app-sidebar" aria-label="Điều hướng Scam Arena">
+    <a class="sidebar-brand" href="/" aria-label="Scam Arena trang chủ" title="Scam Arena">S</a>
+    <div class="sidebar-scroll">
+      <div class="sidebar-primary" role="group" aria-label="Luyện tập">
+        <button class="sidebar-item mode-nav-item" type="button" data-mode="call" aria-pressed="false" title="Cuộc gọi"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path id="call-handset" stroke="none" fill="currentColor" d="M6.6 10.8a15.4 15.4 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.03-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.03l-2.22 2.2Z"/></svg><span>Cuộc gọi</span></button>
+        <button class="sidebar-item mode-nav-item is-active" type="button" data-mode="message" aria-pressed="true" title="Nhắn tin"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/><path d="M8 9h8M8 13h5"/></svg><span>Nhắn tin</span></button>
+        <button id="sidebar-history-open" class="sidebar-item" type="button" aria-haspopup="dialog" aria-controls="sidebar-history-dialog" title="Lịch sử luyện tập"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11a9 9 0 1 1 2.4 7M3 4v7h7M12 7v5l3 2"/></svg><span>Lịch sử</span></button>
+      </div>
+      <div id="admin-tools" class="sidebar-admin" role="group" aria-label="Quản trị" hidden>
+        <span class="sidebar-group-label">QUẢN TRỊ</span>
+        <button id="rasa-review-open" class="sidebar-item" type="button" aria-haspopup="dialog" title="Duyệt mẫu Rasa"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 10h8M8 14l2 2 5-5"/></svg><span>Mẫu Rasa</span></button>
+        <button id="admin-open" class="sidebar-item" type="button" aria-haspopup="dialog" title="Mô hình kịch bản"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="5" rx="1"/><rect x="2" y="17" width="7" height="5" rx="1"/><rect x="15" y="17" width="7" height="5" rx="1"/><path d="M12 7v5M5.5 17v-5h13v5"/></svg><span>Kịch bản</span></button>
+        <a class="sidebar-item" href="/practice-admin.html" title="Duyệt và thống kê cuộc gọi"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M7 16v-5M12 16V5M17 16V8"/></svg><span>Duyệt cuộc gọi</span></a>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <button id="help-open" class="sidebar-item" type="button" aria-label="Hướng dẫn sử dụng" aria-haspopup="dialog" title="Hướng dẫn sử dụng"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 16h.01"/></svg><span>Hướng dẫn</span></button>
+      <details id="account-controls" class="sidebar-account" hidden>
+        <summary class="sidebar-item" aria-label="Tài khoản" title="Tài khoản"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Tài khoản</span></summary>
+        <div class="sidebar-account-menu"><span class="sidebar-account-caption">Đang đăng nhập</span><strong id="auth-username"></strong><button id="auth-logout" type="button">Đăng xuất</button></div>
+      </details>
+    </div>
+  </nav>
   <main class="app-shell">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Scam Arena trang chủ"><span class="brand-mark">S</span><span>Scam Arena</span></a>
-      <div class="topbar-actions">
-        <button id="help-open" class="help-open" type="button" aria-label="Mở hướng dẫn sử dụng" title="Hướng dẫn">?</button>
-        <div class="account-controls" id="account-controls" hidden>
-          <span id="auth-username"></span>
-          <button id="auth-logout" class="button button-quiet" type="button">Đăng xuất</button>
-        </div>
-      </div>
     </header>
-    <nav id="admin-tools" class="admin-tools" aria-label="Quản trị" hidden>
-      <span class="admin-open-label">Quản trị</span>
-      <button id="rasa-review-open" class="admin-open" type="button" aria-haspopup="dialog">Duyệt mẫu Rasa</button>
-      <button id="admin-open" class="admin-open" type="button" aria-haspopup="dialog">Mô hình kịch bản</button>
-    </nav>
+
+    <dialog id="sidebar-history-dialog" class="help-dialog sidebar-history-dialog" aria-labelledby="sidebar-history-title">
+      <div class="help-heading"><h2 id="sidebar-history-title">Lịch sử luyện tập</h2><button id="sidebar-history-close" class="help-close" type="button" aria-label="Đóng lịch sử">×</button></div>
+    <details id="arena-history-panel" class="utility-panel" open>
+      <summary>Lịch sử luyện tập</summary>
+      <div class="utility-content">
+      <div class="section-heading">
+        <div><h2>Các phiên đã lưu</h2></div>
+        <button id="arena-history-refresh" class="button button-secondary" type="button">Làm mới</button>
+      </div>
+      <div id="arena-history-list" class="history-list" aria-live="polite"></div>
+      <p id="arena-history-empty" class="muted-note" hidden>Chưa có phiên chơi nào được lưu.</p>
+      <p id="arena-history-error" class="error" role="alert" hidden></p>
+      </div>
+    </details>
+    </dialog>
 
     <dialog id="rasa-review-dialog" class="help-dialog rasa-review-dialog" aria-labelledby="rasa-review-title">
       <div class="help-heading">
@@ -185,47 +214,44 @@
     <div id="app-content" hidden>
     <div id="message-mode" class="app-mode-panel">
     <section class="intro">
-      <h1>Luyện phản xạ chống lừa đảo</h1>
-      <p class="intro-copy">Trả lời tình huống giả lập, nhận phản hồi ngay.</p>
+      <p class="eyebrow">LUYỆN TẬP QUA TIN NHẮN</p>
+      <h1>Một tin nhắn. Một lựa chọn.</h1>
+      <p class="intro-copy">Bình tĩnh trò chuyện, tự xác minh và luyện cách phản hồi của bạn.</p>
     </section>
 
     <section id="arena-picker" class="panel">
-      <div class="section-heading"><div><h2>Chọn tình huống</h2></div></div>
+      <div class="section-heading"><div><h2>Bắt đầu cuộc trò chuyện</h2><p class="message-picker-note">Chọn một tình huống để thử sức.</p></div><span class="message-sim-pill">Mô phỏng</span></div>
       <div id="arena-scenario-list" class="scenario-grid" aria-live="polite"></div>
       <button id="arena-random-btn" class="button button-secondary" type="button">Chọn ngẫu nhiên</button>
       <p id="picker-error" class="error" role="alert" hidden></p>
     </section>
 
-    <details id="arena-history-panel" class="utility-panel">
-      <summary>Lịch sử luyện tập</summary>
-      <div class="utility-content">
-      <div class="section-heading">
-        <div><h2>Các phiên đã lưu</h2></div>
-        <button id="arena-history-refresh" class="button button-secondary" type="button">Làm mới</button>
-      </div>
-      <div id="arena-history-list" class="history-list" aria-live="polite"></div>
-      <p id="arena-history-empty" class="muted-note" hidden>Chưa có phiên chơi nào được lưu.</p>
-      <p id="arena-history-error" class="error" role="alert" hidden></p>
-      </div>
-    </details>
 
     <section id="arena-session" class="panel session-panel message-chat-panel" hidden>
-      <div class="call-topline"><span class="live-dot"></span><span>HỘI THOẠI GIẢ LẬP</span><span id="arena-call-timer" hidden>00:00</span></div>
-      <div class="caller"><div class="caller-icon" aria-hidden="true">✉</div><div><h2>Người gửi lạ</h2><p id="arena-scenario-label"></p></div></div>
-      <div id="arena-transcript" class="transcript" aria-live="polite"></div>
-      <p id="arena-status" class="status" aria-live="polite"></p>
-      <audio id="arena-audio-player" hidden></audio>
-      <div class="reply-box">
-        <label for="arena-text-input">Hoặc nhập câu trả lời</label>
-        <textarea id="arena-text-input" rows="2" placeholder="Ví dụ: Tôi sẽ tự gọi lại số tổng đài chính thức."></textarea>
-        <div class="reply-actions">
-          <button id="arena-mic-btn" class="button button-secondary" type="button">🎙 Ghi âm</button>
-          <button id="arena-send-btn" class="button button-primary" type="button">Gửi câu trả lời</button>
+      <header class="message-chat-header">
+        <div class="caller"><div class="caller-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-6 3v-3H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/><path d="M7 9h10M7 13h6"/></svg></div><div class="message-contact"><h2>Người gửi lạ</h2><p id="arena-scenario-label"></p></div></div>
+        <span class="message-sim-pill"><span class="live-dot" aria-hidden="true"></span>Mô phỏng</span>
+        <span id="arena-call-timer" hidden>00:00</span>
+      </header>
+      <div class="message-session-note">Cuộc trò chuyện luyện tập · Không dùng thông tin cá nhân thật</div>
+      <div id="arena-transcript" class="transcript" role="log" aria-label="Nội dung trò chuyện" aria-live="polite" aria-relevant="additions" tabindex="0"></div>
+      <div id="arena-typing" class="message-typing" aria-hidden="true" hidden><span></span><span></span><span></span><small>Đang chuẩn bị phản hồi</small></div>
+      <div class="message-composer-area">
+        <p id="arena-status" class="status" role="status"></p>
+        <audio id="arena-audio-player" hidden></audio>
+        <div class="reply-box">
+          <label for="arena-text-input" class="message-input-label">Tin nhắn của bạn</label>
+          <textarea id="arena-text-input" rows="1" maxlength="4000" placeholder="Nhập tin nhắn…" aria-describedby="message-input-hint"></textarea>
+          <div class="reply-actions">
+            <button id="arena-mic-btn" class="button button-secondary" type="button">🎙 Ghi âm</button>
+            <span id="message-input-hint">Enter để gửi · Shift + Enter xuống dòng</span>
+            <button id="arena-send-btn" class="button button-primary" type="button"><span>Gửi</span><svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14-7-4 14-3-7-7 0Z"/><path d="m12 12 7-7"/></svg></button>
+          </div>
         </div>
-      </div>
-      <div class="session-actions">
-        <button id="arena-finish-btn" class="button button-danger" type="button">Kết thúc và xem điểm</button>
-        <button id="arena-cancel-btn" class="button button-quiet" type="button">Đổi tình huống</button>
+        <div class="session-actions">
+          <button id="arena-cancel-btn" class="button button-quiet" type="button">‹ Đổi tình huống</button>
+          <button id="arena-finish-btn" class="button button-danger" type="button">Kết thúc và xem điểm <span aria-hidden="true">↗</span></button>
+        </div>
       </div>
     </section>
 
@@ -253,9 +279,17 @@
         </div>
       </aside>
       <div class="call-scenario-picker">
-        <h1>Chọn tình huống gọi</h1>
+        <h1>Bắt đầu cuộc gọi</h1>
+        <p class="call-picker-hint">Đón một cuộc gọi bất ngờ hoặc chọn tình huống bạn muốn luyện.</p>
+        <div class="call-start-group">
+          <button id="call-random-start" class="call-random-start" type="button" disabled><span aria-hidden="true">↗</span> Bắt đầu</button>
+          <button id="call-scenario-toggle" class="call-scenario-toggle" type="button" aria-label="Chọn tình huống cụ thể" aria-expanded="false" aria-controls="call-scenario-menu" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        </div>
         <p id="call-scenarios-status" role="status"></p>
-        <div id="call-scenario-options" class="call-scenario-options"></div>
+        <div id="call-scenario-menu" class="call-scenario-menu" hidden>
+          <p class="call-menu-label">Chọn tình huống cụ thể</p>
+          <div id="call-scenario-options" class="call-scenario-options"></div>
+        </div>
       </div>
       <div class="call-device-slot">
       <div class="call-device">
@@ -265,19 +299,7 @@
             <span class="phone-indicators"><i class="phone-signal"></i><span>5G</span><i class="phone-battery"></i></span>
           </div>
           <div class="phone-island" aria-hidden="true"></div>
-          <div id="phone-sms-banner" class="phone-sms-banner" hidden>
-            <div class="phone-sms-header">
-              <button id="phone-sms-preview" class="phone-sms-preview" type="button" data-call-action="expand-sms" aria-expanded="false" aria-controls="phone-sms-body">
-                <span class="phone-sms-icon" aria-hidden="true">✉</span>
-                <span><strong>Ngân hàng mô phỏng</strong><small>Tin nhắn · Mã xác minh của bạn…</small></span>
-              </button>
-              <button class="phone-sms-close" type="button" data-call-action="close-sms" aria-label="Ẩn thông báo">×</button>
-            </div>
-            <div id="phone-sms-body" class="phone-sms-body" hidden>
-              <p>Mã OTP mô phỏng: <strong id="phone-sms-code"></strong></p>
-              <p>Không chia sẻ mã này với bất kỳ ai.</p>
-            </div>
-          </div>
+          <div id="phone-sms-banner" class="phone-sms-banner" role="status" aria-live="polite" hidden></div>
           <div class="phone-caller">
             <div class="phone-avatar" aria-hidden="true"></div>
             <h2 id="call-static-title">Điện thoại</h2>
@@ -324,27 +346,20 @@
     </aside>
     </div>
 
-    <nav id="mode-nav" class="mode-nav" aria-label="Chọn chế độ luyện tập">
-      <button class="mode-nav-item" type="button" data-mode="call" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path id="call-handset" d="M6.6 10.8a15.4 15.4 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1.03-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.03l-2.22 2.2Z"/></svg>
-        <span>Cuộc gọi</span>
-      </button>
-      <button class="mode-nav-item is-active" type="button" data-mode="message" aria-pressed="true">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-6 4V5a2 2 0 0 1 2-2Z"/></svg>
-        <span>Nhắn tin</span>
-      </button>
-    </nav>
+
   </main>
-  <script src="/js/api.js?v=fair-partial-1"></script>
-  <script src="/js/arena/arena.js"></script>
-  <script src="/js/arena/history.js"></script>
+  <script src="/js/api.js?v=mixed-calls-2"></script>
+  <script src="/js/arena/arena.js?v=chat-1"></script>
+  <script src="/js/arena/history.js?v=mixed-calls-2"></script>
   <script src="/js/auth.js?v=admin-tools-2"></script>
   <script src="/js/call-latency.js?v=stream-2"></script>
   <script src="/js/call-partial.js?v=2"></script>
   <script src="/js/call-microphone.js?v=silero-stream-1"></script>
   <script src="/js/call-stream.js?v=1"></script>
-  <script src="/js/app-mode.js?v=reply-retry-1"></script>
+  <script src="/js/phone-inbox.js?v=1"></script>
+  <script src="/js/app-mode.js?v=inbox-1"></script>
   <script src="/js/help.js"></script>
+  <script src="/js/sidebar.js?v=1"></script>
   <script src="/js/admin-graph.js?v=path-highlight-10"></script>
   <script src="/js/rasa-review.js?v=1"></script>
 </body>

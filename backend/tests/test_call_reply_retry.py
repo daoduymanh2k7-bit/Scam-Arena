@@ -63,11 +63,12 @@ def test_success_replaces_same_turn_and_decrements_original_once():
     assert not any("UPDATE call_sessions" in q or "INSERT INTO call_turns" in q for q, _ in pool.sql)
 
 
-@pytest.mark.parametrize("mode", ["provider_failure", "stale", "wrong_line", "older_turn", "ended"])
+@pytest.mark.parametrize("mode", ["provider_failure", "stale", "wrong_line", "older_turn", "ended", "assessment"])
 def test_failure_or_stale_request_never_decrements_priority(mode):
     old = turn()
     if mode == "older_turn": old["latest_turn_no"] = 2
     if mode == "ended": old["ended_at"] = "ended"
+    if mode == "assessment": old['exercise_mode']='assessment'
     pool = Pool(old, stale=mode == "stale")
     with patch.object(calls, "get_connection_pool", return_value=pool), \
          patch.object(calls, "regenerate_line_for_turn", side_effect=RuntimeError("provider unavailable") if mode == "provider_failure" else None,

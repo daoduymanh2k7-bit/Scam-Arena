@@ -69,10 +69,19 @@ class Scoring(BaseModel):
     rules: list[ScoreRule] = Field(min_length=1, max_length=30)
 
 
+class CaseBlueprint(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    evidence: str = Field(min_length=10,max_length=1500)
+    official: str = Field(min_length=10,max_length=1500)
+
+
 class Scenario(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     schema_version: Literal[1]
+    scenario_kind: Literal['fraud', 'benign'] = 'fraud'
+    family: str = Field(default='legacy', min_length=2, max_length=80)
+    case_blueprint: CaseBlueprint | None = None
     id: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=80)
     version: int = Field(ge=1)
     status: Literal["draft", "published", "archived"]
@@ -89,7 +98,7 @@ class Scenario(BaseModel):
     persona: Persona
     start_stage_id: str = Field(pattern=r"^[a-z][a-z0-9_-]{0,49}$")
     stages: list[Stage] = Field(min_length=1, max_length=30)
-    red_flags: list[RedFlag] = Field(min_length=1, max_length=20)
+    red_flags: list[RedFlag] = Field(max_length=20)
     scoring: Scoring
     lesson_summary: str = Field(min_length=10, max_length=1500)
     created_at: datetime

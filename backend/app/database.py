@@ -28,6 +28,7 @@ def initialize_database() -> None:
         _pool.open(wait=True, timeout=60)
 
     with _pool.connection() as connection, connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(736219041)")
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS scenarios (
@@ -81,14 +82,21 @@ def initialize_database() -> None:
             word_count SMALLINT NOT NULL CHECK (word_count BETWEEN 1 AND max_words),
             provider TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )""")
-        _seed_scenarios(cursor)
-        _migrate_dialogue_line_catalog(cursor)
-        _seed_dialogue_graph(cursor)
-        _sync_scenario_graphs(cursor)
-        _seed_opening_line_variants(cursor)
-        _migrate_intro_resistance_transitions(cursor)
+        cursor.execute("SELECT to_regclass('public.scenario_versions') AS versions")
+        versioned = bool(cursor.fetchone()['versions'])
+        if not versioned:
+            _seed_scenarios(cursor)
+            _migrate_dialogue_line_catalog(cursor)
+            _seed_dialogue_graph(cursor)
+            _sync_scenario_graphs(cursor)
+            _seed_opening_line_variants(cursor)
+            _migrate_intro_resistance_transitions(cursor)
         _seed_intent_rules(cursor)
         _seed_intent_defaults(cursor)
+        from app.arena.scenario_versions import install
+        install(cursor)
+        from app.arena.notifications import install as install_inbox
+        install_inbox(cursor)
         connection.commit()
 
     clear_intent_rule_cache()
@@ -465,6 +473,8 @@ def _seed_scenarios(cursor: Any) -> None:
     scenario_dir = ROOT / "data" / "scenarios"
     for path in sorted(scenario_dir.glob("*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
+        if payload.get('family') == 'delivery':
+            continue  # Reviewed delivery documents use the versioned publisher.
         cursor.execute(
             """
             INSERT INTO scenarios

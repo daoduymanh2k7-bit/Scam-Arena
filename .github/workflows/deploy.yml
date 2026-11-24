@@ -19,6 +19,18 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: arena_checks
+          POSTGRES_USER: arena_checks
+          POSTGRES_PASSWORD: ci-local-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U arena_checks -d arena_checks"
+          --health-interval 5s --health-timeout 5s --health-retries 12
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -32,6 +44,11 @@ jobs:
         run: python -m pytest backend/tests rasa/evaluation/test_dataset_workflow.py -q
       - name: Check deployment script
         run: bash -n deployment/deploy-vps.sh
+      - name: Verify scenario migrations and version isolation in PostgreSQL
+        env:
+          PYTHONPATH: backend
+          DATABASE_URL: postgresql://arena_checks:ci-local-only@127.0.0.1:5432/arena_checks
+        run: python backend/tools/check_scenario_versions.py
       - name: Test call microphone lifecycle
         run: node --test frontend/tests/*.test.cjs
 

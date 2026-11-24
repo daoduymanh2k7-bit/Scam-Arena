@@ -155,7 +155,7 @@ def speak_scenario_opening(scenario_key: str, user: dict = Depends(get_current_u
         cursor.execute(
             """SELECT l.line_text
                FROM scenarios s
-               JOIN dialogue_nodes n ON n.scenario_id = s.scenario_id AND n.is_start
+               JOIN dialogue_nodes n ON n.scenario_version_id = s.active_version_id AND n.is_start
                JOIN dialogue_lines l ON l.node_id = n.node_id
                WHERE s.scenario_name = %s AND s.status = 'published'
                  AND l.source = 'fixed' AND l.enabled AND NOT l.is_reprompt

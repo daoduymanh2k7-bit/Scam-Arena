@@ -9,12 +9,14 @@ def main():
     initialize_database()
     quota_exhausted=False
     with get_connection_pool().connection() as c,c.cursor() as cur:
-        cur.execute("SELECT scenario_id,payload FROM scenarios WHERE scenario_name=%s AND status='published'",(args.scenario,)); s=cur.fetchone()
+        cur.execute("""SELECT s.scenario_id,s.active_version_id,v.definition->'payload' AS payload
+                       FROM scenarios s JOIN scenario_versions v ON v.version_id=s.active_version_id
+                       WHERE s.scenario_name=%s AND s.status='published'""",(args.scenario,)); s=cur.fetchone()
         if not s: raise SystemExit('Published scenario not found')
         cur.execute("""SELECT n.node_id,line.line_text AS text,n.requested_action,n.objective,n.tactic
                        FROM dialogue_nodes n JOIN dialogue_lines line ON line.node_id=n.node_id
                          AND line.source='fixed' AND line.is_reprompt=FALSE
-                       WHERE n.scenario_id=%s AND NOT n.is_terminal""",(s['scenario_id'],)); nodes=cur.fetchall()
+                       WHERE n.scenario_version_id=%s AND NOT n.is_terminal""",(s['active_version_id'],)); nodes=cur.fetchall()
         for node in nodes:
             cur.execute("SELECT DISTINCT t.intent FROM dialogue_transitions t WHERE t.to_node_id=%s",(node['node_id'],)); intents={r['intent'] for r in cur.fetchall()} | {'unknown'}
             for intent in intents:

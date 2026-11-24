@@ -31,6 +31,8 @@ from app.arena.normalization import normalize_phrase
 from app.database import clear_intent_rule_cache
 from app.arena.line_generator import resolve_bot_line, regenerate_line_for_turn
 from app.arena.phone_dialogue import phone_opening, clarification_fallback
+from app.arena.scenario_versions import session_seed
+from app.arena.practice_catalog import render
 import logging
 
 logger = logging.getLogger(__name__)
@@ -39,16 +41,24 @@ logger = logging.getLogger(__name__)
 def list_scenarios() -> list[dict[str, str]]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            "SELECT scenario_name, title FROM scenarios WHERE status = 'published' ORDER BY scenario_id"
+            """SELECT s.scenario_name,v.definition->>'title' AS title FROM scenarios s
+               JOIN scenario_versions v ON v.version_id=s.active_version_id
+               WHERE s.status = 'published' AND s.family NOT IN ('delivery','appointment','support') ORDER BY s.scenario_id"""
         )
-        return [{"key": row["scenario_name"], "label": row["title"]} for row in cursor.fetchall()]
+        return [{"key": row["scenario_name"], "label": row["title"]} for row in cursor.fetchall()] + [
+            {'key':'mixed-any','label':'Cuộc gọi bất ngờ — mọi chủ đề'},
+            {'key':'mixed-delivery','label':'Giao hàng — cuộc gọi bất ngờ'},
+            {'key':'mixed-appointment','label':'Đặt lịch — cuộc gọi bất ngờ'},
+            {'key':'mixed-support','label':'Hỗ trợ — cuộc gọi bất ngờ'}]
 
 
 def list_admin_scenario_graphs() -> list[dict[str, Any]]:
     """Return the stored scenario and dialogue graph for the admin visualizer."""
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            "SELECT scenario_id,scenario_name,title,status,payload FROM scenarios ORDER BY scenario_id"
+            """SELECT s.scenario_id,s.scenario_name,v.definition->>'title' AS title,s.status,
+                      v.definition->'payload' AS payload,s.active_version_id,v.revision,s.scenario_kind,s.family
+               FROM scenarios s JOIN scenario_versions v ON v.version_id=s.active_version_id ORDER BY s.scenario_id"""
         )
         scenarios = cursor.fetchall()
         result = []
@@ -64,22 +74,24 @@ def list_admin_scenario_graphs() -> list[dict[str, Any]]:
                           FILTER (WHERE l.line_id IS NOT NULL), '[]'::jsonb) AS lines
                    FROM dialogue_nodes n
                    LEFT JOIN dialogue_lines l ON l.node_id=n.node_id
-                   WHERE n.scenario_id=%s
+                   WHERE n.scenario_id=%s AND n.scenario_version_id=%s
                    GROUP BY n.node_id ORDER BY n.is_start DESC,n.node_id""",
-                (scenario["scenario_id"],),
+                (scenario["scenario_id"],scenario['active_version_id']),
             )
             nodes = cursor.fetchall()
             cursor.execute(
                 """SELECT t.from_node_id,t.intent,t.to_node_id,t.score_delta,t.critical,t.feedback
                    FROM dialogue_transitions t
                    JOIN dialogue_nodes n ON n.node_id=t.from_node_id
-                   WHERE n.scenario_id=%s ORDER BY t.from_node_id,t.intent""",
-                (scenario["scenario_id"],),
+                   WHERE n.scenario_id=%s AND n.scenario_version_id=%s ORDER BY t.from_node_id,t.intent""",
+                (scenario["scenario_id"],scenario['active_version_id']),
             )
             transitions = cursor.fetchall()
             payload = scenario["payload"] if isinstance(scenario["payload"], dict) else {}
             result.append({
                 "key": scenario["scenario_name"], "title": scenario["title"], "status": scenario["status"],
+                "version_id": scenario['active_version_id'], "revision": scenario['revision'],
+                "scenario_kind": scenario['scenario_kind'], "family": scenario['family'],
                 "summary": payload.get("summary", ""), "persona": payload.get("persona", {}),
                 "lesson_summary": payload.get("lesson_summary", ""), "scoring": payload.get("scoring", {}),
                 "red_flags": payload.get("red_flags", []),
@@ -92,35 +104,49 @@ def list_admin_scenario_graphs() -> list[dict[str, Any]]:
 def random_scenario() -> dict[str, str]:
     import random
 
-    scenarios = list_scenarios()
+    scenarios = [item for item in list_scenarios() if not item['key'].startswith('mixed-')]
     if not scenarios:
         raise LookupError("Chưa có kịch bản nào được xuất bản.")
     return random.choice(scenarios)
 
 
-def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message") -> StartCallResponse:
+def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message", practice_difficulty: str = 'adaptive', exercise_mode: str = 'training') -> StartCallResponse:
+    requested_key=scenario_key
+    mixed=scenario_key.startswith('mixed-')
+    if mixed and interaction_mode!='call': raise ValueError('Cuộc gọi bất ngờ dùng trong chế độ Cuộc gọi.')
+    seed=session_seed()
+    if exercise_mode not in {'training','assessment'}: raise ValueError('Chế độ không hợp lệ.')
+    if exercise_mode=='assessment' and not mixed: raise ValueError('Bài đánh giá phải chọn cuộc gọi ngẫu nhiên.')
     if interaction_mode not in {"message", "call"}:
         raise ValueError("Chế độ tương tác không hợp lệ.")
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        if mixed:
+            from app.arena.practice_selector import select
+            choice,level=select(cursor,user_id,requested_key.removeprefix('mixed-'),practice_difficulty,seed)
+            scenario_key=choice['scenario_name']
+
         cursor.execute(
             """
-            SELECT scenario_id, scenario_name, title, base_score
-            FROM scenarios
-            WHERE scenario_name = %s AND status = 'published'
+            SELECT s.scenario_id,s.scenario_name,v.version_id,v.definition->>'title' AS title,
+                   (v.definition->>'base_score')::integer AS base_score,v.definition
+            FROM scenarios s JOIN scenario_versions v ON v.version_id=s.active_version_id
+            WHERE s.scenario_name = %s AND s.status = 'published' AND v.status='published'
             """,
             (scenario_key,),
         )
         scenario = cursor.fetchone()
         if scenario is None:
             raise KeyError(scenario_key)
+        if scenario['definition'].get('family') in {'delivery','appointment','support'} and interaction_mode!='call':
+            raise ValueError('Tình huống này cần các tương tác trong chế độ Cuộc gọi.')
 
         cursor.execute(
             """
             SELECT node.node_id, node.node_key, node.stage
             FROM dialogue_nodes AS node
-            WHERE node.scenario_id = %s AND node.is_start = TRUE
+            WHERE node.scenario_version_id = %s AND node.is_start = TRUE
             """,
-            (scenario["scenario_id"],),
+            (scenario["version_id"],),
         )
         node = cursor.fetchone()
         if node is None:
@@ -147,19 +173,30 @@ def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message
         cursor.execute(
             """
             INSERT INTO call_sessions
-                (scenario_id, current_node_id, total_score, user_id, interaction_mode, opening_line_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
+                (scenario_id, current_node_id, total_score, user_id, interaction_mode, opening_line_id,scenario_version_id,random_seed,exercise_mode)
+            VALUES (%s, %s, %s, %s, %s, %s,%s,%s,%s)
             RETURNING session_id
             """,
             (scenario["scenario_id"], node["node_id"], scenario["base_score"], user_id,
-             interaction_mode, opening_line["line_id"]),
+             interaction_mode, opening_line["line_id"],scenario['version_id'],seed,exercise_mode),
         )
         session_id = str(cursor.fetchone()["session_id"])
+        from app.arena.practice_catalog import case_variables, render, FAMILIES,case_spec
+        from psycopg.types.json import Jsonb
+        variables=case_variables(seed)
+        family=scenario['definition'].get('family')
+        context=render(case_spec(scenario['definition'])['context'],variables) if family in FAMILIES else None
+        cursor.execute('UPDATE call_sessions SET case_parameters=%s,world_state=%s WHERE session_id=%s',
+                       (Jsonb(variables),Jsonb({'context':context,'case_schema':1,'selection':choice['_selection'] if mixed else None}),session_id))
+        if interaction_mode=='call':
+            from app.arena.notifications import seed as seed_inbox
+            seed_inbox(cursor,session_id,scenario['definition'],variables)
         return StartCallResponse(
             session_id=session_id,
-            scenario_key=scenario["scenario_name"],
-            scenario_title=scenario["title"],
-            bot_text=phone_opening(opening_line["line_text"]) if interaction_mode == "call" else opening_line["line_text"],
+            scenario_key=requested_key if mixed else scenario["scenario_name"],
+            scenario_title='Cuộc gọi dịch vụ' if mixed else scenario["title"],
+            practice_context=context,
+            bot_text=render(phone_opening(opening_line["line_text"]) if interaction_mode == "call" else opening_line["line_text"],variables),
             stage=node["stage"],
         )
 
@@ -170,7 +207,7 @@ def _masked_text(text: str) -> str:
     return re.sub(r"\d{4,}", "****", masked)
 
 
-def _terminal_node(cursor: Any, scenario_id: int, outcome: str) -> dict[str, Any] | None:
+def _terminal_node(cursor: Any, scenario_version_id: int, outcome: str) -> dict[str, Any] | None:
     cursor.execute(
         """
         SELECT node.node_id AS target_node_id, node.node_key AS target_node_key,
@@ -180,10 +217,10 @@ def _terminal_node(cursor: Any, scenario_id: int, outcome: str) -> dict[str, Any
         FROM dialogue_nodes AS node
         JOIN dialogue_lines AS line ON line.node_id = node.node_id
           AND line.source = 'fixed' AND line.is_reprompt = FALSE
-        WHERE node.scenario_id = %s AND node.is_terminal = TRUE AND node.outcome = %s
+        WHERE node.scenario_version_id = %s AND node.is_terminal = TRUE AND node.outcome = %s
         LIMIT 1
         """,
-        (scenario_id, outcome),
+        (scenario_version_id, outcome),
     )
     return cursor.fetchone()
 
@@ -192,9 +229,10 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT cs.session_id, cs.scenario_id, cs.current_node_id, cs.ended_at,
-                   cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count, cs.interaction_mode,
-                   s.scenario_name, s.title AS scenario_title, s.payload AS scenario_payload, s.max_turns,
+            SELECT cs.session_id, cs.scenario_id, cs.scenario_version_id, cs.current_node_id, cs.ended_at,
+                   cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count, cs.interaction_mode,cs.case_parameters,cs.exercise_mode,
+                   s.scenario_name, v.definition->>'title' AS scenario_title, v.definition->'payload' AS scenario_payload,
+                   (v.definition->>'max_turns')::integer AS max_turns,v.definition->'intent_defaults' AS intent_defaults,
                    n.node_key, n.stage, n.objective, n.tactic,
                    main_line.line_text AS node_text, main_line.line_id AS node_line_id,
                    reprompt_line.line_text AS reprompt_text, reprompt_line.line_id AS reprompt_line_id,
@@ -203,6 +241,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                    COALESCE(previous_turn.bot_reply_text, opening_line.line_text, main_line.line_text, '') AS caller_line
             FROM call_sessions AS cs
             JOIN scenarios AS s ON s.scenario_id = cs.scenario_id
+            JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
             JOIN dialogue_nodes AS n ON n.node_id = cs.current_node_id
             LEFT JOIN dialogue_lines AS main_line ON main_line.node_id = n.node_id
               AND main_line.source = 'fixed' AND main_line.is_reprompt = FALSE
@@ -230,6 +269,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             raise ValueError("Câu trả lời không được để trống.")
         if session["interaction_mode"] == "call" and session["turn_no"] == 0:
             session["caller_line"] = phone_opening(session["caller_line"])
+        session['caller_line']=render(session['caller_line'],session['case_parameters'])
 
         result = detect_intent(
             user_text,
@@ -238,6 +278,13 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             caller_line=session["caller_line"],
         )
         intent = result.intent.value
+        if (session['scenario_payload'].get('scenario_kind')=='benign' and session['requested_action']=='other'):
+            normalized=normalize_phrase(user_text)
+            scheduling=re.search(r'\b(?:nhan o|giao o|toi xuong|goi lai|hen luc|theo lich|de o)\b',normalized)
+            if session['scenario_payload'].get('family') in {'delivery','appointment'}:
+                scheduling=scheduling or re.search(r'\b(?:[0-2]?\d)\s*(?:gio|h)\b',normalized)
+            if not re.search(r'\b(?:khong|chua|dung)\b',normalized) and scheduling:
+                intent='comply'
         intent_method = (
             "rasa" if result.matched_rule and result.matched_rule.startswith("rasa:")
             else "rule" if result.matched_rule else "fallback"
@@ -314,17 +361,13 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             critical = transition["critical"]
             unknown_count = 0
         else:
-            cursor.execute(
-                "SELECT end_outcome, score_delta, feedback, critical FROM intent_defaults WHERE intent = %s",
-                (intent,),
-            )
-            default = cursor.fetchone()
+            default = next((item for item in session['intent_defaults'] if item['intent']==intent),None)
             if default is not None:
                 score_delta = default["score_delta"]
                 feedback = default["feedback"]
                 critical = default["critical"]
                 if default["end_outcome"] is not None:
-                    target = _terminal_node(cursor, session["scenario_id"], default["end_outcome"])
+                    target = _terminal_node(cursor, session["scenario_version_id"], default["end_outcome"])
                 else:
                     unknown_count += 1
             else:
@@ -356,8 +399,12 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                         target.update(cursor.fetchone() or {})
                     unknown_count = 0
                 elif unknown_count >= 2 or next_turn_no >= session["max_turns"]:
-                    target = _terminal_node(cursor, session["scenario_id"], "timeout")
+                    target = _terminal_node(cursor, session["scenario_version_id"], "timeout")
                     unknown_count = 0
+
+        if next_turn_no >= session['max_turns'] and (target is None or not target['target_is_terminal']):
+            target=_terminal_node(cursor,session['scenario_version_id'],'timeout')
+            unknown_count=0
 
         if target is None:
             target_node_id = session["current_node_id"]
@@ -375,6 +422,12 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             outcome = target["target_outcome"] if target["target_is_terminal"] else None
             ended = outcome is not None
 
+        bot_text=render(bot_text,session["case_parameters"])
+        from app.arena.notifications import request_artifact,brief
+        if session['interaction_mode']=='call' and not ended:
+            cursor.execute('SELECT requested_action FROM dialogue_nodes WHERE node_id=%s',(target_node_id,))
+            request_artifact(cursor,session_id,cursor.fetchone()['requested_action'])
+        available_messages=brief(cursor,session_id)
         line_result = None
         if not (target is not None and target["target_is_terminal"]):
             # The session row is locked here; keep LINE_LLM_TIMEOUT_SECONDS short (default 3s).
@@ -383,7 +436,8 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                 target_node=target_node_id, intent=intent, user_text_masked=user_text_masked,
                 original_user_text=user_text, fixed_text=bot_text, is_reprompt=(target is None),
                 context={"sample_line": bot_text, "intent": intent, "player_text": user_text_masked,
-                         "caller_line": caller_line,
+                         "caller_line": caller_line, "case_facts": session["case_parameters"],
+                         "available_messages": available_messages,
                          "interaction_mode": session["interaction_mode"]},
             )
             bot_text = line_result.text
@@ -480,6 +534,7 @@ def rate_generated_line(session_id: UUID, turn_no: int, line_id: int, user_id: s
 def _check_regeneration_turn(turn, turn_no, old_line_id):
     if not turn:
         raise KeyError(turn_no)
+    if turn.get('exercise_mode')=='assessment': raise ValueError('Không tạo lại câu trong bài đánh giá.')
     if turn["interaction_mode"] == "call" and (turn["latest_turn_no"] != turn_no or turn["ended_at"] is not None):
         raise ValueError("Chỉ có thể tạo lại câu trả lời mới nhất khi cuộc gọi đang diễn ra.")
     if old_line_id is not None and old_line_id != turn["line_id"]:
@@ -489,7 +544,7 @@ def _check_regeneration_turn(turn, turn_no, old_line_id):
 def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None, user_id: str) -> RegeneratedLineResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute("""SELECT t.target_node_id,t.intent,t.is_reprompt,s.scenario_id,
-                              t.line_id,t.line_source,t.bot_reply_text,s.interaction_mode,s.ended_at,s.turn_no AS latest_turn_no
+                              t.line_id,t.line_source,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.turn_no AS latest_turn_no
                        FROM call_turns t JOIN call_sessions s USING(session_id)
                        WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s""",(session_id,user_id,turn_no))
         turn=cursor.fetchone()
@@ -507,7 +562,7 @@ def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         # Generation happens outside locks. Recheck under the session/turn locks so
         # a double click or a concurrent new turn cannot penalize/replace stale text.
-        cursor.execute("""SELECT t.line_id,t.bot_reply_text,s.interaction_mode,s.ended_at,s.turn_no AS latest_turn_no
+        cursor.execute("""SELECT t.line_id,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.turn_no AS latest_turn_no
                           FROM call_turns t JOIN call_sessions s USING(session_id)
                           WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s FOR UPDATE OF s,t""",
                        (session_id,user_id,turn_no))
@@ -532,7 +587,7 @@ def finish_call(session_id: UUID, user_id: str) -> None:
             UPDATE call_sessions AS session
             SET current_node_id = COALESCE(
                     (SELECT node_id FROM dialogue_nodes
-                     WHERE scenario_id = session.scenario_id AND is_terminal AND outcome = 'timeout' LIMIT 1),
+                     WHERE scenario_version_id = session.scenario_version_id AND is_terminal AND outcome = 'timeout' LIMIT 1),
                     current_node_id
                 ),
                 outcome = COALESCE(outcome, 'timeout'),
@@ -550,11 +605,14 @@ def get_call_summary(session_id: UUID, user_id: str) -> CallSummaryResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT cs.session_id, cs.outcome, cs.total_score, cs.turn_no,
-                   s.scenario_name, s.title, s.payload->>'lesson_summary' AS lesson_summary,
-                   s.payload->'red_flags' AS red_flags
+            SELECT cs.session_id, cs.outcome, cs.total_score, cs.turn_no,v.definition->>'family' AS family,
+                   EXISTS(SELECT 1 FROM practice_judgements j WHERE j.session_id=cs.session_id) AS judged,
+                   (SELECT evaluation FROM practice_judgements j WHERE j.session_id=cs.session_id) AS evaluation,
+                   s.scenario_name, v.definition->>'title' AS title, v.definition->'payload'->>'lesson_summary' AS lesson_summary,
+                   v.definition->'payload'->'red_flags' AS red_flags
             FROM call_sessions AS cs
             JOIN scenarios AS s ON s.scenario_id = cs.scenario_id
+            JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
             WHERE cs.session_id = %s AND cs.user_id = %s
             """,
             (session_id, user_id),
@@ -562,6 +620,8 @@ def get_call_summary(session_id: UUID, user_id: str) -> CallSummaryResponse:
         session = cursor.fetchone()
         if session is None:
             raise KeyError(str(session_id))
+        if session.get('family') in {'delivery','appointment','support'} and not session['judged']:
+            raise ValueError('Hãy đưa ra nhận định sau cuộc gọi trước khi xem đáp án.')
 
         cursor.execute(
             """
@@ -578,6 +638,12 @@ def get_call_summary(session_id: UUID, user_id: str) -> CallSummaryResponse:
 
     score = session["total_score"]
     badge = "🏆 Cảnh giác cao" if score >= 80 else "🥈 Cần luyện thêm" if score >= 50 else "⚠️ Dễ bị lừa"
+    practice=session.get('family') in {'delivery','appointment','support'}
+    evaluation=session.get('evaluation')
+    if practice and evaluation:
+        score=evaluation['evaluation_score']
+        badge='Đánh giá và kiểm tra tốt' if score>=80 else 'Cần luyện thêm cách kiểm tra' if score>=50 else 'Cần xem lại bằng chứng và hành động'
+        session['outcome']='scammed' if evaluation['risk_action_recorded'] else 'safe' if evaluation['correct'] else 'timeout'
     feedback = [
         SessionFeedback(
             turn_no=turn["turn_no"],
@@ -599,6 +665,7 @@ def get_call_summary(session_id: UUID, user_id: str) -> CallSummaryResponse:
         for turn in turns if turn["feedback"] and (turn["critical"] or turn["score_delta"] < 0)
     ]
     latencies = [turn["elapsed_seconds"] for turn in turns if turn["elapsed_seconds"] is not None]
+    if practice: mistakes=[]
     return CallSummaryResponse(
         session_id=str(session["session_id"]),
         scenario_key=session["scenario_name"],
@@ -622,9 +689,15 @@ def tip(mistake: str) -> str:
 def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT cs.session_id, s.title, cs.started_at, cs.ended_at,
-                      cs.outcome, cs.total_score, cs.turn_no
+            """SELECT cs.session_id, CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, cs.started_at, cs.ended_at,
+                      CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN
+                        CASE WHEN j.evaluation IS NULL THEN NULL WHEN j.evaluation->>'risk_action_recorded'='true' THEN 'scammed'
+                             WHEN j.evaluation->>'correct'='true' THEN 'safe' ELSE 'timeout' END ELSE cs.outcome END AS outcome,
+                      CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN COALESCE((j.evaluation->>'evaluation_score')::integer,0) ELSE cs.total_score END AS total_score,
+                      (v.definition->>'family' IN ('delivery','appointment','support') AND j.evaluation IS NULL) AS awaiting_judgement,cs.turn_no
                FROM call_sessions cs JOIN scenarios s ON s.scenario_id = cs.scenario_id
+               JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
+               LEFT JOIN practice_judgements j ON j.session_id=cs.session_id
                WHERE cs.user_id = %s ORDER BY cs.started_at DESC LIMIT %s""",
             (user_id, limit),
         )
@@ -634,6 +707,7 @@ def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
                 started_at=row["started_at"].isoformat(),
                 ended_at=row["ended_at"].isoformat() if row["ended_at"] else None,
                 outcome=row["outcome"], total_score=row["total_score"], turn_count=row["turn_no"],
+                awaiting_judgement=row['awaiting_judgement'],
             )
             for row in cursor.fetchall()
         ]
@@ -642,11 +716,12 @@ def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
 def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT cs.session_id, s.title, COALESCE(chosen.line_text, fallback.line_text) AS opening_line
+            """SELECT cs.session_id,cs.case_parameters, CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, COALESCE(chosen.line_text, fallback.line_text) AS opening_line
                FROM call_sessions cs
                JOIN scenarios s ON s.scenario_id = cs.scenario_id
+               JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
                JOIN dialogue_nodes start_node
-                 ON start_node.scenario_id = cs.scenario_id AND start_node.is_start = TRUE
+                 ON start_node.scenario_version_id = cs.scenario_version_id AND start_node.is_start = TRUE
                LEFT JOIN dialogue_lines chosen ON chosen.line_id = cs.opening_line_id
                LEFT JOIN LATERAL (
                    SELECT line_text FROM dialogue_lines
@@ -668,7 +743,7 @@ def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptRespons
         )
         turns = cursor.fetchall()
 
-    messages = [TranscriptMessage(role="caller", text=session["opening_line"])]
+    messages = [TranscriptMessage(role="caller", text=render(session["opening_line"],session['case_parameters']))]
     for turn in turns:
         messages.append(TranscriptMessage(
             turn_no=turn["turn_no"], role="player", text=turn["user_text_masked"],
@@ -686,13 +761,15 @@ def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptRespons
 def list_intent_candidates(status: str = "pending") -> list[IntentCandidate]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT c.candidate_id, c.session_id, s.title AS scenario_title, c.stage,
+            """SELECT c.candidate_id, c.session_id, v.definition->>'title' AS scenario_title, c.stage,
                       c.requested_action, c.caller_text, c.user_text_masked,
                       c.detected_intent, c.source_reason,
                       c.suggested_intent, c.suggested_phrase, c.confidence, c.rationale,
                       c.analysis_status, c.created_at
                FROM intent_review_candidates c
                JOIN scenarios s ON s.scenario_id = c.scenario_id
+               JOIN call_sessions cs ON cs.session_id=c.session_id
+               JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
                WHERE c.review_status = %s
                ORDER BY c.created_at DESC LIMIT 100""",
             (status,),

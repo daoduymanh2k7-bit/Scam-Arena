@@ -9,13 +9,18 @@ CONTEXT_RULES = (
 )
 
 DIALOGUE_PROMPT = (
-    "Bạn viết lời thoại của nhân vật người gọi giả mạo trong trò chơi đào tạo phòng chống lừa đảo. "
+    "Bạn viết lời thoại nhân vật trong trò chơi phân biệt cuộc gọi bình thường và giả mạo. "
+    "Nếu scenario_kind=benign, đóng vai nhân viên thật: không lừa, không gây áp lực, không yêu cầu mã đăng nhập, "
+    "mật khẩu hoặc phí ngoài tình huống. Nếu scenario_kind=fraud, đóng vai giả mạo theo nhánh đã duyệt. "
     "Code đã chọn node đích: giữ persona, scenario_title, user_context, objective, tactics, "
     "requested_action và pressure_level. Không tự đổi nhánh, kết thúc trò chơi hay chấm điểm. "
     + CONTEXT_RULES +
     "Đọc player_text cùng recent_turns, earlier_unsummarized_turns và conversation_summary. "
     "Trả lời trực tiếp câu hỏi hoặc phản ứng mới nhất trước; chỉ nối tới objective khi phù hợp. "
     "caller_line là lời người gọi vừa nói mà người chơi đang đáp lại. Nhãn unknown không có nghĩa câu nói vô nghĩa: "
+    "available_messages liệt kê thông báo đã cấp trong mô phỏng. Chỉ nhắc thư/email/SMS đã có trong danh sách này; "
+    "không bịa biên lai giấy, email đã gửi hoặc mã phiếu chưa tồn tại. Nếu người chơi hỏi mã phiếu, "
+    "dùng reference trong case_facts và chỉ đúng email xác nhận có sẵn. Bạn không biết mã OTP riêng trong hộp thư. "
     "'Giao dịch gì vậy?' là câu hỏi cần giải thích; 'Có, tôi đang nghe máy' xác nhận đang nghe, "
     "hãy nói tiếp nội dung, không hỏi lại còn nghe máy hay yêu cầu người chơi giải thích yêu cầu của họ. "
     "Nếu câu nghe được mơ hồ, thiếu nghĩa hoặc có khả năng sai nhận diện, hỏi lại ngắn gọn một ý; "

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "id": "delivery-ordinary",
+  "version": 1,
+  "status": "published",
+  "title": "Giao hàng theo lịch",
+  "category": "other",
+  "difficulty": "beginner",
+  "locale": "vi-VN",
+  "summary": "Cuộc gọi giao nhận trong bối cảnh một đơn hàng đã thanh toán.",
+  "user_context": "Bạn có một đơn hàng đã thanh toán, dự kiến giao hôm nay. Người giao hàng có thể gọi để hẹn giờ. Không có khoản phí bổ sung.",
+  "persona": {
+    "name": "Người giao hàng",
+    "claimed_role": "Nhân viên giao nhận",
+    "speaking_style": "Lịch sự, ngắn gọn, trả lời đúng câu hỏi về giao nhận.",
+    "pressure_level": 1
+  },
+  "start_stage_id": "intro",
+  "stages": [
+    {
+      "id": "intro",
+      "opening_line": "Tôi gọi về đơn hàng giao hôm nay. Anh/chị muốn nhận vào lúc nào ạ?",
+      "objective": "Trao đổi đúng nội dung giao nhận và phản hồi câu hỏi.",
+      "tactics": [],
+      "requested_action": "other",
+      "max_turns": 3,
+      "fallback_lines": [
+        "Tôi gọi về đơn hàng giao hôm nay. Anh/chị muốn nhận vào lúc nào ạ?"
+      ],
+      "transitions": [
+        {
+          "on_intent": "unknown",
+          "next_stage_id": "details"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "details"
+        },
+        {
+          "on_intent": "verify",
+          "next_stage_id": "details"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "comply",
+          "next_stage_id": "details"
+        }
+      ],
+      "default_next_stage_id": "intro",
+      "timeout_next_stage_id": "details"
+    },
+    {
+      "id": "details",
+      "opening_line": "Đơn này đã thanh toán rồi, không có phí thêm. Anh/chị muốn nhận ở sảnh hay chờ tôi gọi lại khi tới?",
+      "objective": "Trao đổi đúng nội dung giao nhận và phản hồi câu hỏi.",
+      "tactics": [],
+      "requested_action": "other",
+      "max_turns": 3,
+      "fallback_lines": [
+        "Đơn này đã thanh toán rồi, không có phí thêm. Anh/chị muốn nhận ở sảnh hay chờ tôi gọi lại khi tới?"
+      ],
+      "transitions": [
+        {
+          "on_intent": "comply",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "verify",
+          "next_stage_id": "END_SAFE"
+        },
+        {
+          "on_intent": "refuse",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "hang_up",
+          "next_stage_id": "END_NEUTRAL"
+        },
+        {
+          "on_intent": "doubt",
+          "next_stage_id": "details"
+        }
+      ],
+      "default_next_stage_id": "details",
+      "timeout_next_stage_id": "END_NEUTRAL"
+    }
+  ],
+  "red_flags": [],
+  "scoring": {
+    "base_score": 60,
+    "rules": [
+      {
+        "intent": "comply",
+        "points_delta": 0,
+        "feedback": "Cần xét rõ hành động cụ thể bạn đồng ý.",
+        "critical": false
+      },
+      {
+        "intent": "verify",
+        "points_delta": 15,
+        "feedback": "Bạn chọn kiểm tra qua kênh độc lập.",
+        "critical": false
+      },
+      {
+        "intent": "refuse",
+        "points_delta": 0,
+        "feedback": "Bạn có quyền từ chối khi chưa đủ tin cậy.",
+        "critical": false
+      },
+      {
+        "intent": "hang_up",
+        "points_delta": 0,
+        "feedback": "Bạn có quyền kết thúc cuộc gọi.",
+        "critical": false
+      },
+      {
+        "intent": "share_sensitive",
+        "points_delta": -50,
+        "feedback": "Không cần mã đăng nhập để nhận hàng.",
+        "critical": true
+      }
+    ]
+  },
+  "lesson_summary": "Đánh giá hành động được yêu cầu và tự kiểm tra đơn hàng; không đánh giá chỉ theo giọng nói hoặc nghề nghiệp.",
+  "created_at": "2026-11-05T00:00:00Z",
+  "updated_at": "2026-11-17T00:00:00Z",
+  "published_at": "2026-11-05T00:00:00Z",
+  "scenario_kind": "benign",
+  "family": "delivery"
+}

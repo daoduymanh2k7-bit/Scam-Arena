@@ -11,6 +11,9 @@
   const clock = document.getElementById("phone-clock");
   const callerTitle = document.getElementById("call-static-title");
   const scenarioOptions = document.getElementById("call-scenario-options");
+  const randomStart = document.getElementById('call-random-start');
+  const scenarioToggle = document.getElementById('call-scenario-toggle');
+  const scenarioMenu = document.getElementById('call-scenario-menu');
   const scenarioStatus = document.getElementById("call-scenarios-status");
   const subtitlesLog = document.getElementById("call-subtitles-log");
   const subtitlesEmpty = document.getElementById("call-subtitles-empty");
@@ -18,14 +21,9 @@
   const micLabel = document.getElementById("phone-mute-label");
   const audioButton = document.getElementById("phone-call-audio");
   const endButton = phone.querySelector('[data-call-action="end"]');
-  const smsBanner = document.getElementById("phone-sms-banner");
-  const smsPreview = document.getElementById("phone-sms-preview");
-  const smsBody = document.getElementById("phone-sms-body");
-  const smsStatus = document.getElementById("phone-sms-status");
-  const smsCode = document.getElementById("phone-sms-code");
+  const inbox = new PhoneInbox(phone);
   let timer = null;
   let startedAt = 0;
-  let smsDeliveryTimer = null;
   let loadingScenarios = false;
   let scenariosLoaded = false;
   let selectedScenario = null;
@@ -34,6 +32,62 @@
   let callRun = 0;
   let sessionId = null;
   let latestCallTurn = null;
+  let mixedSession = null;
+  let preparedStart = null;
+  const practicePanel = document.createElement('div');
+  practicePanel.className='practice-call-panel';
+  practicePanel.hidden = true;
+  practicePanel.innerHTML = `<p data-context>Bạn sẽ nhận một cuộc gọi dịch vụ chưa rõ thật/giả. Bối cảnh cụ thể xuất hiện khi cuộc gọi bắt đầu.</p>
+    <label>Độ khó <select data-difficulty><option value="adaptive">Theo kết quả luyện tập</option><option value="beginner">Cơ bản</option><option value="intermediate">Trung bình</option><option value="advanced">Nâng cao</option></select></label>
+    <label>Chế độ <select data-exercise><option value="training">Luyện tập</option><option value="assessment">Đánh giá (không tạo lại câu)</option></select></label>
+    <p>Công cụ trong điện thoại:</p><button type="button" data-event="check_context">Xem hồ sơ / đơn / lịch</button>
+    <button type="button" data-event="read_message">Đọc thông báo</button><button type="button" data-event="verify_official">Tự kiểm tra kênh chính thức</button>
+    <button type="button" data-event="open_requested_link" hidden>Mở liên kết mô phỏng</button><button type="button" data-event="share_demo_code" hidden>Gửi mã mô phỏng</button>
+    <p data-evidence-text></p><button type="button" data-finish-retry hidden>Lưu kết thúc lại</button><p>Nhận định sau cuộc gọi:</p><textarea data-reason rows="2" maxlength="1000" placeholder="Bạn dựa vào dấu hiệu nào? (không nhập dữ liệu thật)"></textarea>
+    <button type="button" data-judge="benign">Bình thường</button> <button type="button" data-judge="fraud">Giả mạo</button> <button type="button" data-judge="uncertain">Chưa đủ thông tin</button><p data-result></p>`;
+  scenarioMenu.after(practicePanel);
+  const isMixed = () => selectedScenario?.startsWith('mixed-');
+  const isAssessment = () => isMixed() && practicePanel.querySelector('[data-exercise]').value === 'assessment';
+  async function refreshPractice() {
+    if (!mixedSession) return;
+    const owner=mixedSession;
+    const response=await fetch(`/api/practice/${owner}/context`);
+    if (!response.ok || mixedSession!==owner) return;
+    const state=await response.json();
+    practicePanel.querySelector('[data-context]').textContent=state.context;
+    practicePanel.querySelectorAll('[data-event]').forEach(button=>{
+      button.hidden=!state.actions.includes(button.dataset.event);
+      button.disabled=state.ended;
+    });
+  }
+  practicePanel.addEventListener('click', async event => {
+    const button=event.target.closest('button');
+    if (!button || !mixedSession) return;
+    const owner=mixedSession;
+    button.disabled=true;
+    try {
+      if (button.hasAttribute('data-finish-retry')) {
+        if (!await finishSession(owner)) throw Error('Chưa lưu được kết thúc. Hãy thử lại.');
+        if(mixedSession!==owner)return;
+        button.hidden=true;practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=false);return;
+      }
+      const evidence=Boolean(button.dataset.event);
+      const response=await fetch(`/api/practice/${encodeURIComponent(owner)}/${evidence?'events':'judge'}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(evidence?{event_type:button.dataset.event}:{judgement:button.dataset.judge,reason:practicePanel.querySelector('[data-reason]').value})});
+      const data=await response.json();
+      if (mixedSession!==owner) return;
+      if (!response.ok) throw Error(data.detail||'Chưa thực hiện được.');
+      if (evidence) {
+        practicePanel.querySelector('[data-evidence-text]').textContent=data.text;
+        if (button.dataset.event==='read_message') {
+          await inbox.refresh();if(mixedSession===owner)inbox.showList();
+        }
+      } else {
+        practicePanel.querySelector('[data-result]').textContent=`Cuộc gọi ${data.actual_kind==='benign'?'bình thường':'giả mạo'}. ${data.correct?'Nhận định đúng.':data.judgement==='uncertain'?'Bạn chưa kết luận.':'Nhận định chưa đúng.'} Điểm đánh giá: ${data.evaluation_score}/100. ${data.verified_independently?'Đã kiểm tra kênh độc lập.':''} ${data.risk_action_recorded?'Có thao tác mô phỏng rủi ro.':''} ${data.explanation} ${data.note}`;
+        practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=true);
+      }
+    } catch(error) {if(mixedSession===owner){practicePanel.querySelector('[data-result]').textContent=error.message;button.disabled=false;}}
+  });
   let introPhase = "greeting";
   let turnBusy = false;
   let microphone = null;
@@ -44,7 +98,6 @@
   let micError = "";
   let lastLineFinishedAt = 0;
   let greetingTimer = null;
-  let otpScheduled = false;
   let callerVoices = [];
   let currentVoice = null;
   let previousVoice = null;
@@ -71,6 +124,7 @@
   const intentMethods = { rule: "Luật", rasa: "Rasa", llm: "LLM", fallback: "Dự phòng" };
 
   function addSubtitleInfo(entry, text) {
+    if (isAssessment()) return;
     const existing = entry.querySelector(".call-subtitle-info div");
     if (existing) { existing.textContent += ` · ${text}`; return; }
     const info = document.createElement("details");
@@ -140,7 +194,7 @@
   }
 
   function addReplyRetry(entry, metadata, run) {
-    if (!Number.isInteger(metadata.turn_no) || metadata.ended) return;
+    if (!Number.isInteger(metadata.turn_no) || metadata.ended || isAssessment()) return;
     const ownerSession = sessionId;
     const button = document.createElement("button");
     button.type = "button";
@@ -229,7 +283,17 @@
     const run = callRun;
     currentVoice = pickCallerVoice();
     const query = currentVoice ? `?voice=${encodeURIComponent(currentVoice)}` : "";
-    await openMicrophone(run);
+    const micReady=openMicrophone(run);
+    if (isMixed()) {
+      try {
+        const result=await Api.startCall(selectedScenario,'call',practicePanel.querySelector('[data-difficulty]').value,practicePanel.querySelector('[data-exercise]').value);
+        if (run!==callRun) {void finishSession(result.session_id);return;}
+        preparedStart=result;mixedSession=result.session_id;void inbox.bind(result.session_id);
+        if(result.practice_context)practicePanel.querySelector('[data-context]').textContent=result.practice_context;
+        void refreshPractice();
+      } catch(error) {if(run===callRun)setCallState('ended',error.message,true);return;}
+    }
+    await micReady;
     if (run !== callRun) return;
     callStatus.textContent = "Người gọi đang nói…";
     addSubtitle("caller", "Alo?", "Nguồn: Lời chào có sẵn");
@@ -253,8 +317,10 @@
     try {
       await Api.finishCall(id);
       window.ArenaHistory?.refreshAll();
+      return true;
     } catch {
       // A connection failure should not prevent the local call from closing.
+      return false;
     }
   }
 
@@ -284,12 +350,18 @@
           introPhase = "courtesy";
           response = { bot_text: "Dạ, anh chị tiện nghe máy một chút không ạ?" };
         } else {
-          response = await Api.startCall(selectedScenario, "call");
+          response = preparedStart || await Api.startCall(selectedScenario, "call",practicePanel.querySelector("[data-difficulty]").value,isMixed()?practicePanel.querySelector("[data-exercise]").value:'training');
+          preparedStart = null;
           if (run !== callRun) {
             void finishSession(response.session_id);
             return;
           }
           sessionId = response.session_id;
+          void inbox.bind(sessionId);
+          if (isMixed()) {
+            mixedSession=sessionId;
+            void refreshPractice();
+          }
           introPhase = "scenario";
           // The caller already greeted the player before this stored opening.
           response.bot_text = response.bot_text.replace(/^(?:alo|alô|a lô)(?=[\s,.!?…:]|$)[\s,.!?…:]*/iu, "");
@@ -298,6 +370,8 @@
         response = await Api.submitCallTurn(sessionId, text, elapsed);
         if (run !== callRun) return;
         latestCallTurn = response.turn_no;
+        void inbox.refresh();
+        if (isMixed()) void refreshPractice();
         const intent = intentNames[response.intent] ?? "Chưa xác định";
         const method = intentMethods[response.intent_method] ?? "Không rõ";
         addSubtitleInfo(subtitle, `Nhận dạng giọng: ${recognition} · Ý định: ${intent} · Cách gán nhãn: ${method}`);
@@ -315,14 +389,11 @@
       }) : true;
       if (run !== callRun) return;
       if (response.ended) {
-        const score = Number.isFinite(response.score) ? ` · ${response.score}/100` : "";
+        const score = !isMixed() && Number.isFinite(response.score) ? ` · ${response.score}/100` : "";
         setCallState("ended", `Cuộc gọi đã kết thúc${score}.`, true);
         return;
       }
-      if (selectedScenario === "bank" && response.stage === "ask_action" && !otpScheduled) {
-        otpScheduled = true;
-        smsDeliveryTimer = setTimeout(deliverDemoSms, 300);
-      }
+
       if (!heard) addSubtitle("notice", "Không phát được âm thanh. Lời người gọi vẫn có trong phụ đề.");
       waitForReply();
     } catch (error) {
@@ -544,8 +615,42 @@
   }
 
   function resetCall() {
+    practicePanel.hidden=true;
+    mixedSession=null;
     selectedScenario = null;
     setCallState("idle", "Chọn tình huống để bắt đầu");
+  }
+
+  function setScenarioMenu(open, focusFirst = false) {
+    scenarioMenu.hidden=!open;
+    scenarioToggle.setAttribute('aria-expanded',String(open));
+    if(open && focusFirst)scenarioOptions.querySelector('button')?.focus();
+  }
+  scenarioToggle.addEventListener('click',()=>setScenarioMenu(scenarioMenu.hidden));
+  scenarioToggle.addEventListener('keydown',event=>{
+    if(event.key==='ArrowDown'){event.preventDefault();setScenarioMenu(true,true);}
+    if(event.key==='Escape'){event.preventDefault();setScenarioMenu(false);}
+  });
+  document.addEventListener('click',event=>{
+    if(!scenarioMenu.hidden && !event.target.closest('.call-scenario-picker'))setScenarioMenu(false);
+  });
+  scenarioMenu.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();setScenarioMenu(false);scenarioToggle.focus();}
+  });
+  randomStart.addEventListener('click',()=>chooseCallScenario('mixed-any'));
+  function chooseCallScenario(key) {
+    if(!scenariosLoaded)return;
+    setScenarioMenu(false);
+          selectedScenario = key;
+          practicePanel.hidden=!isMixed();
+          mixedSession=null;
+          practicePanel.querySelector('[data-finish-retry]').hidden=true;
+          practicePanel.querySelector('[data-reason]').value='';
+          practicePanel.querySelector('[data-evidence-text]').textContent='';
+          practicePanel.querySelector('[data-result]').textContent='';
+          practicePanel.querySelectorAll('button').forEach(b=>b.disabled=true);
+          clock.textContent = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+          setCallState("ringing", "Cuộc gọi đến", true);
   }
 
   async function loadCallScenarios() {
@@ -558,18 +663,20 @@
         Api.listCallerVoices().catch(() => []),
       ]);
       callerVoices = Array.isArray(voices) ? voices : [];
+      scenarios.sort((a,b)=>Number(b.key.startsWith('mixed-'))-Number(a.key.startsWith('mixed-')));
       scenarioOptions.replaceChildren(...scenarios.map((scenario) => {
         const button = document.createElement("button");
         button.type = "button";
         button.textContent = scenario.label;
         button.addEventListener("click", () => {
-          selectedScenario = scenario.key;
-          clock.textContent = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
-          setCallState("ringing", "Cuộc gọi đến", true);
+          chooseCallScenario(scenario.key);
+
         });
         return button;
       }));
       scenariosLoaded = true;
+      randomStart.disabled=!scenarios.some(s=>s.key==='mixed-any');
+      scenarioToggle.disabled=!scenarios.length;
       scenarioStatus.textContent = scenarios.length ? "" : "Chưa có tình huống";
     } catch {
       scenarioStatus.textContent = "Không tải được tình huống. Hãy mở lại tab Cuộc gọi.";
@@ -584,33 +691,15 @@
     callTimer.textContent = `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
   }
 
-  function deliverDemoSms() {
-    smsCode.textContent = String(Math.floor(Math.random() * 1000000)).padStart(6, "0");
-    smsStatus.textContent = "Có tin nhắn mới từ Ngân hàng mô phỏng.";
-    smsBanner.hidden = false;
-  }
-
-  function resetSms() {
-    clearTimeout(smsDeliveryTimer);
-    smsBanner.hidden = true;
-    setSmsExpanded(false);
-    smsStatus.textContent = "";
-    smsCode.textContent = "";
-  }
-
-  function setSmsExpanded(expanded) {
-    smsBody.hidden = !expanded;
-    smsPreview.setAttribute("aria-expanded", String(expanded));
-  }
-
   function setCallState(state, label, moveFocus = false) {
     const run = ++callRun;
+    let finishing=null;
     clearInterval(timer);
     clearTimeout(greetingTimer);
     timer = null;
     stopAudio();
-    resetSms();
-    otpScheduled = false;
+    if(state==='idle'||state==='ringing')inbox.reset();
+    else if(state==='ended')inbox.ended();
     releaseMicrophone();
     micMuted = false;
     micError = "";
@@ -618,13 +707,34 @@
     phoneAudio.muted = false;
     audioButton.setAttribute("aria-pressed", "false");
     if (sessionId) {
-      void finishSession(sessionId);
+      finishing=finishSession(sessionId);
       sessionId = null;
     }
+    if (preparedStart) {finishing=finishSession(preparedStart.session_id);preparedStart=null;}
     introPhase = "greeting";
     latestCallTurn = null;
     setTurnBusy(state === "active");
     phone.dataset.callState = state;
+    if (isMixed() && state==='ringing') {
+      mixedSession=null;
+      practicePanel.querySelector('[data-context]').textContent='Bạn sẽ nhận một cuộc gọi dịch vụ chưa rõ thật/giả. Bối cảnh cụ thể xuất hiện khi cuộc gọi bắt đầu.';
+      practicePanel.querySelector('[data-reason]').value='';
+      practicePanel.querySelector('[data-result]').textContent='';
+      practicePanel.querySelector('[data-evidence-text]').textContent='';
+      practicePanel.querySelector('[data-finish-retry]').hidden=true;
+      practicePanel.querySelectorAll('button').forEach(b=>b.disabled=true);
+    }
+    practicePanel.querySelectorAll('select').forEach(select=>select.disabled=state==='active');
+    if (isMixed() && state==='ended') {
+      practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=true);
+      practicePanel.querySelectorAll('[data-event]').forEach(b=>b.disabled=true);
+      const owner=mixedSession;
+      Promise.resolve(finishing || true).then(saved=>{
+        if(run!==callRun || mixedSession!==owner || !owner)return;
+        practicePanel.querySelectorAll('[data-judge]').forEach(b=>b.disabled=!saved);
+        const retry=practicePanel.querySelector('[data-finish-retry]');retry.hidden=saved;retry.disabled=false;
+      });
+    }
     callerTitle.textContent = state === "idle" ? "Điện thoại" : "Số không xác định";
     callStatus.textContent = label;
     callTimer.hidden = state !== "active";
@@ -662,16 +772,9 @@
       case "reset": setCallState("ringing", "Cuộc gọi đến", true); break;
       case "choose":
         resetCall();
-        scenarioOptions.querySelector("button")?.focus({ preventScroll: true });
+        setScenarioMenu(true,true);
         break;
-      case "expand-sms":
-        setSmsExpanded(smsBody.hidden);
-        break;
-      case "close-sms":
-        smsBanner.hidden = true;
-        setSmsExpanded(false);
-        endButton.focus({ preventScroll: true });
-        break;
+
     }
   });
 

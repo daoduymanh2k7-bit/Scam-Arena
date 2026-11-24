@@ -15,10 +15,10 @@ const Api = (() => {
     listScenarios: () => fetch("/api/arena/scenarios").then(asJson),
     listCallerVoices: () => fetch("/api/voice/caller-voices").then(asJson),
     randomScenario: () => fetch("/api/arena/scenarios/random").then(asJson),
-    startCall(scenarioKey, interactionMode = "message") {
+    startCall(scenarioKey, interactionMode = "message", practiceDifficulty = 'adaptive', exerciseMode = 'training') {
       return fetch("/api/arena/calls", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scenario_key: scenarioKey, interaction_mode: interactionMode }),
+        body: JSON.stringify({ scenario_key: scenarioKey, interaction_mode: interactionMode, practice_difficulty: practiceDifficulty, exercise_mode: exerciseMode }),
       }).then(asJson);
     },
     submitCallTurn(sessionId, userText, elapsedSeconds) {

@@ -1,0 +1,102 @@
+/* Message trainer: isolated from phone-call and administration screens. */
+#message-mode { --chat-line: #37334d; --chat-muted: #a7a2bd; }
+#message-mode .intro .eyebrow { color: #b7a4ef; font-size: 10px; margin-bottom: 9px; }
+#message-mode .intro h1 { font-size: clamp(26px,3vw,39px); line-height: 1.18; letter-spacing: -.045em; }
+#message-mode .intro-copy { color: #bcb6d1; line-height: 1.6; }
+#message-mode #arena-picker { border-color: var(--chat-line); background: #1b1929; padding: 22px; border-radius: 20px; }
+#message-mode #arena-picker h2 { font-size: 18px; }
+.message-picker-note { margin: 6px 0 0; color: #aaa3bf; font-size: 12px; }
+.message-sim-pill { display: inline-flex; flex: none; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid #74639755; border-radius: 99px; color: #cbbbea; background: #ad8af812; font: 600 10px system-ui,sans-serif; white-space: nowrap; }
+#message-mode .scenario-grid { grid-template-columns: 1fr; gap: 9px; margin: 20px 0 14px; }
+#message-mode .scenario-card { min-height: 76px; padding: 15px 36px 15px 19px; background: #252136; border: 1px solid #403750; border-radius: 13px; transition: transform .18s,background .18s,border-color .18s; }
+#message-mode .scenario-card::before { display: none; }
+#message-mode .scenario-card::after { content: '↗'; position: absolute; top: 50%; right: 18px; transform: translateY(-50%); color: #a997d4; font-size: 19px; }
+#message-mode .scenario-card:hover { transform: translateX(3px); border-color: #9c7fe0; background: #302740; }
+#message-mode .scenario-card strong { font-size: 14px; }
+#message-mode .scenario-card span { color: #b5acc8; font-size: 12px; }
+#message-mode #arena-random-btn { background: linear-gradient(115deg,#7f60d1,#586ec0); border: 1px solid #a28be0; color: white; min-height: 44px; font-size: 13px; border-radius: 11px; }
+#message-mode:has(#arena-session:not([hidden])) { overflow: hidden; }
+#message-mode:has(#arena-session:not([hidden])) > footer { display: none; }
+#message-mode #arena-session.message-chat-panel { width: min(100%,920px); align-self: center; margin: 12px 0 8px; padding: 0; display: flex; min-height: 0; overflow: hidden; border: 1px solid var(--chat-line); border-radius: 22px; background: #151420; box-shadow: 0 20px 60px #0002; }
+#arena-session.message-chat-panel .message-chat-header { display: flex; flex: none; gap: 14px; align-items: center; padding: 18px 24px; border-bottom: 1px solid #ffffff0b; background: #211e30; }
+#arena-session.message-chat-panel .caller { display: flex; flex: 1; min-width: 0; flex-direction: row; align-items: center; gap: 13px; padding: 0; border: 0; }
+#arena-session.message-chat-panel .caller-icon { display: grid; flex: 0 0 44px; width: 44px; height: 44px; margin: 0; border-radius: 15px; background: linear-gradient(140deg,#7660a9,#40375c); color: #f0e8ff; box-shadow: inset 0 0 0 1px #ffffff17; }
+#arena-session .message-contact { min-width: 0; }
+#arena-session.message-chat-panel .caller h2 { font: 700 16px/1.3 system-ui,sans-serif; color: #f4f0ff; }
+#arena-session.message-chat-panel .caller p { margin: 4px 0 0; padding: 0; background: none; border: 0; color: #b5abc9; font-size: 11px; line-height: 1.5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#arena-session.message-chat-panel .caller p::before { display: none; }
+#arena-session .message-sim-pill .live-dot { width: 5px; height: 5px; box-shadow: none; background: #bca3e7; }
+#arena-session .message-session-note { flex: none; text-align: center; padding: 12px 12px 6px; color: #8f879f; font-size: 10px; line-height: 1.4; }
+#arena-session.message-chat-panel .transcript { flex: 1; min-height: 0; max-height: none; overflow-y: auto; padding: 16px clamp(16px,4vw,42px) 20px; gap: 18px; scrollbar-color: #544766 transparent; scroll-padding-bottom: 20px; }
+#arena-session.message-chat-panel .transcript:focus-visible { outline: 2px solid #ae91ed; outline-offset: -4px; border-radius: 10px; }
+#arena-session.message-chat-panel .bubble { position: relative; flex: none; max-width: min(78%,600px); padding: 13px 16px 10px; font: 14px/1.65 system-ui,sans-serif; white-space: normal; overflow-wrap: anywhere; border: 1px solid #ffffff09; box-shadow: 0 3px 12px #0001; animation: message-arrive .18s ease-out; }
+#arena-session.message-chat-panel .bubble.scammer { background: #292535; color: #efeaf8; border-radius: 17px 17px 17px 5px; }
+#arena-session.message-chat-panel .bubble.user { background: #66509e; color: #fff; border-radius: 17px 17px 5px 17px; }
+#arena-session .message-bubble-footer { display: flex; justify-content: flex-end; align-items: center; gap: 7px; margin-top: 7px; color: #b5a9c6; font: 10px/1.3 system-ui,sans-serif; }
+#arena-session .bubble.user .message-bubble-footer { color: #e0d3f5; }
+#arena-session .message-bubble-info summary { display: grid; place-items: center; width: 19px; height: 19px; border: 1px solid #b8a8ce80; border-radius: 50%; color: inherit; cursor: pointer; list-style: none; font: 600 11px system-ui; }
+#arena-session .message-bubble-info summary::-webkit-details-marker { display: none; }
+#arena-session .message-bubble-info[open] { flex: 1; }
+#arena-session .message-bubble-info > div { margin-top: 7px; padding-top: 8px; border-top: 1px solid #ffffff20; font-size: 11px; line-height: 1.6; color: #e0d4ef; }
+#arena-session .message-bubble-info summary:focus-visible { outline: 2px solid #e3ccff; outline-offset: 3px; }
+#arena-session.message-chat-panel .bubble-options { margin-top: 9px; border-top: 1px solid #ffffff12; padding-top: 8px; font-size: 10px; }
+#arena-session.message-chat-panel .bubble-options summary { color: #bfb1d5; cursor: pointer; }
+#arena-session.message-chat-panel .bubble-actions { gap: 7px; }
+#arena-session.message-chat-panel .bubble-action { padding: 8px 10px; font-size: 11px; border-radius: 8px; background: #ffffff08; border-color: #70617f; color: #ece3f6; }
+#arena-session .message-composer-area { flex: none; padding: 5px 24px 14px; background: #191722; border-top: 1px solid #ffffff07; }
+#arena-session.message-chat-panel #arena-status { min-height: 19px; margin: 3px 2px 8px; padding: 0; color: #b6abc9; font-size: 11px; line-height: 1.5; }
+#arena-session.message-chat-panel .reply-box { padding: 12px 13px 10px; margin: 0; border-radius: 15px; border: 1px solid #4d405f; background: #262130; backdrop-filter: none; transition: border-color .15s,box-shadow .15s; }
+#arena-session.message-chat-panel .reply-box:focus-within { border-color: #aa85e5; box-shadow: 0 0 0 3px #a97de710; }
+#arena-session .message-input-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#arena-session.message-chat-panel .reply-box textarea { width: 100%; min-height: 38px; max-height: 112px; padding: 5px 2px; resize: none; background: transparent; border: 0; border-radius: 0; color: #f4edf9; font: 14px/1.6 system-ui,sans-serif; box-shadow: none; }
+#arena-session.message-chat-panel .reply-box textarea::placeholder { color: #a599b1; }
+#arena-session.message-chat-panel .reply-box textarea:focus { outline: none; }
+#arena-session.message-chat-panel .reply-actions { display: flex; align-items: center; flex-wrap: nowrap; gap: 10px; margin-top: 6px; }
+#arena-session.message-chat-panel .reply-actions .button { flex: none; min-height: 36px; padding: 7px 12px; font: 600 11px system-ui,sans-serif; border-radius: 10px; }
+#arena-session #message-input-hint { flex: 1; color: #a99bb8; font-size: 10px; text-align: center; }
+#arena-session.message-chat-panel #arena-mic-btn { color: #d7c9e8; background: #ffffff06; border: 1px solid #ffffff12; }
+#arena-session.message-chat-panel #arena-send-btn { display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 78px; color: white; background: #8b66d2; border: 1px solid #a98bdd; }
+#arena-session.message-chat-panel #arena-send-btn:disabled { opacity: .4; cursor: default; }
+#arena-session.message-chat-panel .session-actions { justify-content: space-between; align-items: center; margin-top: 9px; gap: 10px; }
+#arena-session.message-chat-panel .session-actions .button { flex: none; min-height: 34px; padding: 7px 0; font: 500 11px system-ui,sans-serif; border: 0; background: transparent; border-radius: 6px; }
+#arena-session.message-chat-panel #arena-finish-btn { color: #c4b0e4; background: transparent; border: 0; }
+#arena-session.message-chat-panel #arena-cancel-btn { color: #a69bb6; }
+#arena-session .button:focus-visible { outline: 2px solid #c5a5f5; outline-offset: 3px; }
+#arena-session .message-typing { display: flex; flex: none; align-items: center; gap: 4px; padding: 0 30px 12px; color: #b6a6ca; }
+#arena-session .message-typing[hidden] { display: none; }
+#arena-session .message-typing > span { width: 5px; height: 5px; border-radius: 50%; background: #a68ac8; animation: message-typing 1.2s infinite ease-in-out; }
+#arena-session .message-typing > span:nth-child(2) { animation-delay: .15s; }
+#arena-session .message-typing > span:nth-child(3) { animation-delay: .3s; }
+#arena-session .message-typing small { margin-left: 6px; font-size: 10px; }
+@keyframes message-arrive { from { opacity: 0; transform: translateY(5px); } }
+@keyframes message-typing { 50% { opacity: .35; transform: translateY(-3px); } }
+@media(max-width:600px) {
+  .desktop-visual { display: none; }
+  .app-shell:has(#message-mode:not([hidden])) .topbar-actions { gap: 6px; }
+  .app-shell:has(#message-mode:not([hidden])) #auth-username { display: block; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .app-shell:has(#message-mode:not([hidden])) { background: #15131f; }
+  .app-shell:has(#message-mode:not([hidden]))::before { display: none; }
+  #message-mode #arena-picker { padding: 17px; }
+  #message-mode .intro { padding: 23px 4px 16px; }
+  #message-mode #arena-session.message-chat-panel { margin: 4px 0 0; border-radius: 17px 17px 0 0; }
+  #arena-session.message-chat-panel .message-chat-header { padding: 13px 12px; gap: 8px; }
+  #arena-session.message-chat-panel .caller { gap: 10px; }
+  #arena-session.message-chat-panel .caller-icon { flex-basis: 36px; width: 36px; height: 36px; border-radius: 12px; }
+  #arena-session.message-chat-panel .caller h2 { font-size: 14px; }
+  #arena-session.message-chat-panel .caller p { font-size: 10px; }
+  #arena-session .message-sim-pill { padding: 5px 7px; font-size: 9px; }
+  #arena-session .message-session-note { padding: 10px 12px 2px; font-size: 9px; }
+  #arena-session.message-chat-panel .transcript { padding: 14px 12px; gap: 14px; }
+  #arena-session.message-chat-panel .bubble { max-width: 90%; font-size: 14px; padding: 11px 12px 9px; }
+  #arena-session .message-composer-area { padding: 5px 11px 9px; }
+  #arena-session.message-chat-panel #arena-status { font-size: 10px; margin-bottom: 6px; }
+  #arena-session.message-chat-panel .reply-box { padding: 9px 10px 8px; }
+  #arena-session.message-chat-panel .reply-box textarea { font-size: 16px; }
+  #arena-session #message-input-hint { font-size: 0; }
+  #arena-session.message-chat-panel .session-actions .button { font-size: 10px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  #message-mode .scenario-card,#arena-session.message-chat-panel .reply-box { transition: none; }
+  #arena-session.message-chat-panel .bubble,#arena-session .message-typing > span { animation: none; }
+}

@@ -70,6 +70,8 @@ class SpeakRequest(BaseModel):
 class StartCallRequest(BaseModel):
     scenario_key: str = Field(min_length=1, max_length=80)
     interaction_mode: Literal["message", "call"] = "message"
+    practice_difficulty: Literal['adaptive','beginner','intermediate','advanced'] = 'adaptive'
+    exercise_mode: Literal['training','assessment'] = 'training'
 
 
 class RegisterRequest(BaseModel):
@@ -93,6 +95,7 @@ class StartCallResponse(BaseModel):
     scenario_title: str
     bot_text: str
     stage: str
+    practice_context: str | None = None
 
 
 class CallTurnRequest(BaseModel):
@@ -164,6 +167,7 @@ class CallSummaryResponse(BaseModel):
 
 
 class CallHistoryItem(BaseModel):
+    awaiting_judgement: bool = False
     session_id: str
     scenario_title: str
     started_at: str

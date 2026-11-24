@@ -98,7 +98,7 @@ def test_future_summary_not_used_for_regeneration_and_gap_is_included():
 
 def test_contextual_line_bypasses_shared_cache_and_is_not_published():
     def handler(sql, many):
-        if "SELECT payload" in sql: return {"payload": {"title": "Mô phỏng", "persona": {}}}
+        if "AS payload" in sql: return {"payload": {"title": "Mô phỏng", "persona": {}}}
         if "SELECT node_key" in sql: return {"objective": "Hỏi rõ", "requested_action": "other"}
         if "SELECT turn_no" in sql: return [{"turn_no": 5, "user_text_masked": "Không", "intent": "refuse", "bot_reply_text": "Đã rõ"}]
         if many: return [{"line_text": "Cached reply", "line_id": 3}]
