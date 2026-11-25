@@ -238,7 +238,8 @@ Các bảng chính:
 - `dialogue_lines`: toàn bộ nội dung câu cố định và câu LLM, lượt dùng, trạng thái bật/tắt và điểm ưu tiên.
 - `call_sessions`, `call_turns`: phiên chơi, câu trả lời đã che thông tin, intent, điểm và transcript.
 - `intent_phrase_rules`, `intent_defaults`: luật nhận diện bổ sung và luật mặc định.
-- `intent_review_candidates`: đề xuất intent cần admin xem xét.
+- `data_review_items`: hàng đợi duyệt chung, gồm câu cần gán intent và đề xuất của bot.
+- `intent_review_candidates`: view tương thích đọc/ghi vào hàng đợi chung, không phải bảng lưu dữ liệu riêng.
 
 Migration và seed được chạy idempotent khi ứng dụng khởi động. Các node, metadata và transition của kịch bản đã published được đồng bộ từ `data/scenarios/*.json` mỗi lần khởi động; vì vậy sửa diễn biến trong các file này sẽ cập nhật nhánh đang chạy. Câu thoại cố định đã có trong database không bị ghi đè; các câu thoại mới được thêm nếu còn thiếu. Phrase rules và 12 câu mở đầu mỗi tình huống được nạp idempotent từ `data/intent_phrases.json` và `data/opening_line_variants.json`.
 
@@ -364,3 +365,15 @@ Khi kết thúc phiên, bot mặc định phân tích nền tối đa 2 câu ch�
 Admin dùng mục **Người dùng** để tìm/lọc tài khoản, xem số phiên/lượt luyện tập và kết quả tổng hợp, khóa/mở khóa có ghi lý do và nhật ký. Khóa tài khoản thu hồi cookie đăng nhập trên máy chủ; mở khóa cần đăng nhập lại. Không cho tự khóa tài khoản hiện tại hoặc làm mất admin hoạt động cuối cùng. Bản này chưa có đổi quyền hoặc hạn mức API; không cung cấp mật khẩu, API key hay nội dung hội thoại cá nhân trong danh sách.
 
 X-APIKEY thử model chính rồi các model dự phòng, không gọi đồng thời. Model bị vô hiệu hóa/không tồn tại được bỏ qua 10 phút; timeout, lỗi mạng, lỗi máy chủ hoặc JSON/nội dung không hợp lệ được bỏ qua 30 giây trong tiến trình hiện tại. Hết thời gian sẽ không thử thêm model. Trạng thái này tự mất khi khởi động lại; sau thời gian nghỉ sẽ thử lại model ưu tiên. Lỗi xác thực/quyền truy cập/hạn mức dùng chung (401/402/403/429, trừ mã model bị khóa) dừng ngay, không thử tất cả model bằng cùng key. Danh sách dự phòng không khắc phục được khi toàn bộ gateway ngừng hoạt động; chuỗi Gemini/Groq/OpenRouter và lời thoại có sẵn vẫn giữ nguyên. Các lần thử lỗi có thể vẫn được nhà cung cấp tính phí; không dùng model hình ảnh/embedding làm dự phòng hội thoại.
+
+### Tinh gọn schema và khôi phục
+
+Migration `compact_schema.install` chuyển hàng đợi intent cũ vào `data_review_items`, giữ ID ứng viên, trạng thái, đề xuất, thời gian và các ID đề xuất đã được `reviewed_utterances` tham chiếu. Các đề xuất lịch sử vẫn còn; hàng đợi đang dùng có một hàng cho mỗi lượt thoại. View `intent_review_candidates` giữ tương thích với API duyệt hiện tại; không còn bảng vật lý thứ hai để đồng bộ. Các lượt thoại gốc và các bảng tài khoản/kịch bản không bị thay đổi. Hai bảng thu giọng cá nhân đã ngừng dùng `voice_samples` và `voice_recordings` được gỡ; việc này không ảnh hưởng Deepgram.
+
+**Trước lần khởi động đầu tiên có migration này, phải sao lưu PostgreSQL bằng `pg_dump -Fc` và kiểm tra file bằng `pg_restore --list`.** Script triển khai VPS đã sao lưu trước khi thay container vào `/opt/scam-arena-backups/`. Khi chạy thủ công/local, cần tạo backup trước khi build/chạy bản mới. Backup có dữ liệu cá nhân và thông tin xác thực đã băm: giữ ngoài Git, không chia sẻ công khai. Có thể kiểm tra migration bằng `python backend/tools/check_compact_schema.py` trên database thử độc lập.
+
+Nếu cần quay về code cũ sau migration, dừng ứng dụng và khôi phục database từ bản dump trước migration cùng với phiên bản code tương ứng; chỉ đổi code về bản cũ là chưa đủ vì schema hàng đợi đã đổi sang view. Dữ liệu phát sinh sau thời điểm backup phải được lưu riêng trước khi khôi phục.
+
+Bước tinh gọn tiếp theo chuyển `conversation_memories` và `practice_judgements` vào các cột `memory_*` / đánh giá của `call_sessions`. Cơ chế so sánh phiên bản/thời gian của bản tóm tắt vẫn ngăn kết quả LLM cũ ghi đè sau khi tạo lại câu trả lời. Bản nháp và hồ sơ chờ duyệt dùng chung `scenario_documents`; khóa gồm loại tài liệu và ID để giữ được cả hai tài liệu cũ có cùng ID. Bản nháp vẫn riêng theo tài khoản, có revision chống ghi đè; hồ sơ gửi duyệt là bản chụp độc lập. Các tên cũ được giữ bằng view để truy vấn thống kê/lịch sử không đổi. Schema mới có 19 bảng vật lý; các view tương thích không lưu thêm bản sao dữ liệu. Chạy thêm `python backend/tools/check_consolidated_state.py` để kiểm tra dữ liệu cũ không rỗng, ID trùng, bộ nhớ và bản nháp.
+
+Các bước PostgreSQL trong GitHub Actions cần `PYTHONPATH=.:backend` để tìm cả `app` và namespace `rasa.evaluation` tại gốc repository, giống image Docker (`/app/backend:/app`). Nếu chỉ đặt `backend`, việc quét bot có thể thất bại trước khi gọi LLM.

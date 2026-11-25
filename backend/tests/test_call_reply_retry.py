@@ -60,7 +60,13 @@ def test_success_replaces_same_turn_and_decrements_original_once():
     changes = [(q, p) for q, p in pool.sql if "preference_score=GREATEST" in q]
     assert len(changes) == 1 and changes[0][1] == (-1, 7)
     assert response.turn_no == 1 and response.line_id == 8
-    assert not any("UPDATE call_sessions" in q or "INSERT INTO call_turns" in q for q, _ in pool.sql)
+    assert not any("INSERT INTO call_turns" in q for q, _ in pool.sql)
+    # Regeneration invalidates the summary stored on the session; game fields stay untouched.
+    import re
+    session_updates=[q for q,_ in pool.sql if "UPDATE call_sessions" in q]
+    assert len(session_updates)==1
+    assignments=re.findall(r"(?:SET|,)\s*(\w+)\s*=",session_updates[0])
+    assert assignments and all(field.startswith("memory_") for field in assignments)
 
 
 @pytest.mark.parametrize("mode", ["provider_failure", "stale", "wrong_line", "older_turn", "ended", "assessment"])

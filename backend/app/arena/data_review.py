@@ -99,6 +99,15 @@ def dataset_duplicates(workspace):
 
 def put(c,kind,key,original,run_id,suggestion=None):
     digest=fingerprint(original)
+    if kind=='intent':
+        row=c.execute("SELECT item_id,source_hash,decision FROM data_review_items WHERE kind='intent' AND source_key=%s AND candidate_data IS NOT NULL FOR UPDATE",(str(key),)).fetchone()
+        if row:
+            if row['decision']=='pending':
+                c.execute("""UPDATE data_review_items SET original=%s,source_hash=%s,run_id=%s,
+                    suggestion=CASE WHEN source_hash=%s THEN suggestion ELSE '{}'::jsonb END,
+                    analysis_status=CASE WHEN source_hash=%s THEN analysis_status ELSE 'pending' END,updated_at=now()
+                    WHERE item_id=%s""",(Jsonb(original),digest,run_id,digest,digest,row['item_id']))
+            return
     c.execute('''UPDATE data_review_items SET decision='rejected',reviewed_at=now(),updated_at=now(),
         result='{"action":"superseded","note":"Nguồn đã thay đổi; đã tạo đề xuất mới."}'::jsonb
         WHERE kind=%s AND source_key=%s AND source_hash<>%s AND decision='pending' ''',(kind,str(key),digest))

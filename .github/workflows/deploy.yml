@@ -46,12 +46,14 @@ jobs:
         run: bash -n deployment/deploy-vps.sh
       - name: Verify scenario migrations and version isolation in PostgreSQL
         env:
-          PYTHONPATH: backend
+          PYTHONPATH: .:backend
           DATABASE_URL: postgresql://arena_checks:ci-local-only@127.0.0.1:5432/arena_checks
         run: |
           python backend/tools/check_scenario_versions.py
           python backend/tools/check_user_management.py
           python backend/tools/check_data_review.py
+          python backend/tools/check_compact_schema.py
+          python backend/tools/check_consolidated_state.py
       - name: Test call microphone lifecycle
         run: node --test frontend/tests/*.test.cjs
 

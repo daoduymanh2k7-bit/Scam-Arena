@@ -140,25 +140,20 @@ def update_summary(session_id, user_id, force=False):
     text, provider = result
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute("SET LOCAL lock_timeout = '2s'")
-        cursor.execute("""INSERT INTO conversation_memories
-                            (session_id,summary_text,covered_turn,max_words,word_count,provider)
-                          VALUES(%s,%s,%s,%s,%s,%s)
-                          ON CONFLICT(session_id) DO UPDATE SET summary_text=EXCLUDED.summary_text,
-                            covered_turn=EXCLUDED.covered_turn,max_words=EXCLUDED.max_words,
-                            word_count=EXCLUDED.word_count,provider=EXCLUDED.provider,updated_at=now()
-                          WHERE conversation_memories.covered_turn=%s AND conversation_memories.max_words=%s
-                            AND conversation_memories.updated_at IS NOT DISTINCT FROM %s""",
-                       (session_id, text, turns[-1]["turn_no"], limit, len(text.split()), provider,
-                        old_covered, state["max_words"] or limit, state["updated_at"]))
+        cursor.execute("""UPDATE call_sessions SET memory_text=%s,memory_covered_turn=%s,
+                            memory_max_words=%s,memory_word_count=%s,memory_provider=%s,memory_updated_at=clock_timestamp()
+                          WHERE session_id=%s AND COALESCE(memory_covered_turn,0)=%s
+                            AND COALESCE(memory_max_words,%s)=%s
+                            AND memory_updated_at IS NOT DISTINCT FROM %s""",
+                       (text,turns[-1]["turn_no"],limit,len(text.split()),provider,session_id,
+                        old_covered,limit,state["max_words"] or limit,state["updated_at"]))
 
 
 def invalidate_memory(cursor, session_id):
     # Keep a timestamped placeholder so an in-flight old summary cannot reinsert stale facts.
-    cursor.execute("""INSERT INTO conversation_memories
-                         (session_id,summary_text,covered_turn,max_words,word_count,provider)
-                       VALUES(%s,'…',0,%s,1,'pending') ON CONFLICT(session_id) DO UPDATE
-                       SET summary_text='…',covered_turn=0,max_words=EXCLUDED.max_words,
-                           word_count=1,provider='pending',updated_at=clock_timestamp()""", (session_id, word_limit()))
+    cursor.execute("""UPDATE call_sessions SET memory_text='…',memory_covered_turn=0,memory_max_words=%s,
+                           memory_word_count=1,memory_provider='pending',memory_updated_at=clock_timestamp()
+                       WHERE session_id=%s""",(word_limit(),session_id))
 
 
 def read_memory(session_id, user_id):

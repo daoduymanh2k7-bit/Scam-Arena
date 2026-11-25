@@ -45,6 +45,7 @@ cd "$app"
 backup="$backup_dir/$(date -u +%Y%m%dT%H%M%SZ)-$revision.dump"
 docker compose -p scam-arena exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-acl' > "$backup.tmp" < /dev/null
 test -s "$backup.tmp"
+docker compose -p scam-arena exec -T db pg_restore --list < "$backup.tmp" > /dev/null
 mv "$backup.tmp" "$backup"
 
 # Only synchronize source: credentials, models, reviews and backups stay on VPS.

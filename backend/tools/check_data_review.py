@@ -57,6 +57,9 @@ def run():
                 first,started=bot.create_run(actor['user_id']);assert started
                 same,started=bot.create_run(actor['user_id']);assert not started and same==first
                 bot.run_review(first,limit=1)
+                with pool.connection() as c:
+                    state=c.execute("SELECT status,stats FROM data_review_runs WHERE run_id=%s",(first,)).fetchone()
+                assert state["status"]=="completed",state
                 assert llm.call_count==1
                 second,started=bot.create_run(actor['user_id']);assert started
                 bot.run_review(second,limit=20)

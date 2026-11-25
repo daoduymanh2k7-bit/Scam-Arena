@@ -83,7 +83,7 @@ def judge(session_id: UUID,body: Judgement,user=Depends(get_current_user)):
     with get_connection_pool().connection() as c,c.cursor() as cur:
         row=owned(cur,session_id,user['user_id'],True)
         if not row['ended_at']: raise HTTPException(409,'Hãy kết thúc cuộc gọi trước khi xem đánh giá.')
-        cur.execute('INSERT INTO practice_judgements(session_id,judgement,reason) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING',(session_id,body.judgement,mask(body.reason)))
+        cur.execute('UPDATE call_sessions SET practice_judgement=%s,judgement_reason=%s,judged_at=now() WHERE session_id=%s AND practice_judgement IS NULL',(body.judgement,mask(body.reason),session_id))
         cur.execute('SELECT judgement,reason,evaluation FROM practice_judgements WHERE session_id=%s',(session_id,));saved=cur.fetchone();choice=saved['judgement']
         if saved['evaluation']: return saved['evaluation']
         cur.execute('SELECT event_type FROM practice_events WHERE session_id=%s',(session_id,));events={r['event_type'] for r in cur.fetchall()}
@@ -173,7 +173,7 @@ def validate_preview(body: Review,user=Depends(require_admin)):
 @router.get('/admin/drafts')
 def drafts(user=Depends(require_admin)):
     with get_connection_pool().connection() as c:
-        return c.execute('SELECT draft_id,document,revision,updated_at FROM practice_admin_drafts WHERE owner_id=%s ORDER BY updated_at DESC LIMIT 100',(user['user_id'],)).fetchall()
+        return c.execute("SELECT document_id AS draft_id,document,revision,updated_at FROM scenario_documents WHERE document_kind='draft' AND creator_id=%s ORDER BY updated_at DESC LIMIT 100",(user['user_id'],)).fetchall()
 
 
 @router.post('/admin/drafts')
@@ -181,11 +181,11 @@ def save_draft(body: Draft,user=Depends(require_admin)):
     if len(json.dumps(body.document))>200000: raise HTTPException(413,'Bản nháp quá lớn.')
     with get_connection_pool().connection() as c:
         if body.draft_id is None:
-            return c.execute('INSERT INTO practice_admin_drafts(owner_id,document) VALUES(%s,%s) RETURNING draft_id,revision,updated_at',(user['user_id'],Jsonb(body.document))).fetchone()
-        row=c.execute('UPDATE practice_admin_drafts SET document=%s,revision=revision+1,updated_at=now() WHERE draft_id=%s AND owner_id=%s AND revision=%s RETURNING draft_id,revision,updated_at',
+            return c.execute("INSERT INTO scenario_documents(document_kind,status,creator_id,document) VALUES('draft','draft',%s,%s) RETURNING document_id AS draft_id,revision,updated_at",(user['user_id'],Jsonb(body.document))).fetchone()
+        row=c.execute("UPDATE scenario_documents SET document=%s,revision=revision+1,updated_at=now() WHERE document_kind='draft' AND document_id=%s AND creator_id=%s AND revision=%s RETURNING document_id AS draft_id,revision,updated_at",
                       (Jsonb(body.document),body.draft_id,user['user_id'],body.expected_revision)).fetchone()
         if row:return row
-        exists=c.execute('SELECT 1 FROM practice_admin_drafts WHERE draft_id=%s AND owner_id=%s',(body.draft_id,user['user_id'])).fetchone()
+        exists=c.execute("SELECT 1 FROM scenario_documents WHERE document_kind='draft' AND document_id=%s AND creator_id=%s",(body.draft_id,user['user_id'])).fetchone()
         if not exists:raise HTTPException(404,'Không tìm thấy bản nháp của bạn.')
         raise HTTPException(409,'Bản nháp đã được sửa ở cửa sổ khác. Tải lại bản nháp trước khi lưu.')
 
@@ -194,7 +194,7 @@ def save_draft(body: Draft,user=Depends(require_admin)):
 def propose(body: Review,user=Depends(require_admin)):
     doc=checked_document(body.document)
     with get_connection_pool().connection() as c:
-        return c.execute('INSERT INTO practice_reviews(document,submitted_by) VALUES(%s,%s) RETURNING review_id,status',(Jsonb(doc),user['user_id'])).fetchone()
+        return c.execute("INSERT INTO scenario_documents(document_kind,status,document,creator_id) VALUES('review','pending',%s,%s) RETURNING document_id AS review_id,status",(Jsonb(doc),user['user_id'])).fetchone()
 
 
 @router.post('/admin/reviews/{review_id}/{decision}')
@@ -204,6 +204,6 @@ def decide(review_id: int,decision: Literal['approve','reject'],user=Depends(req
         if not row: raise HTTPException(404,'Không tìm thấy bản duyệt.')
         if row['status']!='pending': raise HTTPException(409,'Bản này đã được xử lý.')
         version=publish_document(cur,row['document']) if decision=='approve' else None
-        cur.execute('UPDATE practice_reviews SET status=%s,reviewed_by=%s,reviewed_at=now(),published_version_id=%s WHERE review_id=%s',
+        cur.execute("UPDATE scenario_documents SET status=%s,reviewed_by=%s,reviewed_at=now(),published_version_id=%s WHERE document_kind='review' AND document_id=%s",
                     ('approved' if version else 'rejected',user['user_id'],version,review_id))
         return {'status':'approved' if version else 'rejected','version_id':version}

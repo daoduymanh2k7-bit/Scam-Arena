@@ -81,10 +81,10 @@ def test_summary_cadence_no_database_lock_during_llm_and_stale_write_guard():
     with patch.object(memory, "get_connection_pool", return_value=pool), patch.object(memory, "request_summary", side_effect=summarize) as llm:
         state["turn_no"] = 3; memory.update_summary(uuid4(), "owner"); llm.assert_not_called()
         state["turn_no"] = 4; memory.update_summary(uuid4(), "owner")
-    inserts = [(q, p) for q, p in pool.sql if "INSERT INTO conversation_memories" in q]
+    inserts = [(q, p) for q, p in pool.sql if "UPDATE call_sessions SET memory_text" in q]
     assert len(inserts) == 1
     assert "updated_at IS NOT DISTINCT FROM" in inserts[0][0]
-    assert inserts[0][1][2:5] == (4, 150, 9)
+    assert inserts[0][1][1:4] == (4, 150, 9)
 
 
 def test_future_summary_not_used_for_regeneration_and_gap_is_included():

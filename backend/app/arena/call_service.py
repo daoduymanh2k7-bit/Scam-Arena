@@ -903,25 +903,12 @@ def flag_turn_for_review(session_id: UUID, turn_no: int, user_id: str) -> FlagTu
         row = cursor.fetchone()
         if row is None:
             raise KeyError(turn_no)
-        cursor.execute(
-            """INSERT INTO intent_review_candidates
-                   (session_id, turn_id, scenario_id, stage, requested_action,
-                    caller_text, user_text_masked, detected_intent, source_reason)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-               ON CONFLICT (turn_id) DO UPDATE SET
-                   source_reason = CASE
-                       WHEN intent_review_candidates.detected_intent = 'unknown' THEN 'unknown'
-                       ELSE 'player_flagged'
-                   END,
-                   analysis_status = CASE
-                       WHEN intent_review_candidates.review_status = 'pending' THEN 'pending'
-                       ELSE intent_review_candidates.analysis_status
-                   END
-               RETURNING candidate_id""",
-            (
-                session_id, row["turn_id"], row["scenario_id"], row["stage"],
-                row["requested_action"], row["caller_text"], row["user_text_masked"],
-                row["intent"], "unknown" if row["intent"] == "unknown" else "player_flagged",
-            ),
-        )
+        cursor.execute('SELECT turn_id FROM call_turns WHERE turn_id=%s FOR UPDATE',(row['turn_id'],))
+        existing=cursor.execute('SELECT candidate_id FROM intent_review_candidates WHERE turn_id=%s',(row['turn_id'],)).fetchone()
+        if existing:
+            cursor.execute("""UPDATE intent_review_candidates SET source_reason=CASE WHEN detected_intent='unknown' THEN 'unknown' ELSE 'player_flagged' END,
+                analysis_status=CASE WHEN review_status='pending' THEN 'pending' ELSE analysis_status END WHERE candidate_id=%s""",(existing['candidate_id'],))
+        else:
+            cursor.execute("""INSERT INTO intent_review_candidates(session_id,turn_id,scenario_id,stage,requested_action,caller_text,user_text_masked,detected_intent,source_reason)
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",(session_id,row['turn_id'],row['scenario_id'],row['stage'],row['requested_action'],row['caller_text'],row['user_text_masked'],row['intent'],'unknown' if row['intent']=='unknown' else 'player_flagged'))
     return FlagTurnResponse(session_id=str(session_id), turn_no=turn_no, queued_for_review=True)
