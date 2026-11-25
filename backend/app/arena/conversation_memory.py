@@ -69,7 +69,8 @@ def request_summary(context, limit):
         if os.getenv(key, "").strip():
             providers.append((provider, lambda seconds, name=provider: llm._compatible(name, context, seconds, instructions=instructions, max_tokens=tokens)))
     if settings(context.get("interaction_mode", "message"))[0]:
-        providers.append(("X-APIKEY", lambda seconds: request_json(instructions, context, max_tokens=tokens, timeout=seconds)[0]))
+        providers.append(("X-APIKEY", lambda seconds: request_json(instructions, context, max_tokens=tokens, timeout=seconds,
+            validate_result=lambda value: bool(bounded_summary(value.get("summary"), limit)))[0]))
     for index, (provider, call) in enumerate(providers):
         remaining = deadline - time.monotonic()
         if remaining < .1:

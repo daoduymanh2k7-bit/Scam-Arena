@@ -51,6 +51,7 @@ jobs:
         run: |
           python backend/tools/check_scenario_versions.py
           python backend/tools/check_user_management.py
+          python backend/tools/check_data_review.py
       - name: Test call microphone lifecycle
         run: node --test frontend/tests/*.test.cjs
 

@@ -42,6 +42,8 @@ def validate_line(text, player_text='', context=None):
     if re.search(r'\b(?:tôi là (?:một )?ai|mô hình ngôn ngữ|trợ lý ai|as an ai)\b',text,re.I): return None
     if '```' in text or text.strip().casefold()==player_text.strip().casefold(): return None
     if context:
+        from app.arena.service_completion import service_line_matches_step
+        if not service_line_matches_step(text,context): return None
         if context.get('phone_ui'):
             from app.arena.phone_ui import unsupported_screen_request
             if unsupported_screen_request(text): return None
@@ -175,7 +177,8 @@ def _request_fallback(context, timeout):
 def _request_xapikey(context, timeout):
     instructions = DIALOGUE_PROMPT
     clean_context = {key: value for key, value in context.items() if not key.startswith("_")}
-    parsed, model = request_xapikey_json(instructions, clean_context, max_tokens=400)
+    parsed, model = request_xapikey_json(instructions, clean_context, max_tokens=400,
+        validate_result=lambda value: bool(validate_line(value.get("line"), context.get("player_text", ""), context)))
     if not isinstance(parsed.get('line'), str):
         raise ValueError('X-APIKEY JSON did not contain a string line')
     context["_generated_model"] = model
@@ -268,6 +271,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
             if context is None: context={}
             context.update({'scenario_title':payload.get('title','') if isinstance(payload,dict) else '',
                 'scenario_kind':payload.get('scenario_kind','fraud'),
+                'scenario_family':payload.get('family'),
                 'scenario_category':payload.get('category','') if isinstance(payload,dict) else '',
                 'persona':persona,'user_context':payload.get('user_context','') if isinstance(payload,dict) else '',
                 'objective':(node_row or {}).get('objective',''),'tactics':[(node_row or {}).get('tactic','')],
@@ -352,6 +356,7 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
         from app.arena.practice_catalog import render
         context={'interaction_mode':row['interaction_mode'],'scenario_title':row['title'] or scenario.get('title',row['scenario_name']),
             'scenario_kind':scenario.get('scenario_kind','fraud'),
+            'scenario_family':scenario.get('family'),
             'scenario_category':scenario.get('category',''),'persona':scenario.get('persona',{}),
             'user_context':scenario.get('user_context',''),'objective':row['objective'] or '',
             'tactics':[row['tactic']] if row['tactic'] else [],'requested_action':row['requested_action'] or 'other',

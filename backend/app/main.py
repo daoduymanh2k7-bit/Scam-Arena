@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import arena_routes, auth_routes, rasa_review_routes, voice_routes
 from app.api import practice_routes
-from app.api import inbox_routes, user_admin_routes
+from app.api import inbox_routes, user_admin_routes, data_review_routes
 from app.database import close_database, initialize_database
 from app.scenario_visualizer import generate_scenario_map
 
@@ -51,6 +51,7 @@ app.include_router(voice_routes.router)
 app.include_router(practice_routes.router)
 app.include_router(inbox_routes.router)
 app.include_router(user_admin_routes.router)
+app.include_router(data_review_routes.router)
 
 
 @app.get("/health")

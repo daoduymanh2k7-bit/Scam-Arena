@@ -14,6 +14,9 @@ DIALOGUE_PROMPT = (
     "mật khẩu hoặc phí ngoài tình huống. Nếu scenario_kind=fraud, đóng vai giả mạo theo nhánh đã duyệt. "
     "Code đã chọn node đích: giữ persona, scenario_title, user_context, objective, tactics, "
     "requested_action và pressure_level. Không tự đổi nhánh, kết thúc trò chơi hay chấm điểm. "
+    "Ở cuộc gọi dịch vụ, nếu requested_action yêu cầu đọc mã hoặc cài ứng dụng, lời thoại phải nêu đúng yêu cầu đó như sample_line; "
+    "không thay bằng lời hẹn xuống sảnh nhận hàng hay xác nhận lịch thông thường. Nếu scenario_kind=fraud và còn bước tiếp, "
+    "không nói như đã chốt việc giao nhận rồi tiếp tục kéo dài bằng những xác nhận lặp lại. "
     + CONTEXT_RULES +
     "conversation_ending=false nghĩa cuộc gọi vẫn đang mở: không nói đã chốt xong, tạm biệt, xin chờ đợi "
     "hay hẹn liên hệ lại để kết thúc. Chỉ hỏi phần còn thiếu, không hỏi lại điều người chơi vừa xác nhận. "

@@ -75,9 +75,16 @@ def collect_rows(workspace, turns):
     review = read_json(path, {"speakers": {}, "rows": []})
     known = {row["sample"] for row in review["rows"]}
     added = skipped = 0
-    for turn_id, user_id, mode, raw in turns:
+    for values in turns:
+        turn_id,user_id,mode,raw=values[:4]
+        reviewed_intent=values[4] if len(values)>4 else None
         sample = fingerprint(salt, "turn", turn_id)
         if sample in known:
+            existing=next(row for row in review['rows'] if row['sample']==sample)
+            locked=read_json(workspace / 'split_lock.json',{})
+            if (reviewed_intent in LABELS and existing['intent'] is None
+                    and existing['speaker'] not in locked and allowed_text(raw)):
+                existing.update(text=allowed_text(raw),intent=reviewed_intent)
             continue
         text = allowed_text(raw)
         if text is None or not user_id:
@@ -87,7 +94,7 @@ def collect_rows(workspace, turns):
         review["speakers"].setdefault(speaker, None)
         review["rows"].append({
             "sample": sample, "speaker": speaker, "style": "whisper" if mode == "call" else "message",
-            "text": text, "intent": None,
+            "text": text, "intent": reviewed_intent if reviewed_intent in LABELS else None,
         })
         known.add(sample)
         added += 1
@@ -103,8 +110,10 @@ def collect(workspace):
     with psycopg.connect(DATABASE_URL) as connection, connection.cursor(name="rasa_review") as cursor:
         connection.read_only = True
         cursor.execute("""
-            SELECT t.turn_id, s.user_id, s.interaction_mode, t.user_text_masked
+            SELECT t.turn_id, s.user_id, s.interaction_mode,
+                   COALESCE(r.corrected_text,t.user_text_masked),r.intent
             FROM call_turns AS t JOIN call_sessions AS s USING (session_id)
+            LEFT JOIN reviewed_utterances r ON r.turn_id=t.turn_id
             WHERE s.user_id IS NOT NULL AND t.user_text_masked IS NOT NULL
             ORDER BY t.turn_id
         """)

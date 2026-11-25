@@ -122,7 +122,11 @@ def reclassify_unknown(*, context: dict) -> Intent | None:
     if os.getenv("OPENROUTER_API_KEY", "").strip():
         providers.append(("OpenRouter", lambda ctx, seconds: _compatible("OpenRouter", ctx, seconds)))
     if xapikey_settings(context.get("interaction_mode", "message"))[0]:
-        providers.append(("X-APIKEY", lambda ctx, seconds: request_xapikey_json(SYSTEM_PROMPT, ctx)[0]))
+        providers.append(("X-APIKEY", lambda ctx, seconds: request_xapikey_json(SYSTEM_PROMPT, ctx, timeout=seconds,
+            validate_result=lambda value: value.get("intent") in SAFE_OVERRIDES | {"unknown"}
+                and not isinstance(value.get("confidence"), bool)
+                and isinstance(value.get("confidence"), (int, float))
+                and 0 <= value["confidence"] <= 1)[0]))
     for provider, call in providers:
         try:
             result = call(context, timeout)

@@ -167,6 +167,10 @@ class CallSummaryResponse(BaseModel):
 
 
 class CallHistoryItem(BaseModel):
+    interaction_mode: Literal['message','call'] = 'message'
+    preview: str = ''
+    updated_at: str | None = None
+    abandoned: bool = False
     awaiting_judgement: bool = False
     session_id: str
     scenario_title: str
@@ -178,6 +182,7 @@ class CallHistoryItem(BaseModel):
 
 
 class TranscriptMessage(BaseModel):
+    created_at: str | None = None
     turn_no: int | None = None
     role: Literal["caller", "player"]
     text: str
@@ -186,6 +191,9 @@ class TranscriptMessage(BaseModel):
 
 
 class CallTranscriptResponse(BaseModel):
+    interaction_mode: Literal['message','call'] = 'message'
+    ended: bool = False
+    abandoned: bool = False
     session_id: str
     scenario_title: str
     messages: list[TranscriptMessage] = Field(default_factory=list)

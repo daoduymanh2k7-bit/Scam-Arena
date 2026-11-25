@@ -10,10 +10,36 @@ class Completion:
     closing: str
 
 
+def service_line_matches_step(text, context):
+    """Reject AI delivery closings that silently skip a pending request."""
+    if context.get('scenario_kind')!='fraud' or context.get('scenario_family') not in {'delivery','appointment','support'}:
+        return True
+    line=normalize_phrase(text)
+    action=context.get('requested_action')
+    if action in {'share_sensitive','install_app'}:
+        # Validate the requested action, rather than accepting a fluent line
+        # that has reverted to arranging an ordinary delivery/appointment.
+        patterns={
+            'share_sensitive':r'\b(?:doc|gui|cung cap|cho (?:toi|minh) biet|noi|bao|chia se)\b.{0,80}\b(?:ma|otp|mat khau|thong tin dang nhap)\b',
+            'install_app':r'\b(?:cai|tai|cap quyen)\b.{0,80}\b(?:ung dung|phan mem|dieu khien|app)\b',
+        }
+        clauses=[normalize_phrase(clause) for clause in re.split(r'[.!?;,]',text)]
+        return any(re.search(patterns[action],clause) and not re.search(r'\b(?:khong|chua|dung (?:doc|gui|cai|tai|cap|chia se))\b',clause)
+                   for clause in clauses)
+    if action=='other' and context.get('scenario_family')=='delivery':
+        receiving_plan=re.search(r'\b(?:xuong|ra|doi|cho)\b.*\b(?:sanh|nhan hang)\b',line)
+        if receiving_plan and not re.search(r'\b(?:xac nhan|kiem tra|doi chieu|buoc tiep)\b',line):
+            return False
+    return True
+
+
 def service_completion(payload, node_key, requested_action, caller_line, user_text, intent):
-    family = payload.get('family')
+    legacy_delivery = payload.get('id') == 'delivery-ordinary'
+    family = 'delivery' if legacy_delivery else payload.get('family')
+    built_in = legacy_delivery or payload.get('id') == f'practice-{family}-ordinary-' + str(
+        {'beginner':1,'intermediate':2,'advanced':3}.get(payload.get('difficulty'),0))
     if (payload.get('scenario_kind') != 'benign' or requested_action != 'other'
-            or payload.get('id') != f'practice-{family}-ordinary-' + str({'beginner':1,'intermediate':2,'advanced':3}.get(payload.get('difficulty'),0))
+            or not built_in
             or (node_key not in {'intro','details','confirmation'} and not (node_key=='verification' and family=='appointment' and 'lich nay co dung voi lich' in normalize_phrase(caller_line)))
             or intent in {'refuse','hang_up','share_sensitive','transfer_money'}):
         return None
@@ -23,19 +49,26 @@ def service_completion(payload, node_key, requested_action, caller_line, user_te
     if re.search(r'\bkhong\b',text) and not (family == 'support' and complaint):
         return None
     # Questions, hesitation, refusal and contradictory clauses still need a reply.
-    if ('?' in user_text or re.search(r'\b(?:chua|nhung|co le|hinh nhu|de toi xem|tai sao|the nao|lam sao|bao nhieu|o dau|khi nao|bao gio)\b',text)
+    if ('?' in user_text or re.search(r'\b(?:chua|nhung|co le|hinh nhu|de toi xem|tai sao|the nao|lam sao|lam gi|gi vay|bao nhieu|o dau|khi nao|bao gio|khoan|doi da|cho da)\b',text)
             or 'đừng' in user_text.casefold()):
         return None
-    acknowledgement = bool(re.fullmatch(r'(?:vang|da|duoc|dong y|ok|oke|u|uh|roi)(?: a| nhe| roi)?',text))
+    # Spoken acknowledgements often repeat or include a short filler. They only
+    # complete a delivery when the caller has already proposed a concrete plan.
+    acknowledgement = bool(
+        re.search(r'\b(?:vang|da|duoc|dong y|ok|oke|o ke|u|uh|roi)\b',text)
+        and re.fullmatch(r'(?:(?:tu tu|vang|da|duoc|dong y|ok|oke|o ke|u|uh|roi|a|nhe|nha)(?: |$))+',text))
     slot = r'\b(?:[01]?\d|2[0-3])\s*(?:gio|h)(?:\s*[0-5]?\d)?\b'
     when = bool(re.search(slot,text) or re.fullmatch(r'(?:hen |giao |nhan |de |vao )?(?:sang|trua|chieu|toi) (?:nay|mai)(?: nhe| di| a)?',text))
     if family == 'delivery':
-        place = bool(re.search(r'\b(?:o|tai|xuong|de o|giao o|nhan o) (?:sanh|cong|cua|quay|diem hen|bao ve)\b',text)
-                     or re.fullmatch(r'(?:sanh|cong|quay tiep nhan)(?: di| nhe| a)?',text))
+        place = bool(re.search(r'\b(?:o|tai|xuong|ra|den|de o|giao o|nhan o) (?:sanh|cong|cua|quay|diem hen|bao ve)\b',text)
+                     or re.fullmatch(r'(?:sanh|cong|quay tiep nhan)(?: di| nhe| a){0,3}',text))
         relevant = bool(re.search(r'\b(?:nhan|giao|dia diem|vi tri|thoi gian|lich|hen)\b',caller))
+        receiving_plan = not re.search(r'\bhay\b',caller) and bool(re.search(
+            r'\b(?:nhan|lay|giao)\b.*\b(?:sanh|cong|quay|bao ve|diem hen)\b|'
+            r'\b(?:sanh|cong|quay|bao ve|diem hen)\b.*\b(?:nhan|lay|giao)\b',caller))
         if relevant and (place or when or re.search(r'\b(?:cu theo lich|theo lich cu|toi se xuong nhan)\b',text)
-                         or (node_key == 'confirmation' and acknowledgement)):
-            return Completion('delivery_arranged','Vâng, tôi ghi nhận thời gian và địa điểm nhận hàng mình vừa thống nhất. Cảm ơn anh/chị, tôi kết thúc cuộc gọi tại đây.')
+                         or (acknowledgement and (node_key == 'confirmation' or receiving_plan))):
+            return Completion('delivery_arranged','Vâng, mình nhận hàng theo điểm hẹn vừa thống nhất nhé. Cảm ơn anh/chị, tôi kết thúc cuộc gọi tại đây.')
     elif family == 'appointment':
         relevant = bool(re.search(r'\b(?:lich|hen|gio|tien)\b',caller))
         if relevant and (when or acknowledgement or re.search(r'\b(?:dung lich|theo lich|xac nhan lich|van tien|giu nguyen lich)\b',text)):

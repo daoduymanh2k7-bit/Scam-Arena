@@ -110,6 +110,8 @@ def initialize_database() -> None:
         install(cursor)
         from app.arena.notifications import install as install_inbox
         install_inbox(cursor)
+        from app.arena.data_review import install as install_data_review
+        install_data_review(cursor)
         connection.commit()
 
     clear_intent_rule_cache()

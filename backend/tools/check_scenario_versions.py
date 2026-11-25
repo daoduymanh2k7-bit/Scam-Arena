@@ -37,6 +37,22 @@ def run():
         with pool.connection() as c:
             user = c.execute("INSERT INTO app_users(username,password_hash) VALUES('version-check','test-only') RETURNING user_id").fetchone()['user_id']
         old = calls.start_call('bank', user, 'call')
+        # Messenger lists only the owner's message sessions and can reopen an
+        # active thread without creating a different scenario/session.
+        message=calls.start_call('bank',user,'message')
+        transcript=calls.get_call_transcript(message.session_id,user)
+        assert transcript.interaction_mode=='message' and not transcript.ended
+        assert transcript.messages[0].created_at and transcript.messages[0].text
+        message_history=calls.list_call_history(100,user,'message')
+        assert all(row.interaction_mode=='message' for row in message_history)
+        assert any(row.session_id==message.session_id and row.preview and row.updated_at for row in message_history)
+        assert all(row.session_id!=message.session_id for row in calls.list_call_history(100,user,'call'))
+        assert not calls.list_call_history(100,'another-owner','message')
+        try:calls.get_call_transcript(message.session_id,'another-owner')
+        except KeyError:pass
+        else:raise AssertionError('Messenger exposed another account\'s conversation')
+        calls.finish_call(message.session_id,user)
+        assert calls.get_call_transcript(message.session_id,user).ended
         raw = json.loads((database.ROOT / 'data/scenarios/bank.json').read_text(encoding='utf-8'))
         raw = copy.deepcopy(raw)
         raw['version'] += 1
@@ -58,9 +74,8 @@ def run():
         check_order(ordinary.session_id,{'user_id':user})
         with patch.object(calls,'detect_intent',return_value=SimpleNamespace(intent=Intent.COMPLY,matched_rule='test')), \
              patch.object(calls,'resolve_bot_line',side_effect=lambda **kw: LineResult(kw['fixed_text'],None,'fixed',0)):
-            for _ in range(2):
-                normal=calls.submit_turn(ordinary.session_id,'Tôi nhận ở sảnh.',2,user)
-                assert normal.score_delta==0
+            normal=calls.submit_turn(ordinary.session_id,'Tôi nhận ở sảnh.',2,user)
+            assert normal.score_delta==0
         assert normal.ended and normal.outcome=='safe'
         evaluation=judge(ordinary.session_id,Judgement(judgement='benign'),{'user_id':user})
         assert evaluation['correct'] and evaluation['checked_order']
@@ -167,7 +182,7 @@ def run():
         with patch.object(calls,'detect_intent',return_value=SimpleNamespace(intent=Intent.UNKNOWN,matched_rule=None)), \
              patch.object(calls,'reclassify_unknown',return_value=None) as reclassify, \
              patch.object(calls,'resolve_bot_line',side_effect=lambda **kw: LineResult(kw['fixed_text'],None,'fixed',0)) as generate:
-            for family,text in [('delivery','Ở sảnh đi'),('appointment','Đúng lịch nhé'),('support','Mở ứng dụng là bị thoát.')]:
+            for family,text in [('delivery','Ở sảnh đi'),('delivery','Ra xuống sảnh đi nhé'),('appointment','Đúng lịch nhé'),('support','Mở ứng dụng là bị thoát.')]:
                 closed=calls.start_call(f'practice-{family}-ordinary-1',user,'call')
                 reclassify.reset_mock();generate.reset_mock()
                 result=calls.submit_turn(closed.session_id,text,2,user)
@@ -183,6 +198,17 @@ def run():
             for scenario,text in [('practice-delivery-ordinary-1','Ở sảnh được không?'),('practice-delivery-impostor-1','Ở sảnh đi')]:
                 active=calls.start_call(scenario,user,'call')
                 assert not calls.submit_turn(active.session_id,text,2,user).ended
+        # Reproduce the screenshot: fluent AI wording must not drop the pending
+        # step, otherwise an apparently completed delivery keeps going forever.
+        from app.arena import line_generator as lines
+        with patch.object(calls,'detect_intent',return_value=SimpleNamespace(intent=Intent.COMPLY,matched_rule='test')), \
+             patch.object(lines,'_config',return_value=(True,True,'test','test-step-alignment',5,1)), \
+             patch.object(lines,'_request_line',return_value='Vâng, anh/chị vui lòng xuống sảnh nhận hàng giúp tôi nhé.'):
+            aligned=calls.start_call('practice-delivery-impostor-1',user,'call')
+            bridge=calls.submit_turn(aligned.session_id,'Ra xuống sảnh đi nhé',2,user)
+            assert bridge.line_source=='fixed' and not bridge.ended
+            request=calls.submit_turn(aligned.session_id,'Từ từ ok ok ok',2,user)
+            assert request.line_source=='fixed' and 'mã đăng nhập' in request.bot_text and not request.ended
         admin_user={'user_id':user,'role':'admin'}
         with pool.connection() as c:
             submitted=c.execute("SELECT definition->'document' AS doc FROM scenario_versions WHERE version_id=(SELECT active_version_id FROM scenarios WHERE scenario_name='practice-support-ordinary-1')").fetchone()['doc']

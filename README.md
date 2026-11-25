@@ -142,10 +142,13 @@ Compose tự đọc `.env` ở thư mục gốc. Các giá trị mặc định d
 | `GROQ_MODEL` | `openai/gpt-oss-20b` | Model Groq. |
 | `XAPIKEY_BASE_URL` | `https://api.x-apikey.com/v1` | Gateway X-APIKEY. |
 | `XAPIKEY_CALL_API_KEY` | rỗng | Key dự phòng trả phí cho cuộc gọi. |
-| `XAPIKEY_CALL_MODEL` | `minimax-m3.1-flash` | Model X-APIKEY cho cuộc gọi. |
+| `XAPIKEY_CALL_MODEL` | `gpt-6.1-sol` | Model X-APIKEY cho cuộc gọi. |
 | `XAPIKEY_MESSAGE_API_KEY` | rỗng | Key dự phòng trả phí cho nhắn tin. |
 | `XAPIKEY_MESSAGE_MODEL` | `gpt-6-luna` | Model X-APIKEY cho nhắn tin. |
-| `XAPIKEY_TIMEOUT_SECONDS` | `15` | Timeout cho mỗi yêu cầu X-APIKEY. |
+| `XAPIKEY_CALL_FALLBACK_MODELS` | `gpt-6.2-sol,deepseek-v4.1-flash-1017,gpt-6-luna` | Model dự phòng theo thứ tự cho cuộc gọi; để rỗng để tắt. |
+| `XAPIKEY_MESSAGE_FALLBACK_MODELS` | `gpt-6.1-sol,gpt-6.2-sol,deepseek-v4.1-flash-1017` | Model dự phòng nhắn tin và bot rà soát; dùng key nhắn tin. |
+| `XAPIKEY_MODEL_TIMEOUT_SECONDS` | `6` | Thời gian chờ mạng cho một lần thử model. |
+| `XAPIKEY_TIMEOUT_SECONDS` | `15` | Ngân sách chung cho chuỗi model X-APIKEY; tác vụ có timeout ngắn hơn sẽ dùng mức ngắn hơn. |
 | `OPENROUTER_API_KEY` | rỗng | Key OpenRouter; provider dự phòng sau Groq. |
 | `OPENROUTER_MODEL` | `openrouter/free` | Model OpenRouter. |
 | `LINE_LLM_TIMEOUT_SECONDS` | `3` | Timeout cho mỗi yêu cầu LLM. |
@@ -186,11 +189,11 @@ Không cần khai báo provider mà bạn không dùng; xóa key khỏi `.env` h
 ## Sử dụng ứng dụng
 
 1. Tạo tài khoản hoặc đăng nhập.
-2. Chọn một tình huống. Mỗi phiên được chọn một biến thể mở đầu từ kho câu cố định.
+2. Trong Nhắn tin, bấm biểu tượng soạn tin hoặc **Tin nhắn mới** để hệ thống tự chọn tình huống; không có màn hình chọn kịch bản. Khung chat dùng toàn bộ vùng nội dung, không có danh sách hội thoại bên trái; nút soạn tin mới nằm trên đầu khung chat. Hội thoại cũ vẫn xem được trong mục Lịch sử. Trong Cuộc gọi, dùng nút Bắt đầu hoặc danh sách tình huống.
 3. Trả lời trong khung nhập hoặc cấp quyền micro để ghi âm. Trình duyệt thường chỉ cho phép micro trên `localhost` hoặc website HTTPS.
 4. Sau phản hồi, xem nhãn nhận diện bên dưới câu người chơi. Di chuột lên biểu tượng `i` ở cuối tin nhắn bot để xem nguồn câu và độ trễ.
 5. Mở rộng câu bot để dùng nút **Trả lời lại câu này** hoặc **Thích câu này**. Các nút phản hồi cập nhật độ ưu tiên trong kho dùng chung.
-6. Kết thúc phiên để xem điểm, phản hồi và lưu transcript vào lịch sử tài khoản.
+6. Bấm **Kết thúc** trên đầu khung chat để xem kết quả; hội thoại vẫn được giữ trong danh sách. Giọng đọc trong Nhắn tin mặc định tắt, có thể bật bằng biểu tượng loa. Bản nháp được giữ khi đổi hội thoại trong cùng lần mở trang.
 
 Chọn chế độ **Cuộc gọi** hoặc **Nhắn tin** trên giao diện. Hai chế độ ghi cùng loại phiên và dùng chung kịch bản, điểm, cache và PostgreSQL; chế độ cuộc gọi hiện là giao diện mô phỏng chứ chưa gọi qua mạng điện thoại.
 
@@ -354,4 +357,10 @@ Cuộc gọi có hộp thư mô phỏng trong điện thoại: email xác nhận
 
 Admin mở **Duyệt cuộc gọi → Soạn kịch bản** để tạo mới, nhân bản và chỉnh nội dung bằng form. **Lưu nháp** lưu riêng theo tài khoản trên máy chủ; **Chạy thử luồng** kiểm tra các nhánh bằng phản ứng chọn sẵn, không gọi LLM/Rasa hoặc tạo phiên chơi. **Gửi duyệt** kiểm tra schema/đường đi; chỉ **Duyệt phát hành** mới kích hoạt phiên bản mới. JSON nằm trong mục nâng cao và cần bấm **Áp dụng JSON vào form** trước khi gửi.
 
+Admin mở **Mẫu Rasa → Bot đề xuất** để quét câu chưa phân loại, luật nhận diện, mục trùng cùng ngữ cảnh, phiên nhắn tin/cuộc gọi không có hoạt động hơn 24 giờ và lời thoại cũ lệch bước. Bot dùng chuỗi provider của phần nhắn tin (Gemini → Groq → OpenRouter → X-APIKEY với `XAPIKEY_MESSAGE_API_KEY` / `XAPIKEY_MESSAGE_MODEL`), không dùng key/model cuộc gọi hoặc cấu hình OpenAI review riêng. Mỗi đợt thủ công phân tích tối đa 5/10/20 mục bằng LLM, mỗi mục có tổng thời gian chờ `DATA_REVIEW_TIMEOUT_SECONDS` (mặc định 12 giây). Quét theo lô: tối đa 200 câu chờ, 100 luật, 200 phiên cũ và 500 lượt thoại gần nhất; đề xuất có dấu vân tay nguồn để không tạo lại nếu dữ liệu không đổi. Lỗi provider được lưu thành thông báo chung, không lưu key hoặc lỗi HTTP nguyên văn.
+
+Khi kết thúc phiên, bot mặc định phân tích nền tối đa 2 câu chờ của phiên đó (`DATA_REVIEW_AUTO=false` để tắt); nếu một đợt khác đang chạy, câu vẫn ở hàng chờ cho đợt sau. Bot không tự duyệt hoặc tự huấn luyện. Admin chấp nhận nhãn/bản chép thì lưu vào `reviewed_utterances`, không ghi đè `call_turns`; chọn `unknown` sẽ bỏ mẫu khỏi hàng chờ. Nút **Lấy mẫu mới** của Rasa lấy các bản hiệu chỉnh đã duyệt, vẫn cần phân nhóm tài khoản train/holdout và xuất dữ liệu riêng. Duyệt sửa luật chỉ đổi nhãn luật có sẵn, không tạo luật contains rộng từ câu ngắn. Phiên được đánh dấu bỏ dở có `abandoned_at`, không được chấm thành hoàn thành; không thể tiếp tục gửi lượt mới vào phiên này. Duyệt mục trùng chỉ bỏ bản thừa khỏi hàng chờ, không xóa lịch sử. Duyệt lỗi lời thoại cũ chỉ ghi nhận đã xem, không sửa nội dung quá khứ. Mọi quyết định lưu admin, thời điểm và ghi chú; nguồn đã đổi hoặc mục đã duyệt sẽ bị từ chối bằng HTTP 409. Đợt bị gián đoạn hơn 10 phút được ghi nhận lỗi và có thể chạy lại.
+
 Admin dùng mục **Người dùng** để tìm/lọc tài khoản, xem số phiên/lượt luyện tập và kết quả tổng hợp, khóa/mở khóa có ghi lý do và nhật ký. Khóa tài khoản thu hồi cookie đăng nhập trên máy chủ; mở khóa cần đăng nhập lại. Không cho tự khóa tài khoản hiện tại hoặc làm mất admin hoạt động cuối cùng. Bản này chưa có đổi quyền hoặc hạn mức API; không cung cấp mật khẩu, API key hay nội dung hội thoại cá nhân trong danh sách.
+
+X-APIKEY thử model chính rồi các model dự phòng, không gọi đồng thời. Model bị vô hiệu hóa/không tồn tại được bỏ qua 10 phút; timeout, lỗi mạng, lỗi máy chủ hoặc JSON/nội dung không hợp lệ được bỏ qua 30 giây trong tiến trình hiện tại. Hết thời gian sẽ không thử thêm model. Trạng thái này tự mất khi khởi động lại; sau thời gian nghỉ sẽ thử lại model ưu tiên. Lỗi xác thực/quyền truy cập/hạn mức dùng chung (401/402/403/429, trừ mã model bị khóa) dừng ngay, không thử tất cả model bằng cùng key. Danh sách dự phòng không khắc phục được khi toàn bộ gateway ngừng hoạt động; chuỗi Gemini/Groq/OpenRouter và lời thoại có sẵn vẫn giữ nguyên. Các lần thử lỗi có thể vẫn được nhà cung cấp tính phí; không dùng model hình ảnh/embedding làm dự phòng hội thoại.

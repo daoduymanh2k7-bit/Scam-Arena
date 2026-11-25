@@ -835,7 +835,7 @@
     const allowed = ['call','message','login',...extraScreens.map(screen=>screen.dataset.workspaceScreen)];
     if (!allowed.includes(mode)) return false;
     if (!signedIn && !['help','login'].includes(mode)) return false;
-    if (['rasa','scenarios','practice','users'].includes(mode) && document.body.dataset.userRole !== 'admin') return false;
+    if (['rasa','scenarios','practice','users','review-bot'].includes(mode) && document.body.dataset.userRole !== 'admin') return false;
     const previous = document.body.dataset.workspace;
     document.querySelectorAll('dialog[open]').forEach(dialog=>dialog.close());
     const isCall = mode === 'call';
@@ -852,7 +852,7 @@
       void CallMicrophone.preload().catch(() => {});
     }
     modeButtons.forEach(button => {
-      const active = button.dataset.mode === mode;
+      const active = button.dataset.mode === mode || (mode === 'review-bot' && button.dataset.mode === 'rasa');
       button.classList.toggle('is-active',active);
       if(button.tagName==='BUTTON')button.setAttribute('aria-pressed',String(active));
       if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');

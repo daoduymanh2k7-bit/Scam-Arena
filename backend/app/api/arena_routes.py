@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from uuid import UUID
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
@@ -124,8 +125,9 @@ def conversation_memory(session_id: UUID, user: dict = Depends(get_current_user)
 
 
 @router.get("/history", response_model=list[CallHistoryItem])
-def call_history(limit: int = 30, user: dict = Depends(get_current_user)) -> list[CallHistoryItem]:
-    return call_service.list_call_history(max(1, min(limit, 100)),user["user_id"])
+def call_history(limit: int = 30, interaction_mode: Literal['message','call'] | None = None,
+                 user: dict = Depends(get_current_user)) -> list[CallHistoryItem]:
+    return call_service.list_call_history(max(1, min(limit, 100)),user["user_id"],interaction_mode)
 
 
 @router.get("/calls/{session_id}/transcript", response_model=CallTranscriptResponse)

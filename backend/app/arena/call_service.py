@@ -230,7 +230,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
             """
-            SELECT cs.session_id, cs.scenario_id, cs.scenario_version_id, cs.current_node_id, cs.ended_at,
+            SELECT cs.session_id, cs.scenario_id, cs.scenario_version_id, cs.current_node_id, cs.ended_at,cs.abandoned_at,
                    cs.outcome, cs.total_score, cs.turn_no, cs.unknown_count, cs.interaction_mode,cs.case_parameters,cs.exercise_mode,
                    s.scenario_name, v.definition->>'title' AS scenario_title, v.definition->'payload' AS scenario_payload,
                    (v.definition->>'max_turns')::integer AS max_turns,v.definition->'intent_defaults' AS intent_defaults,
@@ -264,6 +264,8 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
             raise KeyError(str(session_id))
         if session["ended_at"] is not None:
             raise ValueError("Phiên gọi này đã kết thúc.")
+        if session.get('abandoned_at') is not None:
+            raise ValueError('Phiên này đã được đánh dấu bỏ dở. Hãy bắt đầu phiên mới.')
         if session["is_terminal"]:
             raise ValueError("Phiên gọi đang ở node kết thúc.")
         if not user_text.strip():
@@ -561,6 +563,7 @@ def rate_generated_line(session_id: UUID, turn_no: int, line_id: int, user_id: s
 def _check_regeneration_turn(turn, turn_no, old_line_id):
     if not turn:
         raise KeyError(turn_no)
+    if turn.get('abandoned_at') is not None:raise ValueError('Không tạo lại câu trong phiên đã bỏ dở.')
     if turn.get('exercise_mode')=='assessment': raise ValueError('Không tạo lại câu trong bài đánh giá.')
     if turn["interaction_mode"] == "call" and (turn["latest_turn_no"] != turn_no or turn["ended_at"] is not None):
         raise ValueError("Chỉ có thể tạo lại câu trả lời mới nhất khi cuộc gọi đang diễn ra.")
@@ -571,7 +574,7 @@ def _check_regeneration_turn(turn, turn_no, old_line_id):
 def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None, user_id: str) -> RegeneratedLineResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute("""SELECT t.target_node_id,t.intent,t.is_reprompt,s.scenario_id,
-                              t.line_id,t.line_source,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.turn_no AS latest_turn_no
+                              t.line_id,t.line_source,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.abandoned_at,s.turn_no AS latest_turn_no
                        FROM call_turns t JOIN call_sessions s USING(session_id)
                        WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s""",(session_id,user_id,turn_no))
         turn=cursor.fetchone()
@@ -589,7 +592,7 @@ def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         # Generation happens outside locks. Recheck under the session/turn locks so
         # a double click or a concurrent new turn cannot penalize/replace stale text.
-        cursor.execute("""SELECT t.line_id,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.turn_no AS latest_turn_no
+        cursor.execute("""SELECT t.line_id,t.bot_reply_text,s.interaction_mode,s.exercise_mode,s.ended_at,s.abandoned_at,s.turn_no AS latest_turn_no
                           FROM call_turns t JOIN call_sessions s USING(session_id)
                           WHERE t.session_id=%s AND s.user_id=%s AND t.turn_no=%s FOR UPDATE OF s,t""",
                        (session_id,user_id,turn_no))
@@ -609,6 +612,8 @@ def regenerate_turn_line(session_id: UUID, turn_no: int, old_line_id: int | None
 
 def finish_call(session_id: UUID, user_id: str) -> None:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
+        current=cursor.execute('SELECT abandoned_at FROM call_sessions WHERE session_id=%s AND user_id=%s FOR UPDATE',(session_id,user_id)).fetchone()
+        if current and current['abandoned_at'] is not None:return
         cursor.execute(
             """
             UPDATE call_sessions AS session
@@ -713,24 +718,31 @@ def tip(mistake: str) -> str:
     return improvement_tip(mistake)
 
 
-def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
+def list_call_history(limit: int, user_id: str, interaction_mode: str | None = None) -> list[CallHistoryItem]:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT cs.session_id, CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, cs.started_at, cs.ended_at,
+            """SELECT cs.session_id, CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, cs.started_at, cs.ended_at,cs.abandoned_at,
                       CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN
                         CASE WHEN j.evaluation IS NULL THEN NULL WHEN j.evaluation->>'risk_action_recorded'='true' THEN 'scammed'
                              WHEN j.evaluation->>'correct'='true' THEN 'safe' ELSE 'timeout' END ELSE cs.outcome END AS outcome,
                       CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN COALESCE((j.evaluation->>'evaluation_score')::integer,0) ELSE cs.total_score END AS total_score,
-                      (v.definition->>'family' IN ('delivery','appointment','support') AND j.evaluation IS NULL) AS awaiting_judgement,cs.turn_no
+                      (v.definition->>'family' IN ('delivery','appointment','support') AND j.evaluation IS NULL) AS awaiting_judgement,cs.turn_no,
+                      cs.interaction_mode,COALESCE(latest.bot_reply_text,opening.line_text,'') AS preview,
+                      COALESCE(latest.created_at,cs.started_at) AS updated_at
                FROM call_sessions cs JOIN scenarios s ON s.scenario_id = cs.scenario_id
                JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
                LEFT JOIN practice_judgements j ON j.session_id=cs.session_id
-               WHERE cs.user_id = %s ORDER BY cs.started_at DESC LIMIT %s""",
-            (user_id, limit),
+               LEFT JOIN dialogue_lines opening ON opening.line_id=cs.opening_line_id
+               LEFT JOIN LATERAL (SELECT bot_reply_text,created_at FROM call_turns t WHERE t.session_id=cs.session_id ORDER BY turn_no DESC LIMIT 1) latest ON true
+               WHERE cs.user_id = %s AND (%s::text IS NULL OR cs.interaction_mode=%s)
+               ORDER BY CASE WHEN %s='message' THEN COALESCE(latest.created_at,cs.started_at) ELSE cs.started_at END DESC LIMIT %s""",
+            (user_id, interaction_mode, interaction_mode, interaction_mode, limit),
         )
         return [
             CallHistoryItem(
                 session_id=str(row["session_id"]), scenario_title=row["title"],
+                abandoned=row.get('abandoned_at') is not None,
+                interaction_mode=row['interaction_mode'],preview=_masked_text(row['preview']),updated_at=row['updated_at'].isoformat(),
                 started_at=row["started_at"].isoformat(),
                 ended_at=row["ended_at"].isoformat() if row["ended_at"] else None,
                 outcome=row["outcome"], total_score=row["total_score"], turn_count=row["turn_no"],
@@ -743,7 +755,8 @@ def list_call_history(limit: int, user_id: str) -> list[CallHistoryItem]:
 def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptResponse:
     with get_connection_pool().connection() as connection, connection.cursor() as cursor:
         cursor.execute(
-            """SELECT cs.session_id,cs.case_parameters, CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, COALESCE(chosen.line_text, fallback.line_text) AS opening_line
+            """SELECT cs.session_id,cs.case_parameters,cs.interaction_mode,cs.ended_at,cs.abandoned_at,cs.started_at,
+               CASE WHEN v.definition->>'family' IN ('delivery','appointment','support') THEN 'Cuộc gọi dịch vụ' ELSE v.definition->>'title' END AS title, COALESCE(chosen.line_text, fallback.line_text) AS opening_line
                FROM call_sessions cs
                JOIN scenarios s ON s.scenario_id = cs.scenario_id
                JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
@@ -763,25 +776,28 @@ def get_call_transcript(session_id: UUID, user_id: str) -> CallTranscriptRespons
             raise KeyError(str(session_id))
         cursor.execute(
             """SELECT turns.turn_no, turns.user_text_masked, turns.intent,
-                      turns.bot_reply_text, nodes.stage
+                      turns.bot_reply_text, nodes.stage,turns.created_at
                FROM call_turns turns JOIN dialogue_nodes nodes ON nodes.node_id = turns.node_id
                WHERE turns.session_id = %s ORDER BY turns.turn_no""",
             (session_id,),
         )
         turns = cursor.fetchall()
 
-    messages = [TranscriptMessage(role="caller", text=render(session["opening_line"],session['case_parameters']))]
+    messages = [TranscriptMessage(role="caller", text=render(session["opening_line"],session['case_parameters']),created_at=session['started_at'].isoformat())]
     for turn in turns:
         messages.append(TranscriptMessage(
             turn_no=turn["turn_no"], role="player", text=turn["user_text_masked"],
             intent=turn["intent"], stage=turn["stage"],
+            created_at=turn['created_at'].isoformat(),
         ))
         if turn["bot_reply_text"]:
             messages.append(TranscriptMessage(
                 turn_no=turn["turn_no"], role="caller", text=turn["bot_reply_text"], stage=turn["stage"],
+                created_at=turn['created_at'].isoformat(),
             ))
     return CallTranscriptResponse(
         session_id=str(session["session_id"]), scenario_title=session["title"], messages=messages,
+        interaction_mode=session['interaction_mode'],ended=session['ended_at'] is not None,abandoned=session['abandoned_at'] is not None,
     )
 
 

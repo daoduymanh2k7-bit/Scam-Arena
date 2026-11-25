@@ -45,6 +45,7 @@ const Api = (() => {
       return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/summary`).then(asJson);
     },
     callHistory() { return fetch("/api/arena/history?limit=30").then(asJson); },
+    messageHistory() { return fetch('/api/arena/history?limit=100&interaction_mode=message').then(asJson); },
     callTranscript(sessionId) {
       return fetch(`/api/arena/calls/${encodeURIComponent(sessionId)}/transcript`).then(asJson);
     },
@@ -58,9 +59,10 @@ const Api = (() => {
       form.append("audio", blob, "partial.wav");
       return fetch("/api/voice/transcribe/partial", { method: "POST", body: form, signal }).then(asJson);
     },
-    async speakText(text, voiceId = null, timing = null) {
+    async speakText(text, voiceId = null, timing = null, signal = undefined) {
       const query = voiceId ? `?voice=${encodeURIComponent(voiceId)}` : "";
       const response = await fetch(`/api/voice/speak${query}`, {
+        signal,
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });

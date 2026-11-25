@@ -21,10 +21,10 @@
         const title = document.createElement("strong");
         title.textContent = item.scenario_title;
         const score = document.createElement("span");
-        score.textContent = item.awaiting_judgement ? 'Chưa đánh giá' : `${item.total_score}/100`;
+        score.textContent = item.abandoned ? 'Không chấm điểm' : item.awaiting_judgement ? 'Chưa đánh giá' : `${item.total_score}/100`;
         heading.append(title, score);
         const meta = document.createElement("p");
-        const outcome = item.outcome === "safe" ? "An toàn" : item.outcome === "scammed" ? "Rủi ro" : item.outcome === "timeout" ? "Chưa đủ dữ liệu" : "Đang chơi";
+        const outcome = item.abandoned ? 'Bỏ dở' : item.outcome === "safe" ? "An toàn" : item.outcome === "scammed" ? "Rủi ro" : item.outcome === "timeout" ? "Chưa đủ dữ liệu" : "Đang chơi";
         meta.textContent = `${new Date(item.started_at).toLocaleString("vi-VN")} · ${item.turn_count} lượt · ${outcome}`;
         const details = document.createElement("details");
         const summary = document.createElement("summary");
