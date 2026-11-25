@@ -12,7 +12,8 @@
   <link rel="stylesheet" href="/css/user-admin.css?v=2">
   <link rel="stylesheet" href="/css/light-theme.css?v=1">
   <link rel="stylesheet" href="/css/data-review.css?v=1">
-  <link rel="stylesheet" href="/css/messenger.css?v=2">
+  <link rel="stylesheet" href="/css/messenger.css?v=4">
+  <link rel="stylesheet" href="/css/motion.css?v=1">
 </head>
 <body>
   <nav id="mode-nav" class="app-sidebar" aria-label="Điều hướng Scam Arena">
@@ -75,13 +76,22 @@
 
     <div id="app-content" hidden>
     <div id="message-mode" class="app-mode-panel messenger-workspace">
+      <aside class="message-intro" aria-labelledby="message-intro-title">
+        <span class="message-intro-eyebrow"><span aria-hidden="true"></span> LUYỆN TẬP QUA TIN NHẮN</span>
+        <div class="message-intro-content">
+          <h1 id="message-intro-title">Một tin nhắn.<br>Một lựa chọn.</h1>
+          <p>Bình tĩnh trò chuyện, tự xác minh và luyện cách phản hồi của bạn.</p>
+          <button id="message-empty-new" type="button" class="button message-start-button"><span>Bắt đầu</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button>
+          <p id="message-open-error" class="error" role="alert" hidden></p>
+        </div>
+        <div class="message-intro-footer"><span class="message-intro-rule" aria-hidden="true"></span><p>Mỗi cuộc trò chuyện là một cơ hội<br>để nhận ra điều bất thường.</p><small>Chỉ dùng dữ liệu mô phỏng.<br>Không chia sẻ thông tin cá nhân thật.</small></div>
+      </aside>
       <div class="messenger-main">
         <section id="message-empty" class="messenger-empty" aria-labelledby="message-empty-title">
-          <div class="messenger-empty-icon" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3"><path d="M54 29c0 12-10 21-23 21h-5L13 57l2-13C9 40 6 35 6 29 6 17 17 8 30 8s24 9 24 21Z"/><path d="m19 33 9-10 8 6 9-9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <h2 id="message-empty-title">Tin nhắn của bạn</h2><p>Bắt đầu một cuộc trò chuyện mới để luyện cách phản hồi an toàn.</p>
-          <button id="message-empty-new" type="button" class="button button-primary">Tin nhắn mới</button>
-          <small>Hội thoại mô phỏng · Không dùng thông tin cá nhân thật</small>
-          <p id="message-open-error" class="error" role="alert" hidden></p>
+          <div class="message-preview" aria-hidden="true"><span></span><span></span><span></span></div>
+          <h2 id="message-empty-title">Không gian trò chuyện của bạn</h2>
+          <p>Nhấn <strong>Bắt đầu</strong> để nhận tin nhắn đầu tiên.</p>
+          <small>Cuộc trò chuyện mô phỏng</small>
         </section>
         <section id="arena-session" class="panel session-panel message-chat-panel" hidden>
           <header class="message-chat-header">

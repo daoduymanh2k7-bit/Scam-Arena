@@ -1,4 +1,4 @@
-/* Full-width message conversation, no conversation list or scenario picker. */
+/* Message workspace: introduction and chat, no conversation list or scenario picker. */
 #app-content:has(> #message-mode:not([hidden])) { display:flex; padding:0; }
 #app-content #message-mode #arena-session.message-chat-panel,
 #app-content #message-mode #arena-result { width:100%; max-width:none; }
@@ -79,3 +79,79 @@
   #message-mode #arena-result { padding:24px 15px; }
 }
 @media(prefers-reduced-motion:reduce) { #message-mode #arena-session.message-chat-panel,.messenger-empty { animation:none; }.messenger-thread { transition:none; } }
+
+/* Intro and conversation form one workspace, with independent chat scrolling. */
+#message-mode.messenger-workspace:not([hidden]) {
+  grid-template-columns:minmax(0,46fr) minmax(0,9fr) minmax(0,45fr);
+  grid-template-rows:minmax(0,1fr);
+  gap:0; padding:clamp(20px,2.5vw,40px);
+  background:#f7f7fa; box-sizing:border-box;
+}
+.message-intro {
+  display:flex; flex-direction:column; justify-content:space-between; min-width:0; min-height:0;
+  grid-column:1 / 3; grid-row:1; position:relative; z-index:0;
+  padding:clamp(26px,3vw,48px); padding-right:calc(16.364% + clamp(26px,3vw,48px));
+  border-radius:10px; background:#292635; color:#faf9fd;
+  animation:messenger-pane-in .35s ease-out;
+}
+.message-intro-eyebrow { display:flex; align-items:center; gap:9px; color:#c5b8e2; font:600 10px/1.6 system-ui; letter-spacing:.13em; }
+.message-intro-eyebrow > span { width:6px; height:6px; border-radius:50%; background:#bba1ee; flex:none; }
+.message-intro-content { padding:36px 0; }
+.message-intro h1 { margin:0 0 23px; color:#fff; font:650 clamp(32px,3.5vw,54px)/1.13 system-ui; letter-spacing:-.055em; }
+.message-intro-content > p:not(.error) { margin:0 0 30px; max-width:300px; color:#c7c2d1; font:14px/1.85 system-ui; }
+#message-mode .message-start-button { display:flex; justify-content:space-between; align-items:center; gap:20px; width:100%; min-height:54px; margin:0; padding:15px 20px; border:1px solid #c4adf4; border-radius:13px; background:#bca1ed; color:#252031; font:650 14px system-ui; transition:background .18s,transform .18s; box-shadow:none; }
+.message-start-button svg { width:22px; height:22px; transition:transform .18s; }
+#message-mode .message-start-button:hover { background:#cbb6f4; transform:translateY(-2px); }
+.message-start-button:hover svg { transform:translateX(3px); }
+#message-mode .message-start-button:focus-visible { outline:3px solid #e6d8ff; outline-offset:4px; }
+.message-intro #message-open-error { margin-top:18px; color:#ffced6; font:12px/1.7 system-ui; overflow-wrap:anywhere; }
+.message-intro-footer p { margin:16px 0 20px; color:#e4deed; font:13px/1.8 system-ui; }
+.message-intro-footer small { color:#aaa2b9; font:10px/1.8 system-ui; }
+.message-intro-rule { display:block; width:35px; height:2px; background:#bca1ed; }
+#message-mode .messenger-main { grid-column:2 / 4; grid-row:1; align-self:center; height:87%; margin:0; position:relative; z-index:1; border:1px solid #e4e2eb; border-radius:12px; background:#fff; box-shadow:0 16px 44px #201a3320; }
+#message-mode .messenger-empty { background:#f0f0f5; padding:28px; }
+#message-mode .messenger-empty h2 { max-width:320px; color:#4c4658; font:600 21px/1.4 system-ui; letter-spacing:-.025em; }
+#message-mode .messenger-empty p { font-size:12px; color:#898092; }
+#message-mode .messenger-empty small { margin-top:48px; font-size:10px; color:#948b9f; }
+.message-preview { display:flex; flex-direction:column; gap:14px; width:min(240px,80%); margin-bottom:38px; }
+.message-preview span { display:block; height:35px; width:82%; border-radius:15px 15px 15px 4px; background:#e2dfe9; }
+.message-preview span:nth-child(2) { width:65%; align-self:flex-end; background:#dcd0ef; border-radius:15px 15px 4px 15px; }
+.message-preview span:nth-child(3) { width:58%; }
+@media(min-width:761px) and (max-height:700px) {
+  #message-mode.messenger-workspace:not([hidden]) { padding:16px; gap:0; }
+  .message-intro { padding:24px; padding-right:calc(16.364% + 24px); }
+  .message-intro-content { padding:20px 0; }
+  .message-intro h1 { font-size:34px; margin-bottom:16px; }
+  .message-intro-content > p:not(.error) { margin-bottom:18px; font-size:12px; }
+  .message-intro-footer p { margin:12px 0; font-size:11px; }
+  #message-mode .messenger-main { margin:0; }
+}
+@media(max-width:1000px) and (min-width:761px) {
+  #message-mode.messenger-workspace:not([hidden]) { grid-template-columns:minmax(0,46fr) minmax(0,9fr) minmax(0,45fr); padding:20px; gap:0; }
+  .message-intro { padding:25px; padding-right:calc(16.364% + 25px); }
+  .message-intro h1 { font-size:35px; }
+  #message-mode #arena-session .message-chat-header { padding:16px 12px; }
+  #message-mode #arena-session .message-sim-pill { display:none; }
+  #message-mode #arena-session .caller h2 { font-size:13px; }
+  #message-mode #arena-session .transcript { padding:18px 16px; }
+  #message-mode #arena-session .bubble { max-width:90%; }
+}
+@media(max-width:760px) {
+  #message-mode.messenger-workspace:not([hidden]) { display:flex; flex-direction:column; padding:12px; gap:12px; }
+  .message-intro { flex:none; padding:18px 20px; border-radius:17px; }
+  .message-intro-eyebrow { font-size:8px; letter-spacing:.1em; }
+  .message-intro-content { display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; padding:12px 0 0; align-items:center; }
+  .message-intro h1 { font-size:20px; margin:0; }
+  .message-intro-content > p:not(.error),.message-intro-footer { display:none; }
+  #message-mode .message-start-button { grid-column:2; grid-row:1; min-height:44px; padding:12px; width:auto; font-size:11px; gap:8px; }
+  .message-start-button svg { width:17px; height:17px; }
+  .message-intro #message-open-error { grid-column:1/-1; margin-bottom:0; }
+  #message-mode .messenger-main { flex:1; align-self:stretch; height:auto; min-height:0; margin:0; border-radius:17px; }
+  #message-mode .messenger-empty h2 { font-size:18px; }
+  .message-preview { margin-bottom:22px; gap:10px; }
+  .message-preview span { height:27px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .message-intro { animation:none; }
+  #message-mode .message-start-button,.message-start-button svg { transition:none; }
+}

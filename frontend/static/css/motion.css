@@ -1,0 +1,37 @@
+/* Lightweight motion: short, event-driven, compositor-friendly, no observers or loops. */
+@keyframes arena-view-enter {
+  from { opacity:0; transform:translateY(8px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@keyframes arena-item-enter {
+  from { opacity:0; transform:translateY(5px); }
+  to { opacity:1; transform:translateY(0); }
+}
+@media(prefers-reduced-motion:no-preference) {
+  #message-mode:not([hidden]),#call-static-screen:not([hidden]),
+  .workspace-screen:not([hidden]),#auth-panel:not([hidden]),
+  .practice-editor [data-panel]:not([hidden]) {
+    animation:arena-view-enter .25s cubic-bezier(.2,.7,.3,1);
+  }
+  .message-intro { animation:arena-view-enter .28s ease-out; }
+  #message-mode .messenger-main { animation:arena-view-enter .28s ease-out; }
+  #message-mode #arena-session .bubble,.saved-message,.call-subtitle-entry,
+  .history-card,.practice-editor .preview-dialog:not([hidden]) {
+    animation:arena-item-enter .22s ease-out;
+  }
+  .history-card:nth-child(2) { animation-duration:.25s; }
+  .history-card:nth-child(3) { animation-duration:.28s; }
+  button,.button,.sidebar-item,.messenger-icon {
+    transition:background-color .16s ease,border-color .16s ease,color .16s ease,transform .16s ease;
+  }
+  button:not(:disabled):active,.button:not(:disabled):active { transform:scale(.98); }
+  .sidebar-item svg { transition:transform .18s ease; }
+  input,textarea,select { transition:border-color .16s ease,background-color .16s ease; }
+  @media(hover:hover) and (pointer:fine) {
+    button:not(:disabled):hover,.button:not(:disabled):hover { transform:translateY(-1px); }
+    .sidebar-item:hover svg { transform:translateY(-1px); }
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; }
+}
