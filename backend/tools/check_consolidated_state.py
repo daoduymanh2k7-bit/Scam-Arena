@@ -44,14 +44,14 @@ def run():
                 assert c.execute('SELECT * FROM '+table).fetchall()==before[table],table
                 assert c.execute('SELECT relkind FROM pg_class WHERE oid=%s::regclass',(table,)).fetchone()['relkind']=='v'
         database.initialize_database();database.initialize_database()
-        with patch.object(memory,'request_summary',return_value=('Người chơi vẫn muốn xác minh.','test')):
+        with patch.dict(os.environ,{'LINE_LLM_ENABLED':'true','CONVERSATION_SUMMARY_ENABLED':'true'}), patch.object(memory,'request_summary',return_value=('Người chơi vẫn muốn xác minh.','test')):
             memory.update_summary(sid,uid,force=True)
         assert memory.read_memory(sid,uid)['covered_turn']==2
         with pool.connection() as c:c.execute('UPDATE call_sessions SET memory_covered_turn=1 WHERE session_id=%s',(sid,))
         def invalidated_during_request(*args):
             with pool.connection() as c:memory.invalidate_memory(c,sid)
             return 'Không được ghi bản tóm tắt lỗi thời.','test'
-        with patch.object(memory,'request_summary',side_effect=invalidated_during_request):
+        with patch.dict(os.environ,{'LINE_LLM_ENABLED':'true','CONVERSATION_SUMMARY_ENABLED':'true'}), patch.object(memory,'request_summary',side_effect=invalidated_during_request):
             memory.update_summary(sid,uid,force=True)
         assert memory.read_memory(sid,uid)['covered_turn']==0
         with pool.connection() as c:memory.invalidate_memory(c,sid)
