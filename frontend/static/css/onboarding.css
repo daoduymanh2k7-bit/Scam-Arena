@@ -1,0 +1,21 @@
+#quick-tutorial { width:min(520px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); box-sizing:border-box; padding:0; border:1px solid #e5deef; border-radius:22px; background:white; color:#30273d; box-shadow:0 24px 80px #30204026; overflow:auto; }
+#quick-tutorial::backdrop { background:#241d394f; }
+.quick-tutorial-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:23px 26px 0; }
+.quick-tutorial-top > span { font:650 9px/1.5 system-ui; letter-spacing:.1em; color:#9787a9; }
+#quick-tutorial-skip { padding:5px; border:0; background:none; color:#887598; font:12px system-ui; cursor:pointer; }
+.quick-tutorial-body { padding:24px 30px 22px; }
+#quick-tutorial-icon { display:grid; place-items:center; width:46px; height:46px; border-radius:15px; background:#f0e9fb; color:#865dbe; font:700 17px system-ui; }
+#quick-tutorial-step { margin:20px 0 8px; color:#a294af; font:11px system-ui; }
+#quick-tutorial-title { margin:0 0 14px; color:#33273f; font:700 27px/1.2 system-ui; letter-spacing:-.035em; }
+#quick-tutorial-description { margin:0; color:#756682; font:14px/1.8 system-ui; }
+#quick-tutorial-example { margin:18px 0 0; padding:15px 17px; border-left:3px solid #b99be4; border-radius:0 10px 10px 0; background:#f7f4fb; color:#655272; font:13px/1.8 system-ui; }
+.quick-tutorial-bottom { display:flex; align-items:center; justify-content:flex-end; gap:9px; border-top:1px solid #eee9f3; padding:18px 24px; }
+#quick-tutorial-dots { display:flex; gap:5px; margin-right:auto; }
+#quick-tutorial-dots i { width:6px; height:6px; border-radius:50%; background:#e7e0ee; }
+#quick-tutorial-dots i.is-current { background:#986bc9; }
+#quick-tutorial-next,#quick-tutorial-prev { padding:11px 14px; border:0; border-radius:11px; font:600 12px system-ui; cursor:pointer; }
+#quick-tutorial-next { background:#8256bc; color:white; }
+#quick-tutorial-prev { background:#f2edf8; color:#7d6492; }
+#quick-tutorial [hidden] { display:none!important; }
+@media(prefers-reduced-motion:no-preference) { #quick-tutorial[open] { animation:arena-view-enter .24s ease-out; } }
+@media(max-width:420px) { .quick-tutorial-top { padding:18px 20px 0; } .quick-tutorial-body { padding:20px; } #quick-tutorial-title { font-size:23px; } .quick-tutorial-bottom { padding:16px 18px; gap:6px; } #quick-tutorial-next,#quick-tutorial-prev { padding:10px; font-size:11px; } }

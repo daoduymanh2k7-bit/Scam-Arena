@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api import arena_routes, auth_routes, rasa_review_routes, voice_routes
 from app.api import practice_routes
-from app.api import inbox_routes, user_admin_routes, data_review_routes
+from app.api import inbox_routes, user_admin_routes, data_review_routes, service_status_routes
 from app.database import close_database, initialize_database
 from app.scenario_visualizer import generate_scenario_map
 
@@ -27,11 +27,20 @@ async def _warm_speech() -> None:
         logging.getLogger(__name__).exception("Speech model preload failed; a later request may retry")
 
 
+async def _warm_voice() -> None:
+    try:
+        from app.voice.synthesis import prewarm_audio
+        await asyncio.to_thread(prewarm_audio)
+    except Exception:
+        logging.getLogger(__name__).warning('TTS prewarm unavailable; normal synthesis will retry later')
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     initialize_database()
     generate_scenario_map()
     warmup = asyncio.create_task(_warm_speech())
+    voice_warmup=asyncio.create_task(_warm_voice())
     try:
         yield
     finally:
@@ -40,6 +49,9 @@ async def lifespan(_: FastAPI):
         warmup.cancel()
         with suppress(asyncio.CancelledError):
             await warmup
+        voice_warmup.cancel()
+        with suppress(asyncio.CancelledError):
+            await voice_warmup
         close_database()
 
 
@@ -52,6 +64,7 @@ app.include_router(practice_routes.router)
 app.include_router(inbox_routes.router)
 app.include_router(user_admin_routes.router)
 app.include_router(data_review_routes.router)
+app.include_router(service_status_routes.router)
 
 
 @app.get("/health")

@@ -91,3 +91,30 @@ def test_masked_input_only_in_prompt_context():
     serialized=lg.build_prompt_payload(context)
     assert '123456789' not in serialized and 'private@example.com' not in serialized
     assert json.loads(serialized)==context
+
+
+def test_cached_line_is_rechecked_against_current_requested_action():
+    from contextlib import contextmanager
+    bad={'line_text':'Anh chị xuống sảnh nhận hàng giúp tôi nhé.','line_id':1,'use_count':0}
+    class Pool:
+        @contextmanager
+        def connection(self):yield self
+        @contextmanager
+        def cursor(self):yield self
+        def execute(self,sql,params=()):self.query=sql
+        def fetchone(self):
+            if ' AS payload' in self.query:return {'payload':{'family':'delivery','scenario_kind':'fraud'}}
+            if 'SELECT node_key' in self.query:return {'requested_action':'share_sensitive'}
+            if 'FROM dialogue_lines' in self.query:return bad
+            return None
+        def fetchall(self):
+            if 'FROM call_turns' in self.query:return []
+            if 'FROM dialogue_lines' in self.query:return [bad]
+            return []
+    fixed='Anh chị đọc mã đăng nhập trong tin nhắn để tôi xác nhận nhé.'
+    with patch.object(lg,'get_connection_pool',return_value=Pool()), \
+         patch.object(lg,'_config',return_value=(True,True,'test','test',1,1)), \
+         patch.object(lg,'memory_context',return_value={}), \
+         patch.object(lg,'_request_line',side_effect=RuntimeError('unavailable')):
+        result=lg.resolve_bot_line(scenario_id=1,session_id='s',target_node=2,intent='comply',user_text_masked='Tôi đang nghe',fixed_text=fixed,is_reprompt=False,context={'conversation_ending':False})
+    assert result.source=='fixed' and result.text==fixed

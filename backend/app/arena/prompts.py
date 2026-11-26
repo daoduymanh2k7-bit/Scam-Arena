@@ -14,6 +14,8 @@ DIALOGUE_PROMPT = (
     "mật khẩu hoặc phí ngoài tình huống. Nếu scenario_kind=fraud, đóng vai giả mạo theo nhánh đã duyệt. "
     "Code đã chọn node đích: giữ persona, scenario_title, user_context, objective, tactics, "
     "requested_action và pressure_level. Không tự đổi nhánh, kết thúc trò chơi hay chấm điểm. "
+    "Không tự bịa lỗi ứng dụng, đơn hàng, yêu cầu hỗ trợ hoặc trải nghiệm mà người chơi chưa được biết. "
+    "Với hỗ trợ ứng dụng, dùng đúng support_issue trong case_facts và user_context; nhắc lại triệu chứng đã có trước khi hỏi tình trạng, không bắt người chơi tự nghĩ ra lỗi. "
     "Ở cuộc gọi dịch vụ, nếu requested_action yêu cầu đọc mã hoặc cài ứng dụng, lời thoại phải nêu đúng yêu cầu đó như sample_line; "
     "không thay bằng lời hẹn xuống sảnh nhận hàng hay xác nhận lịch thông thường. Nếu scenario_kind=fraud và còn bước tiếp, "
     "không nói như đã chốt việc giao nhận rồi tiếp tục kéo dài bằng những xác nhận lặp lại. "

@@ -1,0 +1,15 @@
+.service-status { position:relative; flex:none; width:100%; }
+.service-status-buttons { display:flex; justify-content:center; gap:2px; padding:3px 0 7px; }
+#mode-nav .service-status-buttons button { display:grid; position:relative; place-items:center; width:23px; height:29px; padding:3px; border:0; border-radius:6px; background:transparent; color:#88789e; cursor:pointer; }
+.service-status-buttons svg { width:16px; height:16px; }
+.service-status-buttons i { position:absolute; right:0; bottom:3px; width:6px; height:6px; border-radius:50%; background:#9da3af; border:1px solid white; }
+.service-status-buttons [data-state="ok"] i { background:#22a766; }
+.service-status-buttons [data-state="warning"] i,.service-status-buttons [data-state="checking"] i { background:#dfa520; }
+.service-status-buttons [data-state="unavailable"] i { background:#db505d; }
+#mode-nav .service-status-buttons button:hover,#mode-nav .service-status-buttons button[aria-expanded="true"] { background:#ece5f7; }
+.service-status-detail { position:absolute; z-index:30; left:calc(100% + 12px); bottom:0; width:min(265px,calc(100vw - var(--sidebar-width) - 28px)); padding:15px; border:1px solid #ded7e9; border-radius:12px; background:white; color:#40354f; box-shadow:0 8px 30px #30204020; text-align:left; overflow-wrap:anywhere; }
+.service-status-detail strong { font:650 13px/1.5 system-ui; }
+.service-status-detail p { margin:8px 0; font:12px/1.6 system-ui; }
+.service-status-detail small { display:block; white-space:pre-line; color:#8b8097; font:10px/1.6 system-ui; }
+.service-status-detail[hidden] { display:none; }
+@media(max-width:600px) { #mode-nav .service-status-buttons button { width:15px; height:27px; padding:0; } .service-status-buttons svg { width:13px; height:13px; } }

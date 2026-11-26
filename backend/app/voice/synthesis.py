@@ -4,6 +4,13 @@ import io
 import os
 import re
 import wave
+import hashlib
+import json
+import threading
+from app.voice.tts_cache import AudioCache
+
+_audio_cache=AudioCache()
+_synthesis_lock=threading.Lock()
 from functools import lru_cache
 from pathlib import Path
 
@@ -36,7 +43,7 @@ def _get_voice(model_path: Path) -> PiperVoice:
     return PiperVoice.load(str(model_path))
 
 
-def text_to_speech(text: str, voice_id: str = "default") -> bytes:
+def _render_audio(text: str, voice_id: str = "default") -> bytes:
     path = _default_voice_path()
     preset = CALLER_PRESETS.get(voice_id)
     if preset is not None:
@@ -58,3 +65,28 @@ def text_to_speech(text: str, voice_id: str = "default") -> bytes:
             if index < len(chunks) - 1:
                 output.writeframes(silence)
     return buffer.getvalue()
+
+
+def synthesize_cached(text: str,voice_id: str='default'):
+    path=_default_voice_path()
+    if voice_id in CALLER_PRESETS:path=path.with_name(CALLER_MODEL)
+    signature=[]
+    for file in [path,path.with_suffix('.onnx.json')]:
+        stat=file.stat();signature.append((str(file.resolve()),stat.st_size,stat.st_mtime_ns))
+    preset=CALLER_PRESETS.get(voice_id)
+    settings={name:getattr(preset,name,None) for name in ['speaker_id','length_scale','noise_scale','noise_w_scale']}
+    key=hashlib.sha256(json.dumps([text,voice_id,signature,settings,os.getenv('PIPER_SENTENCE_PAUSE_MS','350')],ensure_ascii=False,sort_keys=True).encode()).hexdigest()
+    def build():
+        # Avoid oversubscribing the small VPS with concurrent ONNX inference.
+        with _synthesis_lock:return _render_audio(text,voice_id)
+    if os.getenv('TTS_CACHE_ENABLED','true').lower() not in {'true','1'}:return build(),False
+    return _audio_cache.get(key,build)
+
+
+def text_to_speech(text: str,voice_id: str='default') -> bytes:
+    return synthesize_cached(text,voice_id)[0]
+
+
+def prewarm_audio():
+    if os.getenv('TTS_PREWARM_ENABLED','true').lower() in {'true','1'}:
+        for voice in ['default']+available_caller_voices():text_to_speech('Alo?',voice)

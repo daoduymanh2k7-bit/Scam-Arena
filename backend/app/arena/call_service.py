@@ -186,7 +186,9 @@ def start_call(scenario_key: str, user_id: str, interaction_mode: str = "message
         from psycopg.types.json import Jsonb
         variables=case_variables(seed)
         family=scenario['definition'].get('family')
-        context=render(case_spec(scenario['definition'])['context'],variables) if family in FAMILIES else None
+        context=render(case_spec(scenario['definition'])['context'],variables) if family in FAMILIES else render(
+            (scenario['definition'].get('payload') or {}).get('user_context') or
+            'Bạn đang sinh hoạt bình thường thì nhận cuộc gọi từ một người chưa được xác minh danh tính. Những thông tin người gọi đưa ra chưa phải là sự thật đã được xác nhận.',variables)
         cursor.execute('UPDATE call_sessions SET case_parameters=%s,world_state=%s WHERE session_id=%s',
                        (Jsonb(variables),Jsonb({'context':context,'case_schema':1,'selection':choice['_selection'] if mixed else None}),session_id))
         if interaction_mode=='call':
@@ -323,7 +325,7 @@ def submit_turn(session_id: UUID, user_text: str, elapsed_seconds: float | None,
                     "scenario_title": session["scenario_title"],
                     "scenario_category": scenario_payload.get("category") if isinstance(scenario_payload, dict) else None,
                     "persona": scenario_payload.get("persona") if isinstance(scenario_payload, dict) else None,
-                    "user_context": scenario_payload.get("user_context") if isinstance(scenario_payload, dict) else None,
+                    "user_context": render(scenario_payload.get("user_context", ""),session["case_parameters"]) if isinstance(scenario_payload, dict) else None,
                     "stage": session["stage"],
                     "objective": session["objective"],
                     "tactics": session["tactic"],

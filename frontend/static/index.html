@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
   <link rel="stylesheet" href="/css/style.css?v=admin-rasa-review-1">
-  <link rel="stylesheet" href="/css/call-preview.css?v=call-focus-3">
+  <link rel="stylesheet" href="/css/call-preview.css?v=call-context-1">
   <link rel="stylesheet" href="/css/message-chat.css?v=1">
   <link rel="stylesheet" href="/css/sidebar.css?v=5">
   <link rel="stylesheet" href="/css/user-admin.css?v=2">
@@ -14,6 +14,8 @@
   <link rel="stylesheet" href="/css/data-review.css?v=1">
   <link rel="stylesheet" href="/css/messenger.css?v=4">
   <link rel="stylesheet" href="/css/motion.css?v=1">
+  <link rel="stylesheet" href="/css/service-status.css?v=1">
+  <link rel="stylesheet" href="/css/onboarding.css?v=1">
 </head>
 <body>
   <nav id="mode-nav" class="app-sidebar" aria-label="Điều hướng Scam Arena">
@@ -33,6 +35,14 @@
       </div>
     </div>
     <div class="sidebar-footer">
+      <div id="service-status" class="service-status" aria-label="Trạng thái dịch vụ">
+        <div class="service-status-buttons">
+          <button type="button" data-service="call" data-state="unknown" aria-label="AI cuộc gọi: chưa kiểm tra" aria-expanded="false" aria-controls="service-status-detail" title="AI cuộc gọi: chưa kiểm tra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m7 3 3 5-3 3c2 3 3 4 6 6l3-3 5 3c0 3-2 5-5 4C8 19 5 16 3 8 2 5 4 3 7 3Z"/></svg><i aria-hidden="true"></i></button>
+          <button type="button" data-service="message" data-state="unknown" aria-label="AI nhắn tin: chưa kiểm tra" aria-expanded="false" aria-controls="service-status-detail" title="AI nhắn tin: chưa kiểm tra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a9 9 0 0 1 19 0Z"/><path d="M7 10h10M7 14h7"/></svg><i aria-hidden="true"></i></button>
+          <button type="button" data-service="stt" data-state="unknown" aria-label="Nhận diện giọng nói: chưa kiểm tra" aria-expanded="false" aria-controls="service-status-detail" title="Nhận diện giọng nói: chưa kiểm tra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg><i aria-hidden="true"></i></button>
+        </div>
+        <div id="service-status-detail" class="service-status-detail" hidden><strong></strong><p></p><small></small></div>
+      </div>
       <button id="help-open" data-mode="help" class="sidebar-item" type="button" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 16h.01"/></svg><span>Hướng dẫn</span></button>
       <details id="account-controls" class="sidebar-account" hidden>
         <summary class="sidebar-item" aria-label="Tài khoản" title="Tài khoản"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Tài khoản</span></summary>
@@ -41,6 +51,11 @@
       <button id="sidebar-login" class="sidebar-item" type="button" data-mode="login" title="Đăng nhập"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg><span>Đăng nhập</span></button>
     </div>
   </nav>
+  <dialog id="quick-tutorial" class="quick-tutorial" aria-labelledby="quick-tutorial-title" aria-describedby="quick-tutorial-description">
+    <div class="quick-tutorial-top"><span>CHÀO MỪNG ĐẾN SCAM ARENA</span><button id="quick-tutorial-skip" type="button">Bỏ qua</button></div>
+    <div class="quick-tutorial-body"><span id="quick-tutorial-icon" aria-hidden="true"></span><p id="quick-tutorial-step"></p><h2 id="quick-tutorial-title"></h2><p id="quick-tutorial-description"></p><blockquote id="quick-tutorial-example" hidden></blockquote></div>
+    <div class="quick-tutorial-bottom"><div id="quick-tutorial-dots" aria-hidden="true"><i></i><i></i><i></i></div><button id="quick-tutorial-prev" type="button">Quay lại</button><button id="quick-tutorial-next" type="button">Tiếp tục →</button></div>
+  </dialog>
   <main class="app-shell">
 <dialog id="admin-overview-dialog" class="help-dialog admin-lines-dialog" aria-labelledby="admin-overview-title">
       <div class="help-heading">
@@ -137,6 +152,7 @@
     <section id="call-static-screen" class="call-static-screen" aria-label="Mô phỏng cuộc gọi" hidden>
       <aside class="call-subtitles" aria-labelledby="call-subtitles-title" hidden>
         <h2 id="call-subtitles-title">Phụ đề cuộc gọi</h2>
+        <div id="call-player-context" class="call-player-context" hidden><span>Bối cảnh giả định của bạn</span><p></p></div>
         <div id="call-subtitles-log" class="call-subtitles-log" role="log" aria-labelledby="call-subtitles-title" tabindex="0">
           <p id="call-subtitles-empty" class="call-subtitles-empty">Lời người gọi và câu máy nghe được sẽ hiện ở đây.</p>
         </div>
@@ -253,6 +269,7 @@
     <section id="help-dialog" hidden tabindex="-1" data-workspace-screen="help" class="workspace-screen help-dialog" aria-labelledby="help-title">
       <div class="help-heading">
         <div><p class="eyebrow">SCAM ARENA</p><h2 id="help-title">Hướng dẫn sử dụng</h2></div>
+        <button id="quick-tutorial-replay" class="button button-secondary" type="button">Hướng dẫn nhanh</button>
 
       </div>
       <div class="help-layout">
@@ -389,18 +406,21 @@
   <script src="/js/api.js?v=messenger-1"></script>
   <script src="/js/arena/arena.js?v=messenger-2"></script>
   <script src="/js/arena/history.js?v=review-bot-1"></script>
-  <script src="/js/auth.js?v=workspace-1"></script>
+  <script src="/js/auth.js?v=onboarding-1"></script>
   <script src="/js/call-latency.js?v=stream-2"></script>
   <script src="/js/call-partial.js?v=2"></script>
   <script src="/js/call-microphone.js?v=silero-stream-1"></script>
   <script src="/js/call-stream.js?v=1"></script>
   <script src="/js/phone-inbox.js?v=2"></script>
-  <script src="/js/app-mode.js?v=review-bot-1"></script>
+  <script src="/js/speech-audio-stream.js?v=1"></script>
+  <script src="/js/app-mode.js?v=validated-audio-1"></script>
   <script src="/js/help.js?v=workspace-1"></script>
   <script src="/js/sidebar.js?v=4"></script>
   <script src="/js/admin-graph.js?v=workspace-2"></script>
   <script src="/js/rasa-review.js?v=workspace-1"></script>
   <script src="/js/user-admin.js?v=2"></script>
   <script src="/js/data-review.js?v=1"></script>
+  <script src="/js/service-status.js?v=1"></script>
+  <script src="/js/onboarding.js?v=1"></script>
 </body>
 </html>

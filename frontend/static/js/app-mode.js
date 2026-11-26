@@ -33,11 +33,17 @@
   let selectedScenario = null;
   const phoneAudio = new Audio();
   let cancelPlayback = null;
+  let ttsAbortController=null;
   let callRun = 0;
   let sessionId = null;
   let latestCallTurn = null;
   let mixedSession = null;
   let preparedStart = null;
+  const playerContext = document.getElementById('call-player-context');
+  function setPlayerContext(text) {
+    playerContext.querySelector('p').textContent = text || '';
+    playerContext.hidden = !text;
+  }
   const practicePanel = document.createElement('div');
   practicePanel.className='practice-call-panel';
   practicePanel.hidden = true;
@@ -92,6 +98,7 @@
     if (!response.ok || mixedSession!==owner) return;
     const state=await response.json();
     practicePanel.querySelector('[data-context]').textContent=state.context;
+    setPlayerContext(state.context);
     practiceTools.querySelectorAll('[data-event]').forEach(button=>{
       button.hidden=!state.actions.includes(button.dataset.event);
       button.disabled=state.ended;
@@ -193,7 +200,8 @@
     return entry;
   }
 
-  function stopAudio() {
+  function stopAudio(cancelSpeech=true) {
+    if(cancelSpeech){ttsAbortController?.abort();ttsAbortController=null;}
     cancelPlayback?.();
     if (!phoneAudio.hasAttribute("src")) return;
     phoneAudio.pause();
@@ -201,8 +209,8 @@
     phoneAudio.load();
   }
 
-  function playAudio(source, loop = false, onStarted = null) {
-    stopAudio();
+  function playAudio(source, loop = false, onStarted = null, preserveSpeech=false) {
+    stopAudio(!preserveSpeech);
     phoneAudio.loop = loop;
     phoneAudio.src = source;
     return new Promise((resolve) => {
@@ -253,6 +261,7 @@
         const alternative = await Api.regenerateLine(ownerSession, metadata.turn_no,
           metadata.line_source === "fixed" ? null : metadata.line_id);
         if (run !== callRun || sessionId !== ownerSession) return;
+        alternative.audio_session_id=ownerSession;
         const heard = await speakLine(alternative.bot_text, run, alternative, null, null, entry);
         if (!heard && run === callRun) addSubtitle("notice", "Không phát được âm thanh. Câu mới đã có trong phụ đề.");
       } catch (error) {
@@ -279,24 +288,31 @@
     entry.querySelectorAll(".call-subtitle-info, .call-retry-reply").forEach(item => item.remove());
     addSubtitleInfo(entry, `Nguồn: ${source}${timing}`);
     addReplyRetry(entry, metadata, run);
+    stopAudio();
+    const controller=new AbortController();ttsAbortController=controller;
+    const ttsStarted=performance.now();
+    let first=true;
+    const playBlob=async(blob,chunk=null)=>{
+      if(run!==callRun||controller.signal.aborted)return false;
+      const initial=first;first=false;
+      if(initial&&latency){latency.tts_ms=performance.now()-ttsStarted;if(chunk)latency.tts_server_ms=chunk.server_ms;latency.beginPlayback();}
+      const url=URL.createObjectURL(blob);
+      try{return await playAudio(url,false,()=>{if(run!==callRun||controller.signal.aborted)return;if(initial){latency?.audioStarted();onStarted?.();}},true);}
+      finally{URL.revokeObjectURL(url);}
+    };
     try {
-      const request = () => Api.speakText(line, currentVoice, latency);
-      const wav = latency ? await latency.measure("tts_ms", request) : await request();
-      if (run !== callRun) return false;
-      const url = URL.createObjectURL(wav);
-      try {
-        latency?.beginPlayback();
-        return await playAudio(url, false, () => {
-          if (run !== callRun) return;
-          latency?.audioStarted();
-          onStarted?.();
-        });
-      } finally {
-        URL.revokeObjectURL(url);
+      const owner=metadata.audio_session_id||sessionId;
+      if(window.SpeechAudioStream&&owner&&metadata.turn_no>0&&line.length>=160&&/[.!?]\s+\S/.test(line)){
+        const query=currentVoice?'?voice='+encodeURIComponent(currentVoice):'';
+        try{return await SpeechAudioStream.play({url:`/api/voice/speak/stream/${encodeURIComponent(owner)}/${metadata.turn_no}${query}`,
+            text:line,signal:controller.signal,playChunk:playBlob});}
+        catch(error){if(!error.allowFallback||controller.signal.aborted||run!==callRun)return false;}
       }
-    } catch {
-      return false;
-    }
+      const request=()=>Api.speakText(line,currentVoice,latency,controller.signal);
+      const wav=await request();
+      return await playBlob(wav);
+    } catch {return false;}
+    finally{if(ttsAbortController===controller)ttsAbortController=null;}
   }
 
   function setTurnBusy(busy) {
@@ -318,6 +334,7 @@
   }
 
   async function answerCall() {
+    setPlayerContext(isMixed()?'':'Bạn đang sinh hoạt bình thường thì nhận cuộc gọi từ một người chưa được xác minh danh tính. Những thông tin người gọi đưa ra chưa phải là sự thật đã được xác nhận.');
     setCallState("active", "Đang chuẩn bị micro…", true);
     const run = callRun;
     currentVoice = pickCallerVoice();
@@ -328,7 +345,7 @@
         const result=await Api.startCall(selectedScenario,'call',practicePanel.querySelector('[data-difficulty]').value,practicePanel.querySelector('[data-exercise]').value);
         if (run!==callRun) {void finishSession(result.session_id);return;}
         preparedStart=result;mixedSession=result.session_id;void inbox.bind(result.session_id);
-        if(result.practice_context)practicePanel.querySelector('[data-context]').textContent=result.practice_context;
+        if(result.practice_context){practicePanel.querySelector('[data-context]').textContent=result.practice_context;setPlayerContext(result.practice_context);}
         void refreshPractice();
       } catch(error) {if(run===callRun)setCallState('ended',error.message,true);return;}
     }
@@ -396,6 +413,7 @@
             return;
           }
           sessionId = response.session_id;
+          if(response.practice_context)setPlayerContext(response.practice_context);
           void inbox.bind(sessionId);
           if (isMixed()) {
             mixedSession=sessionId;
@@ -409,6 +427,7 @@
         response = await Api.submitCallTurn(sessionId, text, elapsed);
         if (run !== callRun) return;
         latestCallTurn = response.turn_no;
+        response.audio_session_id=sessionId;
         void inbox.refresh();
         if (isMixed()) void refreshPractice();
         const intent = intentNames[response.intent] ?? "Chưa xác định";
@@ -764,7 +783,7 @@
     revealBlock(practiceSettings,isMixed()&&state!=='active');
     revealBlock(practiceTools,isMixed()&&state==='active');
     revealBlock(practiceDebrief,isMixed()&&state==='ended'&&Boolean(mixedSession));
-    if (state === 'idle' || state === 'ringing') subtitlesPanel.hidden = true;
+    if (state === 'idle' || state === 'ringing') {subtitlesPanel.hidden = true;setPlayerContext('');}
     else if (state === 'active') subtitlesPanel.hidden = false;
     if (isMixed() && state==='ringing') {
       mixedSession=null;

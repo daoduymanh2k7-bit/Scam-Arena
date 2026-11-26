@@ -29,7 +29,7 @@
         ` · Đóng gói WAV: ${ms(this.encode_ms)}` +
         ` · ${recognition}` +
         ` · Xử lý hội thoại: ${ms(this.reply_ms)}` +
-        ` · Tạo và tải giọng: ${ms(this.tts_ms)} (Piper: ${ms(this.tts_server_ms)})` +
+        ` · Tạo và tải giọng đến đoạn đầu: ${ms(this.tts_ms)} (trong đó máy chủ TTS: ${ms(this.tts_server_ms)})` +
         ` · Đệm phát: ${ms(this.play_ms)}` +
         ` · Tổng ${Number.isFinite(this.vad_ms) ? "từ khung tiếng nói cuối" : "từ lúc chốt đoạn"} đến phát: ${ms(this.total_ms)}`;
     }

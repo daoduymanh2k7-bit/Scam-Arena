@@ -5,6 +5,7 @@
   const error = $("auth-error");
 
   function showSignedIn(user) {
+    window.ArenaCurrentUser=user;
     document.body.dataset.authenticated = "true";
     document.body.dataset.userRole = user.role;
     $("account-role").textContent = user.role === "admin" ? "Vai trò: Quản trị viên" : "Vai trò: Người dùng";
@@ -14,7 +15,7 @@
     $("account-controls").hidden = false;
     $("admin-tools").hidden = user.role !== "admin";
     if (window.ArenaHistory) window.ArenaHistory.refreshAll();
-    document.dispatchEvent(new CustomEvent("arena:authenticated"));
+    document.dispatchEvent(new CustomEvent("arena:authenticated",{detail:{user}}));
   }
 
   async function send(path, body) {

@@ -184,7 +184,7 @@ def test_invalid_beam_is_not_silently_applied(monkeypatch):
 
 def test_tts_returns_server_timing_without_changing_audio():
     import sys
-    fake = SimpleNamespace(available_caller_voices=lambda: [], text_to_speech=lambda *_: b"RIFFtest")
+    fake = SimpleNamespace(available_caller_voices=lambda: [], synthesize_cached=lambda *_: (b"RIFFtest",False))
     with patch.dict(sys.modules, {"app.voice.synthesis": fake}), client() as api:
         result = api.post("/api/voice/speak", json={"text": "Alo"})
     assert result.status_code == 200

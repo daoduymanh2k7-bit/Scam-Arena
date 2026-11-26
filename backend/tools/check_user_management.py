@@ -31,6 +31,16 @@ def run():
         app=FastAPI();app.include_router(users.router);app.include_router(auth_routes.router)
         with TestClient(app) as client:
             assert client.get('/api/admin/users').status_code==401
+            assert client.post('/api/auth/onboarding/complete').status_code==401
+            client.cookies.set(auth.COOKIE_NAME,old_token)
+            assert client.get('/api/auth/me').json()['onboarding_completed'] is False
+            assert client.post('/api/auth/onboarding/complete').status_code==204
+            assert client.post('/api/auth/onboarding/complete').status_code==204
+            assert client.get('/api/auth/me').json()['onboarding_completed'] is True
+            _,tutorial_token=auth.login('learner-check',password)
+            assert auth.get_current_user(token=tutorial_token)['onboarding_completed_at'] is not None
+            client.cookies.set(auth.COOKIE_NAME,token1)
+            assert client.get('/api/auth/me').json()['onboarding_completed'] is False
             client.cookies.set(auth.COOKIE_NAME,old_token)
             assert client.get('/api/admin/users').status_code==403
             client.cookies.set(auth.COOKIE_NAME,token1)

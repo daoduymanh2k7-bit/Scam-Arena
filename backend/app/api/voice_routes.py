@@ -4,10 +4,13 @@ import os
 import time
 import io
 import wave
+import json
+import base64
+from uuid import UUID
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app.schemas import SpeakRequest
@@ -170,18 +173,58 @@ def speak_scenario_opening(scenario_key: str, user: dict = Depends(get_current_u
 
 
 def _speak_text(text: str, voice: str | None = None) -> Response:
-    from app.voice.synthesis import available_caller_voices, text_to_speech
+    from app.voice.synthesis import available_caller_voices, synthesize_cached
 
     if voice is not None and voice not in available_caller_voices():
         raise HTTPException(status_code=404, detail="Giọng đọc này chưa được cài đặt.")
 
     try:
         started = time.monotonic()
-        audio = text_to_speech(text, voice or "default")
+        audio,cache_hit = synthesize_cached(text, voice or "default")
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Tạo giọng đọc thất bại. Kiểm tra model Piper.") from exc
     duration_ms = (time.monotonic() - started) * 1000
     return Response(content=audio, media_type="audio/wav", headers={
         "Server-Timing": f"tts;dur={duration_ms:.1f}",
         "Cache-Control": "no-store",
+        "X-TTS-Cache": "hit" if cache_hit else "miss",
     })
+
+
+def current_audio_turn(session_id,turn_no,user_id,text):
+    with get_connection_pool().connection() as c:
+        row=c.execute("""SELECT t.bot_reply_text FROM call_sessions s JOIN call_turns t USING(session_id)
+            WHERE s.session_id=%s AND s.user_id=%s AND s.interaction_mode='call' AND s.abandoned_at IS NULL
+              AND s.turn_no=%s AND t.turn_no=%s""",(session_id,user_id,turn_no,turn_no)).fetchone()
+    if not row:raise HTTPException(409,'Lượt này không còn là lời thoại hiện tại.')
+    if row['bot_reply_text']!=text:raise HTTPException(409,'Lời thoại đã thay đổi. Không phát bản cũ.')
+
+
+@router.post('/speak/stream/{session_id}/{turn_no}')
+async def speak_turn_stream(session_id:UUID,turn_no:int,body:SpeakRequest,request:Request,
+                            voice:str|None=None,user:dict=Depends(get_current_user)):
+    if os.getenv('TTS_STREAMING_ENABLED','true').lower() not in {'true','1'}:
+        raise HTTPException(404,'Phát theo đoạn đang tắt.')
+    from app.voice.synthesis import available_caller_voices,synthesize_cached
+    from app.voice.tts_cache import sentence_chunks
+    if voice is not None and voice not in available_caller_voices():raise HTTPException(404,'Giọng đọc chưa được cài đặt.')
+    await run_in_threadpool(current_audio_turn,session_id,turn_no,user['user_id'],body.text)
+    chunks=sentence_chunks(body.text)
+    async def events():
+        for index,text in enumerate(chunks):
+            if await request.is_disconnected():return
+            try:
+                await run_in_threadpool(current_audio_turn,session_id,turn_no,user['user_id'],body.text)
+                start=time.monotonic()
+                audio,hit=await run_in_threadpool(synthesize_cached,text,voice or 'default')
+                if await request.is_disconnected():return
+                await run_in_threadpool(current_audio_turn,session_id,turn_no,user['user_id'],body.text)
+                yield json.dumps({'type':'audio','index':index,'count':len(chunks),'text':text,
+                    'audio':base64.b64encode(audio).decode('ascii'),'server_ms':round((time.monotonic()-start)*1000),
+                    'cache_hit':hit})+'\n'
+            except Exception:
+                yield json.dumps({'type':'error','message':'Âm thanh bị gián đoạn hoặc lời thoại đã đổi.'})+'\n'
+                return
+        yield json.dumps({'type':'done','count':len(chunks)})+'\n'
+    return StreamingResponse(events(),media_type='application/x-ndjson',
+        headers={'Cache-Control':'no-store','X-Accel-Buffering':'no'})

@@ -87,6 +87,7 @@ class LoginRequest(BaseModel):
 class AuthUserResponse(BaseModel):
     username: str
     role: Literal["user", "admin"]
+    onboarding_completed: bool = False
 
 
 class StartCallResponse(BaseModel):

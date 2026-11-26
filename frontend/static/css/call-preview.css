@@ -564,3 +564,9 @@
     grid-template-rows:minmax(280px,1fr) clamp(130px,26dvh,240px);
   }
 }
+
+/* Player-known facts are visible without opening the in-phone tools. */
+.call-player-context { flex:none; margin:0 0 12px; padding:11px 13px; border:1px solid #e3ddef; border-radius:10px; background:#f7f5fb; color:#524660; }
+.call-player-context > span { display:block; margin-bottom:5px; font:650 10px/1.5 system-ui; color:#80609d; }
+.call-player-context > p { margin:0; font:12px/1.65 system-ui; overflow-wrap:anywhere; }
+.call-player-context[hidden] { display:none; }

@@ -114,7 +114,7 @@ def install(cursor):
     from app.arena.practice_catalog import documents
     base=json.loads((root/'data/scenarios/bank.json').read_text(encoding='utf-8'))
     for document in documents(base):
-        bundle='practice-bundle-v2'
+        bundle='practice-bundle-v4-support-context' if document['family']=='support' else 'practice-bundle-v2'
         cursor.execute('SELECT version_id FROM practice_bundle_versions WHERE scenario_name=%s AND bundle_revision=%s',(document['id'],bundle))
         if cursor.fetchone(): continue
         cursor.execute("""SELECT s.active_version_id,EXISTS(SELECT 1 FROM practice_reviews r

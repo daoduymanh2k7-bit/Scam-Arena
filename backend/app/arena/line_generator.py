@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 from app.arena.normalization import normalize_phrase
+from app.arena.practice_catalog import render
 from app.arena.phone_dialogue import phone_opening, listening_acknowledgement
 from app.database import get_connection_pool
 from app.arena.conversation_memory import memory_context
@@ -273,7 +274,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
                 'scenario_kind':payload.get('scenario_kind','fraud'),
                 'scenario_family':payload.get('family'),
                 'scenario_category':payload.get('category','') if isinstance(payload,dict) else '',
-                'persona':persona,'user_context':payload.get('user_context','') if isinstance(payload,dict) else '',
+                'persona':persona,'user_context':render(payload.get('user_context',''),context.get('case_facts',{})) if isinstance(payload,dict) else '',
                 'objective':(node_row or {}).get('objective',''),'tactics':[(node_row or {}).get('tactic','')],
                 'requested_action':(node_row or {}).get('requested_action','other'),'sample_line':fixed_text,
                 'intent':intent,'player_text':user_text_masked,
@@ -287,8 +288,8 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
             if not has_memory:
                 if norm and intent != 'unknown' and not has_memory:
                     cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND player_text_norm=%s AND source='llm' AND enabled AND preference_score >= 0 ORDER BY preference_score DESC,use_count,line_id LIMIT 1",params[1:]+(norm,)); row=cur.fetchone()
-                    if row: return _use(cur,row,'cache_exact',start)
-                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",params[1:]); rows=cur.fetchall()
+                    if row and validate_line(row['line_text'],user_text_masked,context): return _use(cur,row,'cache_exact',start)
+                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",params[1:]); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
                 prev=None
                 cur.execute("SELECT bot_reply_text FROM call_turns WHERE session_id=%s ORDER BY turn_no DESC LIMIT 1",(session_id,)); p=cur.fetchone(); prev=p['bot_reply_text'] if p else None
                 chosen=pick_from_pool(rows,prev)
@@ -300,7 +301,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
         with get_connection_pool().connection() as c, c.cursor() as cur:
             cur.execute("INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,line_text,source,model,prompt_version) VALUES(%s,%s,%s,%s,%s,'llm',%s,%s) ON CONFLICT DO NOTHING RETURNING line_id",(target_node,intent,is_reprompt,norm,line,context.get('_generated_model',model),version)); got=cur.fetchone()
             if got:return LineResult(line,got['line_id'],'llm',int((time.monotonic()-start)*1000))
-            cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=cur.fetchall()
+            cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
             chosen=pick_from_pool(rows)
             if chosen and not has_memory:return _use(cur,chosen,'cache_pool',start)
         return fixed
@@ -309,7 +310,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
         if intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))): return fixed
         try:
             with get_connection_pool().connection() as c,c.cursor() as cur:
-                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=cur.fetchall()
+                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
                 cur.execute("SELECT bot_reply_text FROM call_turns WHERE session_id=%s ORDER BY turn_no DESC LIMIT 1",(session_id,)); prev=cur.fetchone()
                 chosen=pick_from_pool(rows,prev['bot_reply_text'] if prev else None)
                 if chosen:return _use(cur,chosen,'cache_pool',start)
@@ -358,7 +359,7 @@ def regenerate_line_for_turn(*,session_id,turn_no,old_line_id=None,user_id):
             'scenario_kind':scenario.get('scenario_kind','fraud'),
             'scenario_family':scenario.get('family'),
             'scenario_category':scenario.get('category',''),'persona':scenario.get('persona',{}),
-            'user_context':scenario.get('user_context',''),'objective':row['objective'] or '',
+            'user_context':render(scenario.get('user_context',''),row['case_parameters']),'objective':row['objective'] or '',
             'tactics':[row['tactic']] if row['tactic'] else [],'requested_action':row['requested_action'] or 'other',
             'sample_line':render(row['text'] or row['bot_reply_text'] or '',row['case_parameters']), 'intent':row['intent'],
             'case_facts':row['case_parameters'],

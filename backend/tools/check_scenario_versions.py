@@ -36,6 +36,30 @@ def run():
         pool = database.get_connection_pool()
         with pool.connection() as c:
             user = c.execute("INSERT INTO app_users(username,password_hash) VALUES('version-check','test-only') RETURNING user_id").fetchone()['user_id']
+        # Support facts must agree across the player brief, first line and confirmation email.
+        for key in ['practice-support-ordinary-1','practice-support-impostor-3']:
+            support=calls.start_call(key,user,'call')
+            with pool.connection() as c:
+                facts=c.execute('SELECT case_parameters FROM call_sessions WHERE session_id=%s',(support.session_id,)).fetchone()['case_parameters']
+                email=c.execute("SELECT body FROM practice_messages WHERE session_id=%s AND message_key='confirmation'",(support.session_id,)).fetchone()['body']
+            assert facts['support_issue'] in support.practice_context
+            assert facts['support_issue'] in support.bot_text and facts['support_issue'] in email
+            assert '{' not in support.practice_context+support.bot_text+email
+            calls.finish_call(support.session_id,user)
+        # Audio streaming must match the persisted latest reply and its owner.
+        audio_call=calls.start_call('bank',user,'call')
+        with patch.object(calls,'detect_intent',return_value=SimpleNamespace(intent=Intent.UNKNOWN,matched_rule=None)), \
+             patch.object(calls,'reclassify_unknown',return_value=None), \
+             patch.object(calls,'resolve_bot_line',side_effect=lambda **kw:LineResult(kw['fixed_text'],None,'fixed',0)):
+            audio_turn=calls.submit_turn(audio_call.session_id,'Tôi muốn nghe rõ hơn',1,user)
+        from app.api.voice_routes import current_audio_turn
+        from fastapi import HTTPException
+        current_audio_turn(audio_call.session_id,audio_turn.turn_no,user,audio_turn.bot_text)
+        for owner,text in [('another-owner',audio_turn.bot_text),(user,'Lời thoại sai không được phát')]:
+            try:current_audio_turn(audio_call.session_id,audio_turn.turn_no,owner,text)
+            except HTTPException as exc:assert exc.status_code==409
+            else:raise AssertionError('Audio stream accepted wrong owner or unvalidated text')
+        calls.finish_call(audio_call.session_id,user)
         old = calls.start_call('bank', user, 'call')
         # Messenger lists only the owner's message sessions and can reopen an
         # active thread without creating a different scenario/session.

@@ -15,7 +15,7 @@ def create_account(request: RegisterRequest, response: Response) -> AuthUserResp
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     set_auth_cookie(response, token)
-    return AuthUserResponse(username=user["username"], role=user["role"])
+    return AuthUserResponse(username=user["username"], role=user["role"],onboarding_completed=bool(user.get("onboarding_completed_at")))
 
 
 @router.post("/login", response_model=AuthUserResponse)
@@ -25,7 +25,7 @@ def sign_in(request: LoginRequest, response: Response) -> AuthUserResponse:
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
     set_auth_cookie(response, token)
-    return AuthUserResponse(username=user["username"], role=user["role"])
+    return AuthUserResponse(username=user["username"], role=user["role"],onboarding_completed=bool(user.get("onboarding_completed_at")))
 
 
 @router.post("/logout", status_code=204)
@@ -36,4 +36,11 @@ def sign_out(response: Response, token: str | None = Cookie(default=None, alias=
 
 @router.get("/me", response_model=AuthUserResponse)
 def me(user: dict = Depends(get_current_user)) -> AuthUserResponse:
-    return AuthUserResponse(username=user["username"], role=user["role"])
+    return AuthUserResponse(username=user["username"], role=user["role"],onboarding_completed=bool(user.get("onboarding_completed_at")))
+
+
+@router.post('/onboarding/complete',status_code=204)
+def complete_onboarding(user:dict=Depends(get_current_user)):
+    from app.database import get_connection_pool
+    with get_connection_pool().connection() as c:
+        c.execute('UPDATE app_users SET onboarding_completed_at=COALESCE(onboarding_completed_at,now()) WHERE user_id=%s',(user['user_id'],))

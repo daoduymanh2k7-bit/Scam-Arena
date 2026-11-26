@@ -17,11 +17,11 @@ FAMILIES = {
                     'normal':'Nếu giờ đó chưa tiện, mình hẹn lại. Anh/chị cũng có thể tự đổi lịch trong ứng dụng.',
                     'fraud':'Tôi cần làm thêm bước kiểm tra thiết bị trước buổi hẹn. Anh/chị cần tôi giải thích không?',
                     'request':'Anh/chị mở đường dẫn và cài ứng dụng điều khiển để tôi kiểm tra thiết bị trước nhé.', 'action':'install_app'},
-    'support': {'label':'Chăm sóc khách hàng', 'context':'Bạn đã gửi yêu cầu hỗ trợ một lỗi ứng dụng. Bạn chưa yêu cầu đổi mật khẩu hoặc hoàn tiền.',
-                'evidence':'Phiếu {reference}: lỗi ứng dụng đang được xử lý. Có thể trao đổi triệu chứng; hỗ trợ không cần mật khẩu hay mã đăng nhập.',
+    'support': {'label':'Chăm sóc khách hàng', 'context':'Bối cảnh giả định: bạn dùng ứng dụng dịch vụ mô phỏng và gặp lỗi: {support_issue}. Bạn đã gửi phiếu hỗ trợ; chưa yêu cầu đổi mật khẩu hoặc hoàn tiền.',
+                'evidence':'Phiếu {reference} ghi nhận: {support_issue}. Phiếu đang chờ kỹ thuật kiểm tra. Hỗ trợ không cần mật khẩu hay mã đăng nhập.',
                 'official':'Trung tâm hỗ trợ trong ứng dụng mô phỏng xác nhận có phiếu. Không có quy trình đọc mã đăng nhập cho nhân viên.',
-                'intro':'Tôi gọi về phiếu hỗ trợ lỗi ứng dụng. Anh/chị có thể mô tả lại phần đang gặp lỗi không?',
-                'normal':'Anh/chị cho biết lỗi xuất hiện khi mở ứng dụng hay khi dùng một chức năng. Tôi không cần mật khẩu hoặc mã đăng nhập.',
+                'intro':'Tôi gọi lại về phiếu {reference}, ghi nhận lỗi: {support_issue}. Hiện vẫn còn tình trạng đó hay đã dùng được bình thường rồi ạ?',
+                'normal':'Phiếu đã ghi nhận lỗi này. Anh/chị có muốn bổ sung chi tiết nào, hay để tôi chuyển bộ phận kỹ thuật kiểm tra?',
                 'fraud':'Tôi cần đối chiếu tài khoản để tiếp tục xử lý phiếu hỗ trợ. Anh/chị muốn nghe bước tiếp theo không?',
                 'request':'Anh/chị đọc mã đăng nhập vừa nhận để tôi truy cập và kiểm tra tài khoản.', 'action':'share_sensitive'},
 }
@@ -29,9 +29,16 @@ FAMILIES = {
 
 def case_variables(seed):
     rng=random.Random(seed)
-    return {'reference':'DEMO-'+str(rng.randrange(1000,9999)),
+    variables={'reference':'DEMO-'+str(rng.randrange(1000,9999)),
             'window':rng.choice(['chiều nay','sáng mai','trong khung giờ đã hẹn']),
             'place':rng.choice(['sảnh tòa nhà','quầy tiếp nhận','điểm hẹn đã ghi trong ứng dụng'])}
+    # Appended after existing draws so old reference/window/place seed replay remains stable.
+    variables['support_issue']=rng.choice([
+        'mục Lịch sử đơn hàng chỉ hiện màn hình trắng, dù trang chủ vẫn mở được',
+        'nút Xem lịch hẹn không phản hồi khi bấm, dù các mục khác vẫn dùng được',
+        'ứng dụng tự đóng khi mở mục Thông báo, còn trang chủ vẫn hoạt động',
+    ])
+    return variables
 
 
 def render(text, variables):
@@ -77,7 +84,7 @@ def documents(base):
                 if benign:
                     doc['stages'] += [node('details',spec['normal'],'other',
                          {'comply':'confirmation','verify':'verification','refuse':'END_NEUTRAL','hang_up':'END_NEUTRAL','doubt':'verification'},'confirmation'),
-                         node('confirmation','Tôi ghi nhận nội dung vừa trao đổi. Anh/chị muốn tiếp tục theo lịch hay để tôi liên hệ lại?','other',
+                         node('confirmation',('Tôi đã ghi nhận thông tin trong phiếu. Anh/chị đồng ý để tôi chuyển bộ phận kỹ thuật xử lý chứ?' if family=='support' else 'Tôi ghi nhận nội dung vừa trao đổi. Anh/chị muốn tiếp tục theo lịch hay để tôi liên hệ lại?'),'other',
                               {'comply':'END_SAFE','verify':'verification','refuse':'END_NEUTRAL','hang_up':'END_NEUTRAL'},'END_NEUTRAL')]
                     doc['red_flags']=[]
                 else:

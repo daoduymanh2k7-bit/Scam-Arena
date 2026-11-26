@@ -41,6 +41,9 @@ services:
       STT_PARTIAL_ENABLED: ${STT_PARTIAL_ENABLED:-true}
       HF_HOME: /models/huggingface
       PIPER_VOICE_PATH: /app/voices/vi_VN-vais1000-medium.onnx
+      TTS_CACHE_ENABLED: ${TTS_CACHE_ENABLED:-true}
+      TTS_STREAMING_ENABLED: ${TTS_STREAMING_ENABLED:-true}
+      TTS_PREWARM_ENABLED: ${TTS_PREWARM_ENABLED:-true}
       PIPER_SENTENCE_PAUSE_MS: ${PIPER_SENTENCE_PAUSE_MS:-350}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}

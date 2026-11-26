@@ -90,3 +90,27 @@ def test_old_selection_snapshots_keep_the_original_equal_class_replay():
         key=str(seed)
         expected=random.Random(key).choice(['benign','fraud'])
         assert replay_selection(snapshot,key)['scenario_kind']==expected
+
+
+def test_support_calls_provide_the_same_concrete_issue_to_player_caller_and_email():
+    from app.arena.practice_catalog import case_spec
+    import random
+    base=json.loads((Path(__file__).resolve().parents[2]/'data/scenarios/bank.json').read_text(encoding='utf-8'))
+    support=[d for d in documents(base) if d['family']=='support']
+    assert len(support)==6
+    for seed in ['first','second','third']:
+        facts=case_variables(seed)
+        assert facts==case_variables(seed)
+        for doc in support:
+            context=render(doc['user_context'],facts)
+            opening=render(doc['stages'][0]['opening_line'],facts)
+            evidence=render(case_spec({'family':'support','payload':doc})['evidence'],facts)
+            assert facts['support_issue'] in context and facts['support_issue'] in opening and facts['support_issue'] in evidence
+            assert 'mô tả lại phần đang gặp lỗi' not in opening
+            assert '{' not in context+opening+evidence
+            assert len(opening)<=300
+        # Added facts do not change the original seeded reference/window/place.
+        rng=random.Random(seed)
+        assert facts['reference']=='DEMO-'+str(rng.randrange(1000,9999))
+        assert facts['window']==rng.choice(['chiều nay','sáng mai','trong khung giờ đã hẹn'])
+        assert facts['place']==rng.choice(['sảnh tòa nhà','quầy tiếp nhận','điểm hẹn đã ghi trong ứng dụng'])
