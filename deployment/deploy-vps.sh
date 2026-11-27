@@ -57,6 +57,18 @@ rsync -a --delete \
   --exclude='/deployment/database.dump' \
   "$release/" "$app/"
 
+# Verify Docker DNS before restarting the application. A stale database network
+# endpoint can survive image replacement; recreate only its container, never its volume.
+network=$(docker network ls --filter label=com.docker.compose.project=scam-arena --filter label=com.docker.compose.network=default --format '{{.Name}}')
+test -n "$network"
+probe_database_dns() {
+  docker run --rm --network "$network" --entrypoint python scam-arena-scam-arena -c 'import socket; print("Database DNS:", socket.gethostbyname("db"))'
+}
+if ! probe_database_dns; then
+  printf 'Refreshing database container network endpoint; persistent volume is preserved.\n'
+  docker compose -p scam-arena up -d --no-deps --force-recreate --wait --wait-timeout 120 db
+  probe_database_dns
+fi
 docker compose -p scam-arena up -d --no-build --wait --wait-timeout 240 scam-arena
 curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8000/health
 if [[ "$provider" == faster_whisper ]]; then

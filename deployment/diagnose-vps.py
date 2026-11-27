@@ -20,3 +20,9 @@ else:
     print(json.dumps({key:state.get(key) for key in ['Status','OOMKilled','ExitCode','Error','StartedAt','FinishedAt']}))
     logs=subprocess.run(['docker','logs','--tail','80','scam-arena'],capture_output=True,text=True)
     print(redact(logs.stdout+logs.stderr))
+
+for container in ('scam-arena','scam-arena-db','scam-arena-rasa-1'):
+    result=subprocess.run(['docker','inspect',container],capture_output=True,text=True)
+    if result.returncode:continue
+    item=json.loads(result.stdout)[0]
+    print(json.dumps({'container':container,'networks':{name:{'ip':network.get('IPAddress'),'aliases':network.get('Aliases')} for name,network in item.get('NetworkSettings',{}).get('Networks',{}).items()}}))
