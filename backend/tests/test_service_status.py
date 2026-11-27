@@ -53,3 +53,22 @@ def test_stt_uses_synthetic_audio_and_no_user_microphone(monkeypatch):
     assert routes.probe_stt()['state']=='ok'
     assert request.call_args.args[0].startswith(b'RIFF')
     assert request.call_args.kwargs['user_id']=='service-status-probe'
+
+
+@pytest.mark.parametrize('fallback,slow',[(True,False),(False,True),(True,True)])
+def test_warning_explains_fallback_and_slow_response(monkeypatch,fallback,slow):
+    monkeypatch.setenv('LINE_LLM_ENABLED','true')
+    for key in ['GEMINI_API_KEY','GROQ_API_KEY','OPENROUTER_API_KEY']:
+        monkeypatch.delenv(key,raising=False)
+    monkeypatch.setenv('XAPIKEY_CALL_API_KEY','test')
+    monkeypatch.setenv('XAPIKEY_CALL_MODEL','primary')
+    clock=iter([0,9 if slow else 1])
+    monkeypatch.setattr(routes.time,'monotonic',lambda:next(clock))
+    def generate(ctx,*args):
+        ctx['_generated_model']='backup' if fallback else 'primary'
+        return 'Xin chào, tôi có thể giúp gì?'
+    monkeypatch.setattr(routes.lines,'_request_line',generate)
+    result=routes.probe_llm('call')
+    assert result['state']=='warning'
+    assert ('dự phòng' in result['message'])==fallback
+    assert ('8 giây' in result['message'])==slow

@@ -349,6 +349,8 @@ def _create_dialogue_tables(cursor: Any) -> None:
             use_count INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        ALTER TABLE dialogue_lines ADD COLUMN IF NOT EXISTS player_text_sample TEXT;
+        ALTER TABLE dialogue_lines ADD COLUMN IF NOT EXISTS cache_context_hash TEXT;
         CREATE INDEX IF NOT EXISTS dialogue_lines_lookup_idx
             ON dialogue_lines (node_id, intent, is_reprompt, player_text_norm);
         CREATE UNIQUE INDEX IF NOT EXISTS dialogue_lines_unique_llm_text_idx
@@ -431,6 +433,8 @@ def _create_dialogue_tables(cursor: Any) -> None:
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS bot_reply_text TEXT;
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS line_id BIGINT REFERENCES dialogue_lines(line_id) ON DELETE SET NULL;
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS line_source TEXT CHECK (line_source IN ('cache_exact','cache_pool','llm','fixed'));
+        ALTER TABLE call_turns DROP CONSTRAINT IF EXISTS call_turns_line_source_check;
+        ALTER TABLE call_turns ADD CONSTRAINT call_turns_line_source_check CHECK (line_source IN ('cache_exact','cache_semantic','cache_pool','llm','fixed'));
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS line_latency_ms INTEGER;
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS target_node_id BIGINT REFERENCES dialogue_nodes(node_id);
         ALTER TABLE call_turns ADD COLUMN IF NOT EXISTS is_reprompt BOOLEAN NOT NULL DEFAULT FALSE;

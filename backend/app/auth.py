@@ -66,7 +66,7 @@ def register(username: str, password: str) -> tuple[dict, str]:
     try:
         with get_connection_pool().connection() as connection, connection.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO app_users(username,password_hash) VALUES(%s,%s) RETURNING user_id,username,role",
+                "INSERT INTO app_users(username,password_hash,last_login_at) VALUES(%s,%s,now()) RETURNING user_id,username,role",
                 (username, _hash_password(password)),
             )
             user = cursor.fetchone()

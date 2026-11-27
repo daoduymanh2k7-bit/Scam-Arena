@@ -46,6 +46,9 @@ def run():
             client.cookies.set(auth.COOKIE_NAME,token1)
             page=client.get('/api/admin/users',params={'page_size':1}).json()
             assert page['total']==3 and len(page['users'])==1
+            assert client.get('/api/admin/users').headers['cache-control']=='no-store'
+            registered=client.get('/api/admin/users',params={'search':'learner-check'}).json()['users'][0]
+            assert registered['last_login_at'] is not None
             assert client.get('/api/admin/users',params={'search':'%'}).json()['total']==0
             assert 'password_hash' not in str(page) and 'token_hash' not in str(page)
             sid=person['user_id']

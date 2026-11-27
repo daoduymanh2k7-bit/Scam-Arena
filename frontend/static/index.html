@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <title>Scam Arena — Luyện phản xạ chống lừa đảo</title>
   <link rel="stylesheet" href="/css/style.css?v=admin-rasa-review-1">
-  <link rel="stylesheet" href="/css/call-preview.css?v=call-context-1">
+  <link rel="stylesheet" href="/css/call-preview.css?v=briefing-1">
   <link rel="stylesheet" href="/css/message-chat.css?v=1">
   <link rel="stylesheet" href="/css/sidebar.css?v=5">
   <link rel="stylesheet" href="/css/user-admin.css?v=2">
@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/css/data-review.css?v=1">
   <link rel="stylesheet" href="/css/messenger.css?v=4">
   <link rel="stylesheet" href="/css/motion.css?v=1">
-  <link rel="stylesheet" href="/css/service-status.css?v=1">
+  <link rel="stylesheet" href="/css/service-status.css?v=2">
   <link rel="stylesheet" href="/css/onboarding.css?v=1">
 </head>
 <body>
@@ -41,7 +41,12 @@
           <button type="button" data-service="message" data-state="unknown" aria-label="AI nhắn tin: chưa kiểm tra" aria-expanded="false" aria-controls="service-status-detail" title="AI nhắn tin: chưa kiểm tra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M21 11a9 9 0 0 1-9 9H4l-2 2V11a9 9 0 0 1 19 0Z"/><path d="M7 10h10M7 14h7"/></svg><i aria-hidden="true"></i></button>
           <button type="button" data-service="stt" data-state="unknown" aria-label="Nhận diện giọng nói: chưa kiểm tra" aria-expanded="false" aria-controls="service-status-detail" title="Nhận diện giọng nói: chưa kiểm tra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg><i aria-hidden="true"></i></button>
         </div>
-        <div id="service-status-detail" class="service-status-detail" hidden><strong></strong><p></p><small></small></div>
+        <div id="service-status-detail" class="service-status-detail" hidden><strong></strong><p></p><small></small><ul class="service-status-legend" aria-label="Ý nghĩa màu trạng thái">
+          <li><i data-state="ok" aria-hidden="true"></i><span><b>Xanh:</b> hoạt động bình thường.</span></li>
+          <li><i data-state="warning" aria-hidden="true"></i><span><b>Vàng:</b> đang kiểm tra, phản hồi chậm hoặc dùng dự phòng; xem thông báo phía trên.</span></li>
+          <li><i data-state="unavailable" aria-hidden="true"></i><span><b>Đỏ:</b> lần kiểm tra không thành công.</span></li>
+          <li><i data-state="unknown" aria-hidden="true"></i><span><b>Xám:</b> chưa xác định được trạng thái.</span></li>
+        </ul></div>
       </div>
       <button id="help-open" data-mode="help" class="sidebar-item" type="button" aria-label="Hướng dẫn sử dụng" title="Hướng dẫn sử dụng"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1-1.5 2M12 16h.01"/></svg><span>Hướng dẫn</span></button>
       <details id="account-controls" class="sidebar-account" hidden>
@@ -158,6 +163,13 @@
         </div>
       </aside>
       <div class="call-scenario-picker">
+        <section id="call-briefing" class="call-briefing" aria-labelledby="call-briefing-title" hidden>
+          <span class="call-briefing-kicker">TRƯỚC KHI BẮT MÁY</span>
+          <h2 id="call-briefing-title">Tình huống của bạn</h2>
+          <p id="call-briefing-text" role="status">Đang chuẩn bị tình huống…</p>
+          <small>Đọc bối cảnh, rồi bấm Trả lời trên điện thoại.</small>
+          <button id="call-briefing-retry" type="button" class="button button-secondary" hidden>Thử lại</button>
+        </section>
         <div class="call-setup">
         <h1>Bắt đầu cuộc gọi</h1>
         <p class="call-picker-hint">Đón một cuộc gọi bất ngờ hoặc chọn tình huống bạn muốn luyện.</p>
@@ -370,7 +382,7 @@
     </section>
     <section id="users-screen" class="workspace-screen users-screen" data-workspace-screen="users" hidden tabindex="-1" aria-labelledby="users-title">
       <div class="help-heading"><div><p class="eyebrow">QUẢN TRỊ</p><h2 id="users-title">Người dùng</h2></div><button id="users-refresh" class="users-button" type="button">Tải lại</button></div>
-      <p class="users-note">Tìm tài khoản, theo dõi số liệu luyện tập và quản lý trạng thái truy cập.</p>
+      <p class="users-note">Tìm tài khoản, theo dõi số liệu luyện tập và quản lý trạng thái truy cập. Danh sách thuộc máy chủ bạn đang mở; dữ liệu localhost và website VPS được lưu riêng.</p>
       <form id="users-search-form" class="users-filters">
         <label>Tên tài khoản<input id="users-search" type="search" maxlength="64" placeholder="Tìm theo tên đăng nhập…"></label>
         <label>Trạng thái<select id="users-state"><option value="all">Tất cả</option><option value="active">Đang hoạt động</option><option value="locked">Đã khóa</option></select></label>
@@ -404,7 +416,7 @@
 
   </main>
   <script src="/js/api.js?v=messenger-1"></script>
-  <script src="/js/arena/arena.js?v=messenger-2"></script>
+  <script src="/js/arena/arena.js?v=semantic-1"></script>
   <script src="/js/arena/history.js?v=review-bot-1"></script>
   <script src="/js/auth.js?v=onboarding-1"></script>
   <script src="/js/call-latency.js?v=stream-2"></script>
@@ -413,7 +425,7 @@
   <script src="/js/call-stream.js?v=1"></script>
   <script src="/js/phone-inbox.js?v=2"></script>
   <script src="/js/speech-audio-stream.js?v=1"></script>
-  <script src="/js/app-mode.js?v=validated-audio-1"></script>
+  <script src="/js/app-mode.js?v=semantic-1"></script>
   <script src="/js/help.js?v=workspace-1"></script>
   <script src="/js/sidebar.js?v=4"></script>
   <script src="/js/admin-graph.js?v=workspace-2"></script>

@@ -1,13 +1,14 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById('users-'+id);
-  let page=1,result=null,selected=null,sequence=0,controller=null,actionBusy=false;
+  let page=1,result=null,selected=null,sequence=0,controller=null,actionBusy=false,visible=false,poll=null;
   const date=value=>value?new Date(value).toLocaleString('vi-VN'):'Chưa ghi nhận';
   function element(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
   function status(text,error=false){$('status').textContent=text;$('status').classList.toggle('users-error',error);}
   async function request(path='',body,signal){const r=await fetch('/api/admin/users'+path,body===undefined?{signal,cache:'no-store'}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal});const data=await r.json();if(!r.ok)throw Error(typeof data.detail==='string'?data.detail:'Không xử lý được yêu cầu.');return data;}
-  async function load(){
-    const seq=++sequence;controller?.abort();controller=new AbortController();status('Đang tải danh sách…');
+  async function load(background=false){
+    if(background&&(actionBusy||document.hidden||!visible))return;
+    const seq=++sequence;controller?.abort();controller=new AbortController();if(!background)status('Đang tải danh sách…');
     const query=new URLSearchParams({search:$('search').value.trim(),state:$('state').value,role:$('role').value,page:String(page),page_size:'20'});
     try{
       const data=await request('?'+query,undefined,controller.signal);if(seq!==sequence)return;result=data;
@@ -31,20 +32,26 @@
         }
         table.append(body);$('list').append(table);
       }
-      $('prev').disabled=page<=1;$('next').disabled=page>=pages;$('page').textContent=`Trang ${page} / ${pages}`;status('Đã tải danh sách.');
+      $('prev').disabled=page<=1;$('next').disabled=page>=pages;$('page').textContent=`Trang ${page} / ${pages}`;status(`Cập nhật: ${date(data.checked_at||new Date().toISOString())} · ${location.origin} · Tự cập nhật mỗi 30 giây khi mở mục này.`);
+      if(selected&&!actionBusy){
+        const fresh=data.users.find(u=>u.user_id===selected.user_id);
+        if(fresh)void open(fresh,true);
+        else{selected=null;$('detail').hidden=true;}
+      }
     }catch(e){if(e.name!=='AbortError'&&seq===sequence)status(e.message,true);}
   }
-  async function open(u){
-    if(actionBusy)return;selected=u;$('detail').hidden=false;$('detail-title').textContent=u.username;
+  async function open(u,refresh=false){
+    if(actionBusy)return;const previous=selected;selected=u;$('detail').hidden=false;$('detail-title').textContent=u.username;
     $('detail-state').textContent=u.is_locked?`Đã khóa ${date(u.locked_at)}. Lý do: ${u.lock_reason||'Chưa ghi nhận'}`:'Tài khoản đang hoạt động.';
     $('detail-meta').textContent=`Ngày tạo: ${date(u.created_at)} · Đăng nhập gần nhất: ${date(u.last_login_at)}\nLuyện tập gần nhất: ${date(u.last_practice_at)}\n${u.sessions} phiên · ${u.turns} lượt trao đổi · Điểm TB: ${u.avg_score??'—'} · Nhận định đúng: ${u.correct}/${u.reviewed}`;
     const canChange=u.is_locked||u.can_lock;
     $('action-form').hidden=!canChange;
     if(!canChange)$('detail-state').textContent+=' Không thể tự khóa tài khoản đang sử dụng hoặc khóa admin cuối cùng.';
-    $('reason').value='';$('reason').required=!u.is_locked;$('reason').minLength=u.is_locked?0:3;
+    if(!refresh||previous?.is_locked!==u.is_locked)$('reason').value='';$('reason').required=!u.is_locked;$('reason').minLength=u.is_locked?0:3;
     $('reason-label').textContent=u.is_locked?'Lý do mở khóa (không bắt buộc)':'Lý do khóa (tối thiểu 3 ký tự)';
     $('action').textContent=u.is_locked?'Xác nhận mở khóa':'Xác nhận khóa tài khoản';$('action').disabled=false;
-    $('events').textContent='Đang tải lịch sử…';$('detail').scrollIntoView({behavior:'auto',block:'start'});
+    if(refresh&&previous?.is_locked===u.is_locked)return;
+    $('events').textContent='Đang tải lịch sử…';if(!refresh)$('detail').scrollIntoView({behavior:'auto',block:'start'});
     try{
       const events=await request('/'+encodeURIComponent(u.user_id)+'/events');if(selected?.user_id!==u.user_id)return;
       $('events').replaceChildren();if(!events.length)$('events').append(element('p','users-note','Chưa có thao tác khóa hoặc mở khóa.'));
@@ -63,5 +70,11 @@
     }catch(e){status(e.message,true);$('action').disabled=false;}
     finally{actionBusy=false;}
   };
-  document.addEventListener('arena:viewchange',event=>{if(event.detail.mode==='users')load();});
+  document.addEventListener('arena:viewchange',event=>{
+    visible=event.detail.mode==='users';clearInterval(poll);poll=null;
+    if(visible){void load();poll=setInterval(()=>void load(true),30000);}
+    else{sequence++;controller?.abort();}
+  });
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&visible)void load(true);});
+  window.addEventListener('focus',()=>{if(visible)void load(true);});
 })();

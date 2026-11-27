@@ -41,6 +41,8 @@ async def lifespan(_: FastAPI):
     generate_scenario_map()
     warmup = asyncio.create_task(_warm_speech())
     voice_warmup=asyncio.create_task(_warm_voice())
+    from app.arena.semantic_cache import warmup as warm_semantic
+    semantic_warmup=asyncio.create_task(asyncio.to_thread(warm_semantic))
     try:
         yield
     finally:
@@ -52,6 +54,9 @@ async def lifespan(_: FastAPI):
         voice_warmup.cancel()
         with suppress(asyncio.CancelledError):
             await voice_warmup
+        semantic_warmup.cancel()
+        with suppress(asyncio.CancelledError):
+            await semantic_warmup
         close_database()
 
 

@@ -1,6 +1,7 @@
 """Account administration without passwords or private conversation contents."""
 from typing import Literal
-from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import datetime,timezone
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel,Field
 from app.auth import require_admin
 from app.database import get_connection_pool
@@ -16,7 +17,8 @@ class AccountStatus(BaseModel):
 @router.get('')
 def list_users(search: str=Query(default='',max_length=64), state: Literal['all','active','locked']='all',
                role: Literal['all','user','admin']='all', page: int=Query(default=1,ge=1,le=10000),
-               page_size: int=Query(default=25,ge=1,le=100), user=Depends(require_admin)):
+               page_size: int=Query(default=25,ge=1,le=100), user=Depends(require_admin), response: Response=None):
+    if response is not None:response.headers["Cache-Control"]="no-store"
     where="WHERE position(lower(%s) in lower(u.username))>0 AND (%s='all' OR u.is_locked=(%s='locked')) AND (%s='all' OR u.role=%s)"
     args=(search.strip(),state,state,role,role)
     with get_connection_pool().connection() as c:
@@ -38,7 +40,7 @@ def list_users(search: str=Query(default='',max_length=64), state: Literal['all'
              ) stats ON true """+where+' ORDER BY u.created_at DESC,u.user_id LIMIT %s OFFSET %s',args+(page_size,(page-1)*page_size)).fetchall()
     for row in rows:
         row['can_lock']=row['user_id']!=user['user_id'] and (row['role']!='admin' or admins>1)
-    return {'users':rows,'total':total,'page':page,'page_size':page_size,'current_user_id':user['user_id']}
+    return {'users':rows,'total':total,'page':page,'page_size':page_size,'current_user_id':user['user_id'],'checked_at':datetime.now(timezone.utc).isoformat()}
 
 
 @router.get('/{user_id}/events')

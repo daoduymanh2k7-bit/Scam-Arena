@@ -39,6 +39,11 @@
   let latestCallTurn = null;
   let mixedSession = null;
   let preparedStart = null;
+  let briefingSequence=0;
+  const briefing=document.getElementById('call-briefing');
+  const briefingText=document.getElementById('call-briefing-text');
+  const briefingRetry=document.getElementById('call-briefing-retry');
+  const acceptCall=phone.querySelector('[data-call-action="accept"]');
   const playerContext = document.getElementById('call-player-context');
   function setPlayerContext(text) {
     playerContext.querySelector('p').textContent = text || '';
@@ -159,6 +164,7 @@
   const lineSources = {
     fixed: "Luật / câu thoại có sẵn",
     llm: "LLM vừa tạo",
+    cache_semantic: "Câu LLM đã lưu, khớp nghĩa câu người chơi",
     cache_exact: "Câu LLM đã lưu, khớp câu người chơi",
     cache_pool: "Câu LLM lấy từ kho lời thoại",
   };
@@ -333,22 +339,45 @@
     setTurnBusy(false);
   }
 
+  async function prepareBeforeCall(run) {
+    const sequence=++briefingSequence;
+    const old=preparedStart;preparedStart=null;mixedSession=null;
+    if(old)void finishSession(old.session_id);
+    acceptCall.disabled=true;briefing.hidden=false;briefingRetry.hidden=true;
+    briefingText.textContent='Đang chuẩn bị tình huống…';
+    try {
+      const response=await Api.startCall(selectedScenario,'call',practicePanel.querySelector('[data-difficulty]').value,
+          isMixed()?practicePanel.querySelector('[data-exercise]').value:'training');
+      if(run!==callRun||sequence!==briefingSequence||phone.dataset.callState!=='ringing'){
+        void finishSession(response.session_id);return;
+      }
+      preparedStart=response;if(isMixed())mixedSession=response.session_id;
+      const context=response.practice_context||'Bạn nhận cuộc gọi từ một người chưa được xác minh danh tính.';
+      const brief=context.replace(/^Bối cảnh giả định:\s*/u,'');
+      briefingText.textContent=brief.charAt(0).toLocaleUpperCase('vi')+brief.slice(1);
+      practicePanel.querySelector('[data-context]').textContent=context;
+      acceptCall.disabled=false;
+    }catch(error){
+      if(run!==callRun||sequence!==briefingSequence)return;
+      briefingText.textContent='Chưa tải được tình huống. Bấm Thử lại để tiếp tục.';briefingRetry.hidden=false;
+    }
+  }
+  briefingRetry.onclick=()=>{if(phone.dataset.callState==='ringing')void prepareBeforeCall(callRun);};
+  practicePanel.querySelectorAll('select').forEach(select=>select.addEventListener('change',()=>{
+    if(phone.dataset.callState==='ringing')void prepareBeforeCall(callRun);
+  }));
+
   async function answerCall() {
-    setPlayerContext(isMixed()?'':'Bạn đang sinh hoạt bình thường thì nhận cuộc gọi từ một người chưa được xác minh danh tính. Những thông tin người gọi đưa ra chưa phải là sự thật đã được xác nhận.');
-    setCallState("active", "Đang chuẩn bị micro…", true);
+    if(phone.dataset.callState!=='ringing'||!preparedStart||acceptCall.disabled)return;
+    const response=preparedStart;
+    setCallState("active", "Đang chuẩn bị micro…", true, true);
     const run = callRun;
+    setPlayerContext(response.practice_context);
     currentVoice = pickCallerVoice();
     const query = currentVoice ? `?voice=${encodeURIComponent(currentVoice)}` : "";
     const micReady=openMicrophone(run);
-    if (isMixed()) {
-      try {
-        const result=await Api.startCall(selectedScenario,'call',practicePanel.querySelector('[data-difficulty]').value,practicePanel.querySelector('[data-exercise]').value);
-        if (run!==callRun) {void finishSession(result.session_id);return;}
-        preparedStart=result;mixedSession=result.session_id;void inbox.bind(result.session_id);
-        if(result.practice_context){practicePanel.querySelector('[data-context]').textContent=result.practice_context;setPlayerContext(result.practice_context);}
-        void refreshPractice();
-      } catch(error) {if(run===callRun)setCallState('ended',error.message,true);return;}
-    }
+    void inbox.bind(response.session_id);
+    if(isMixed())void refreshPractice();
     await micReady;
     if (run !== callRun) return;
     callStatus.textContent = "Người gọi đang nói…";
@@ -749,7 +778,7 @@
     callTimer.textContent = `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
   }
 
-  function setCallState(state, label, moveFocus = false) {
+  function setCallState(state, label, moveFocus = false, preservePrepared = false) {
     const run = ++callRun;
     let finishing=null;
     clearInterval(timer);
@@ -768,13 +797,14 @@
       finishing=finishSession(sessionId);
       sessionId = null;
     }
-    if (preparedStart) {finishing=finishSession(preparedStart.session_id);preparedStart=null;}
+    if (preparedStart && !preservePrepared) {finishing=finishSession(preparedStart.session_id);preparedStart=null;}
     introPhase = "greeting";
     latestCallTurn = null;
     setTurnBusy(state === "active");
     phone.dataset.callState = state;
     callScreen.dataset.callState = state;
     const busyCall=state==='ringing'||state==='active';
+    briefing.hidden=state!=='ringing';
     if(state==='ended')practiceSettings.open=false;
     if(busyCall)setScenarioMenu(false);
     revealBlock(callSetup,!busyCall);
@@ -813,6 +843,7 @@
       if (!controls.hidden && moveFocus) controls.querySelector("button:not(:disabled)").focus({ preventScroll: true });
     }
     if (state === "ringing") {
+      void prepareBeforeCall(run);
       subtitlesEmpty.hidden = false;
       subtitlesLog.replaceChildren(subtitlesEmpty);
       playAudio("/audio/call-ringtone.wav", true).then((played) => {

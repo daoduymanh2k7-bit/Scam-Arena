@@ -8,3 +8,6 @@ faster-whisper>=1.1,<2
 av>=11,<19
 piper-tts>=1.6
 psycopg[binary,pool]>=3.2,<4
+
+# CPU ONNX embeddings; multilingual semantic reuse without per-user training.
+fastembed>=0.7,<1

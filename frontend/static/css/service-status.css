@@ -13,3 +13,11 @@
 .service-status-detail small { display:block; white-space:pre-line; color:#8b8097; font:10px/1.6 system-ui; }
 .service-status-detail[hidden] { display:none; }
 @media(max-width:600px) { #mode-nav .service-status-buttons button { width:15px; height:27px; padding:0; } .service-status-buttons svg { width:13px; height:13px; } }
+
+.service-status-detail { max-height:calc(100dvh - 32px); overflow-y:auto; }
+.service-status-legend { margin:12px 0 0; padding:10px 0 0; border-top:1px solid #ece5f3; list-style:none; }
+.service-status-legend li { display:flex; align-items:baseline; gap:7px; margin:5px 0; font:10px/1.5 system-ui; color:#756981; }
+.service-status-legend i { flex:none; width:6px; height:6px; border-radius:50%; background:#9da3af; }
+.service-status-legend [data-state="ok"] { background:#22a766; }
+.service-status-legend [data-state="warning"] { background:#dfa520; }
+.service-status-legend [data-state="unavailable"] { background:#db505d; }

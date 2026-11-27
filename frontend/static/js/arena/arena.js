@@ -50,6 +50,7 @@
   };
   const intentMethods = { saved: "lịch sử đã lưu", rule: "luật an toàn", rasa: "bộ nhận diện Rasa", llm: "LLM", fallback: "dự phòng" };
   const lineSources = {
+    cache_semantic: "Câu LLM đã lưu, khớp nghĩa câu người chơi",
     cache_exact: "LLM (dùng lại câu khớp chính xác từ bộ nhớ)",
     cache_pool: "LLM (dùng lại câu trong bộ nhớ)", llm: "LLM (vừa tạo câu này)", fixed: "luật/kịch bản cố định",
   };

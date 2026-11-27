@@ -1,12 +1,13 @@
 """Optional, fail-open LLM dialogue line generation and PostgreSQL cache."""
 from __future__ import annotations
 
-import json, logging, os, re, time
+import hashlib, json, logging, os, re, time
 from dataclasses import dataclass
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 
 from app.arena.normalization import normalize_phrase
+from app.arena.semantic_cache import match as semantic_match
 from app.arena.practice_catalog import render
 from app.arena.phone_dialogue import phone_opening, listening_acknowledgement
 from app.database import get_connection_pool
@@ -34,6 +35,12 @@ def _config():
 def cache_key(masked: str, original: str | None = None) -> str | None:
     if len(masked) > 200 or (original is not None and masked != original): return None
     return normalize_phrase(masked) or None
+
+def context_cache_key(context):
+    # Do not reuse case-specific or earlier-turn-dependent wording across contexts.
+    stable={key:value for key,value in context.items() if key not in {'player_text','_generated_model'} and not key.startswith('_')}
+    return hashlib.sha256(json.dumps(stable,ensure_ascii=False,sort_keys=True,default=str).encode()).hexdigest()
+
 
 def validate_line(text, player_text='', context=None):
     if not isinstance(text,str): return None
@@ -259,10 +266,11 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
     fixed=LineResult(fixed_text,None,'fixed',0)
     if not enabled or not key or terminal:return fixed
     norm=cache_key(user_text_masked,original_user_text)
+    fingerprint=None
     try:
         with get_connection_pool().connection() as c, c.cursor() as cur:
             # Supply only published scenario metadata, the chosen target node and masked history.
-            cur.execute("""SELECT v.definition->'payload' || jsonb_build_object('title',v.definition->>'title') AS payload
+            cur.execute("""SELECT v.version_id,v.definition->'payload' || jsonb_build_object('title',v.definition->>'title') AS payload
                            FROM call_sessions cs JOIN scenario_versions v ON v.version_id=cs.scenario_version_id
                            WHERE cs.session_id=%s""",(session_id,)); scenario_row=cur.fetchone()
             cur.execute("SELECT node_key,objective,tactic,requested_action FROM dialogue_nodes WHERE node_id=%s",(target_node,)); node_row=cur.fetchone()
@@ -270,7 +278,7 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
             payload=scenario_row['payload'] if scenario_row else {}
             persona=payload.get('persona',{}) if isinstance(payload,dict) else {}
             if context is None: context={}
-            context.update({'scenario_title':payload.get('title','') if isinstance(payload,dict) else '',
+            context.update({'scenario_version_id':(scenario_row or {}).get('version_id'),'scenario_title':payload.get('title','') if isinstance(payload,dict) else '',
                 'scenario_kind':payload.get('scenario_kind','fraud'),
                 'scenario_family':payload.get('family'),
                 'scenario_category':payload.get('category','') if isinstance(payload,dict) else '',
@@ -282,38 +290,43 @@ def resolve_bot_line(*,scenario_id,session_id,target_node,intent,user_text_maske
             context.update(memory_context(cur,session_id,before_turn=(history[-1].get('turn_no',0)+1 if history else 1),
                 recent_start=(history[0].get('turn_no',0) if history else 0)))
             has_memory=bool(context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))
+            fingerprint=context_cache_key(context)
             params=(scenario_id,target_node,intent,is_reprompt,version)
             # An unclear reply can mean different things in different conversations.
             # Give the LLM the current context before falling back to stored lines.
             if not has_memory:
                 if norm and intent != 'unknown' and not has_memory:
-                    cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND player_text_norm=%s AND source='llm' AND enabled AND preference_score >= 0 ORDER BY preference_score DESC,use_count,line_id LIMIT 1",params[1:]+(norm,)); row=cur.fetchone()
-                    if row and validate_line(row['line_text'],user_text_masked,context): return _use(cur,row,'cache_exact',start)
-                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",params[1:]); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
+                    cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND player_text_norm=%s AND source='llm' AND enabled AND preference_score >= 0 AND cache_context_hash=%s ORDER BY preference_score DESC,use_count,line_id LIMIT 1",params[1:]+(norm,fingerprint)); row=cur.fetchone()
+                    if row and row.get('cache_context_hash')==fingerprint and validate_line(row['line_text'],user_text_masked,context): return _use(cur,row,'cache_exact',start)
+                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled AND cache_context_hash=%s ORDER BY preference_score DESC,use_count,line_id LIMIT 128",params[1:]+(fingerprint,)); rows=[r for r in cur.fetchall() if r.get('cache_context_hash')==fingerprint and validate_line(r['line_text'],user_text_masked,context)]
                 prev=None
                 cur.execute("SELECT bot_reply_text FROM call_turns WHERE session_id=%s ORDER BY turn_no DESC LIMIT 1",(session_id,)); p=cur.fetchone(); prev=p['bot_reply_text'] if p else None
-                chosen=pick_from_pool(rows,prev)
-                if intent != 'unknown' and not has_memory and len(rows)>=pool_size and chosen:return _use(cur,chosen,'cache_pool',start)
+                if norm and intent != 'unknown':
+                    similar=semantic_match(user_text_masked,rows,intent)
+                    if similar and similar['line_text']!=prev:return _use(cur,similar,'cache_semantic',start)
         line=validate_line(_request_line(context or {'sample_line':fixed_text,'intent':intent,'player_text':user_text_masked},model,timeout),user_text_masked,context)
         if not line: raise ValueError('invalid line')
         if has_memory:
             return LineResult(line,None,'llm',int((time.monotonic()-start)*1000))
         with get_connection_pool().connection() as c, c.cursor() as cur:
-            cur.execute("INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,line_text,source,model,prompt_version) VALUES(%s,%s,%s,%s,%s,'llm',%s,%s) ON CONFLICT DO NOTHING RETURNING line_id",(target_node,intent,is_reprompt,norm,line,context.get('_generated_model',model),version)); got=cur.fetchone()
+            cur.execute("INSERT INTO dialogue_lines(node_id,intent,is_reprompt,player_text_norm,player_text_sample,cache_context_hash,line_text,source,model,prompt_version) VALUES(%s,%s,%s,%s,%s,%s,%s,'llm',%s,%s) ON CONFLICT DO NOTHING RETURNING line_id",(target_node,intent,is_reprompt,norm,user_text_masked if norm else None,fingerprint,line,context.get('_generated_model',model),version)); got=cur.fetchone()
             if got:return LineResult(line,got['line_id'],'llm',int((time.monotonic()-start)*1000))
-            cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
-            chosen=pick_from_pool(rows)
-            if chosen and not has_memory:return _use(cur,chosen,'cache_pool',start)
-        return fixed
+            cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled AND cache_context_hash=%s ORDER BY preference_score DESC,use_count,line_id LIMIT 128",(target_node,intent,is_reprompt,version,fingerprint)); rows=[r for r in cur.fetchall() if r.get('cache_context_hash')==fingerprint and validate_line(r['line_text'],user_text_masked,context)]
+            if norm and not has_memory:
+                similar=semantic_match(user_text_masked,rows,intent)
+                if similar:return _use(cur,similar,'cache_semantic',start)
+        return LineResult(line,None,'llm',int((time.monotonic()-start)*1000))
     except Exception as exc:
         log.warning('Generated line unavailable: %s',exc)
-        if intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))): return fixed
+        if not fingerprint or intent == 'unknown' or (context and (context.get('conversation_summary') or context.get('earlier_unsummarized_turns') or context.get('available_messages'))): return fixed
         try:
             with get_connection_pool().connection() as c,c.cursor() as cur:
-                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled ORDER BY preference_score DESC,use_count,line_id",(target_node,intent,is_reprompt,version)); rows=[r for r in cur.fetchall() if validate_line(r['line_text'],user_text_masked,context)]
+                cur.execute("SELECT * FROM dialogue_lines WHERE node_id=%s AND intent=%s AND is_reprompt=%s AND prompt_version=%s AND source='llm' AND enabled AND cache_context_hash=%s ORDER BY preference_score DESC,use_count,line_id LIMIT 128",(target_node,intent,is_reprompt,version,fingerprint)); rows=[r for r in cur.fetchall() if r.get('cache_context_hash')==fingerprint and validate_line(r['line_text'],user_text_masked,context)]
                 cur.execute("SELECT bot_reply_text FROM call_turns WHERE session_id=%s ORDER BY turn_no DESC LIMIT 1",(session_id,)); prev=cur.fetchone()
-                chosen=pick_from_pool(rows,prev['bot_reply_text'] if prev else None)
-                if chosen:return _use(cur,chosen,'cache_pool',start)
+                if norm:
+                    exact=next((r for r in rows if r.get('player_text_norm')==norm and r.get('preference_score',0)>=0),None)
+                    similar=exact or semantic_match(user_text_masked,rows,intent)
+                    if similar:return _use(cur,similar,'cache_exact' if exact else 'cache_semantic',start)
         except Exception as cache_exc: log.warning('Line cache unavailable: %s',cache_exc)
         return fixed
 

@@ -34,8 +34,11 @@ def probe_llm(mode):
             ('GEMINI_API_KEY','GEMINI_MODEL','gemini-2.5-flash'),('GROQ_API_KEY','GROQ_MODEL','openai/gpt-oss-20b'),
             ('OPENROUTER_API_KEY','OPENROUTER_MODEL','openrouter/free')] if os.getenv(key,'').strip()),settings(mode)[1])
         fallback=used!=primary
-        return {'state':'warning' if fallback or ms>8000 else 'ok','model':used,'latency_ms':ms,
-                'message':'Đang dùng dịch vụ/model dự phòng.' if fallback else 'Tạo câu trả lời thử thành công.'}
+        reasons=[]
+        if fallback:reasons.append('Tạo câu trả lời thành công bằng dịch vụ/model dự phòng.')
+        if ms>8000:reasons.append('Phản hồi thử chậm hơn 8 giây.')
+        return {'state':'warning' if reasons else 'ok','model':used,'latency_ms':ms,
+                'message':' '.join(reasons) if reasons else 'Tạo câu trả lời thử thành công.'}
     except Exception:
         return {'state':'unavailable','message':'Chưa tạo được phản hồi thử. Dịch vụ có thể lỗi hoặc quá thời gian chờ.'}
 

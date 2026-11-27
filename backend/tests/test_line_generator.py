@@ -118,3 +118,11 @@ def test_cached_line_is_rechecked_against_current_requested_action():
          patch.object(lg,'_request_line',side_effect=RuntimeError('unavailable')):
         result=lg.resolve_bot_line(scenario_id=1,session_id='s',target_node=2,intent='comply',user_text_masked='Tôi đang nghe',fixed_text=fixed,is_reprompt=False,context={'conversation_ending':False})
     assert result.source=='fixed' and result.text==fixed
+
+
+def test_cache_context_keeps_facts_history_and_mode_separate():
+    base={'player_text':'Một câu nói','interaction_mode':'call','recent_turns':[],'case_facts':{'place':'sảnh'}}
+    assert lg.context_cache_key(base)==lg.context_cache_key({**base,'player_text':'Câu gần nghĩa','_generated_model':'test'})
+    for change in [{'case_facts':{'place':'quầy'}},{'interaction_mode':'message'},
+                   {'recent_turns':[{'player_text_masked':'Tôi đã từ chối'}]}, {'conversation_summary':'Bối cảnh khác'}]:
+        assert lg.context_cache_key(base)!=lg.context_cache_key({**base,**change})

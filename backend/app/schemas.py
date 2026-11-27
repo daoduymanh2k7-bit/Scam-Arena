@@ -108,7 +108,7 @@ class CallTurnResponse(BaseModel):
     bot_text: str
     intent: Intent
     intent_method: Literal["rule", "rasa", "llm", "fallback"]
-    line_source: Literal["cache_exact", "cache_pool", "llm", "fixed"] = "fixed"
+    line_source: Literal["cache_exact", "cache_semantic", "cache_pool", "llm", "fixed"] = "fixed"
     line_latency_ms: int = 0
     line_id: int | None = None
     turn_no: int | None = None
