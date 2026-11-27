@@ -20,7 +20,10 @@ test -s "$archive"
 
 # Refuse to deploy to a new/empty database volume by accident.
 docker inspect scam-arena-db --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Name}}{{end}}{{end}}' | grep -Fxq scam-arena_postgres-data
-test "$(docker inspect scam-arena-db --format '{{.State.Health.Status}}')" = healthy
+if [[ "$(docker inspect scam-arena-db --format '{{.State.Health.Status}}')" != healthy ]]; then
+  # The existing volume was verified above; restore its container if it stopped.
+  (cd "$app" && docker compose -p scam-arena up -d --no-deps --force-recreate --wait --wait-timeout 120 db)
+fi
 
 mkdir -p "$release" "$backup_dir"
 tar -xzf "$archive" -C "$release"
