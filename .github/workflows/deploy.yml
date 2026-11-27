@@ -89,6 +89,8 @@ jobs:
           ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/before-image-id.txt
           ssh production 'docker exec -i scam-arena python - --label before --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
           ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
+      - name: Clean obsolete deployment packages while preserving current and recent releases
+        run: ssh production 'python3 - --apply' < deployment/cleanup_releases.py
       - name: Ensure deployment disk space without deleting persistent data
         run: ssh production 'bash -s' < deployment/prepare-vps.sh
       - name: Inspect application startup before deployment
