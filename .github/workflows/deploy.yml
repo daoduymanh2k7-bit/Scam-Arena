@@ -89,6 +89,8 @@ jobs:
           ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/before-image-id.txt
           ssh production 'docker exec -i scam-arena python - --label before --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
           ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
+      - name: Inspect application startup before deployment
+        run: ssh production 'python3 -' < deployment/diagnose-vps.py
       - name: Upload tracked source and deploy
         run: |
           set -euo pipefail
@@ -99,6 +101,9 @@ jobs:
           ssh production "bash -s -- '${GITHUB_SHA}'" < deployment/deploy-vps.sh
           # shellcheck disable=SC2029
           ssh production "grep -Fxq '${GITHUB_SHA}' /opt/scam-arena/.deployed-revision"
+      - name: Inspect application startup after deployment
+        if: always()
+        run: ssh production 'python3 -' < deployment/diagnose-vps.py
       - name: Measure updated VPS speech service
         if: inputs.speech_load_test || contains(github.event.head_commit.message, '[speech-load-test]')
         run: |
