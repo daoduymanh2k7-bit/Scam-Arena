@@ -43,7 +43,7 @@ jobs:
           PYTHONPATH: .:backend:rasa/evaluation
         run: python -m pytest backend/tests rasa/evaluation/test_dataset_workflow.py -q
       - name: Check deployment script
-        run: bash -n deployment/deploy-vps.sh
+        run: bash -n deployment/deploy-vps.sh deployment/prepare-vps.sh
       - name: Verify scenario migrations and version isolation in PostgreSQL
         env:
           PYTHONPATH: .:backend
@@ -89,6 +89,8 @@ jobs:
           ssh production 'docker inspect scam-arena --format "{{.Image}}"' > speech-load-results/before-image-id.txt
           ssh production 'docker exec -i scam-arena python - --label before --cadence 1.05 --adaptive --audio /tmp/speech-load.wav' < backend/tools/benchmark_speech_load.py > speech-load-results/before.json
           ssh production 'docker cp scam-arena:/tmp/speech-load.wav /root/scam-arena-speech-load.wav'
+      - name: Ensure deployment disk space without deleting persistent data
+        run: ssh production 'bash -s' < deployment/prepare-vps.sh
       - name: Inspect application startup before deployment
         run: ssh production 'python3 -' < deployment/diagnose-vps.py
       - name: Upload tracked source and deploy
